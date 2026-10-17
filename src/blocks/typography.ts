@@ -10,7 +10,8 @@ export function blockSpacing(node:Node):{before:number;after:number} {
   ][node.level-1]
   if(isListBlock(node))return {before:.35,after:.35}
   if(Element.isElement(node)&&node.type==='block-quote')return {before:.85,after:.85}
-  if(Element.isElement(node)&&['table','code-block','image-block','horizontal-rule'].includes(node.type))return {before:1,after:1}
+  if(Element.isElement(node)&&node.type==='horizontal-rule')return {before:2,after:2}
+  if(Element.isElement(node)&&['table','code-block','image-block'].includes(node.type))return {before:1,after:1}
   return {before:.65,after:.65}
 }
 export function blockGap(nodes:Node[],index:number):string {

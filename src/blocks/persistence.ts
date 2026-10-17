@@ -29,8 +29,14 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
     const parsed=parseOne(chunk.lines.join('\n').trim());const node=parsed[0]
     if(!node)return null
     const depth=Math.max(0,Math.min(32,Number(chunk.metadata.depth)||0))
-    if(isListBlock(node))(node as Element & {depth:number}).depth=depth
-    node.__blockDepth=depth
+    const recoveredList=isListBlock(node)&&node.__blockDepth!==undefined
+    // A chunk can recover several list items. Keep their relative indentation
+    // and add the enclosing block's saved depth to every recovered item.
+    for(const item of parsed) {
+      const itemDepth=Math.min(32,depth+blockDepth(item))
+      if(isListBlock(item))(item as Element & {depth:number}).depth=itemDepth
+      item.__blockDepth=itemDepth
+    }
     const paths=Array.isArray(chunk.metadata.subtitles)?chunk.metadata.subtitles:chunk.metadata.subtitle===true?[[]]:[]
     for(const path of paths)if(Array.isArray(path)&&path.every(i=>Number.isInteger(i)&&i>=0)&&Node.has(node,path)) {
       const target=Node.get(node,path)
@@ -40,7 +46,7 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
         target.children=[{type:'heading',level:5,children:target.children}];(target as unknown as {blockChildren:boolean}).blockChildren=true
       }
     }
-    if(node.type==='ordered-list-item') {
+    if(node.type==='ordered-list-item'&&!recoveredList) {
       if(typeof chunk.metadata.start==='number')node.start=chunk.metadata.start;else delete node.start
       if(['continue','restart'].includes(chunk.metadata.numbering))node.__numbering=chunk.metadata.numbering
     }

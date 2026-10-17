@@ -25,6 +25,9 @@ export const $UnorderedListItem = styled($ListItem)`
 
 export const $OrderedListItem = styled($ListItem)`
   position: relative;
+  display: flex;
+  align-items: baseline;
+  .wysimark-list-content { flex: 1; min-width: 0; }
   list-style-type: decimal;
   counter-increment: var(--list-item-var);
 

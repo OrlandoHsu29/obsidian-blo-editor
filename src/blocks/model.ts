@@ -16,10 +16,28 @@ export function rootCache(editor: Editor) {
   }
   return cache
 }
+/** A numbered heading uses its heading level, independently of body indentation. */
+export function listHeadingLevel(node: Node): number | undefined {
+  if(!Element.isElement(node))return undefined
+  if(node.type==='heading')return node.level
+  if(node.type==='ordered-list-item'&&node.blockChildren) {
+    const first=node.children[0]
+    if(Element.isElement(first)&&first.type==='heading')return first.level
+  }
+}
 export function orderedNumbers(nodes: Node[]) {
-  const counts=new Map<number,number>(), result=new Map<Node,number>()
+  const counts=new Map<number,number>(), headings=new Map<number,number>(), result=new Map<Node,number>()
   for(const node of nodes) {
     if(isEditorSpacer(node))continue
+    const headingLevel=listHeadingLevel(node)
+    if(headingLevel!==undefined) {
+      for(const level of headings.keys())if(level>headingLevel)headings.delete(level)
+      if(Element.isElement(node)&&node.type==='ordered-list-item') {
+        const number=node.start ?? (node.__numbering==='restart'?1:(headings.get(headingLevel)||0)+1)
+        headings.set(headingLevel,number);result.set(node,number)
+      }
+      continue
+    }
     const depth=blockDepth(node)
     for(const level of counts.keys())if(level>depth)counts.delete(level)
     if(Element.isElement(node)&&node.type==='ordered-list-item') {
@@ -103,11 +121,19 @@ export function setNumbering(editor: Editor, index: number, mode:'continue'|'res
 /** Connected default lists are dynamic; source starts must not pin old numbers after a conversion. */
 export function reflowFollowingLists(editor: Editor, path: Path, depth = blockDepth(Node.get(editor,path))) {
   const parent=Node.parent(editor,path),parentPath=Path.parent(path)
+  const headingLevel=listHeadingLevel(Node.get(editor,path))
   for(let i=path[path.length-1]+1;i<parent.children.length;i++) {
     const node=parent.children[i]
     if(isEditorSpacer(node))continue
-    if(blockDepth(node)<depth)break
-    if(blockDepth(node)!==depth||!Element.isElement(node)||node.type!=='ordered-list-item')continue
+    const nextHeadingLevel=listHeadingLevel(node)
+    if(headingLevel!==undefined) {
+      if(nextHeadingLevel!==undefined&&nextHeadingLevel<headingLevel)break
+      if(nextHeadingLevel!==headingLevel)continue
+    } else {
+      if(blockDepth(node)<depth)break
+      if(blockDepth(node)!==depth||nextHeadingLevel!==undefined)continue
+    }
+    if(!Element.isElement(node)||node.type!=='ordered-list-item')continue
     if(node.__numbering==='restart')break
     const at=[...parentPath,i]
     Transforms.unsetNodes(editor,'start',{at})
@@ -116,7 +142,7 @@ export function reflowFollowingLists(editor: Editor, path: Path, depth = blockDe
 }
 /** Normalize actual text, including native DOM insertions, paste and formatted prefixes. */
 export function normalizeOrderedText(editor: Editor, [node,path]: NodeEntry): boolean {
-  if(editor.wysimark.readOnly||!Element.isElement(node)||!['paragraph','unordered-list-item','task-list-item','ordered-list-item'].includes(node.type)||('blockChildren' in node&&node.blockChildren))return false
+  if(editor.wysimark.readOnly||!Element.isElement(node)||!['paragraph','heading','unordered-list-item','task-list-item','ordered-list-item'].includes(node.type)||('blockChildren' in node&&node.blockChildren))return false
   // Explicitly escaped source text stays literal until that block's text is edited.
   if(node.__literalOrderedText===Node.string(node))return false
   const match=Node.string(node).match(/^(\d{1,6})\. /)
@@ -127,8 +153,22 @@ export function normalizeOrderedText(editor: Editor, [node,path]: NodeEntry): bo
   if(!end)return false
   Editor.withoutNormalizing(editor,()=>{
     Transforms.delete(editor,{at:{anchor:start,focus:end}})
-    Transforms.setNodes(editor,{type:'ordered-list-item',depth:blockDepth(node),start:Number(match[1]),__numbering:'restart'},{at:path})
-    Transforms.unsetNodes(editor,'__literalOrderedText',{at:path})
-    reflowFollowingLists(editor,path,blockDepth(node))
+    let listPath=path
+    if(node.type==='heading') {
+      const containing=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'})
+      if(containing) {
+        listPath=containing[1]
+        Transforms.setNodes(editor,{start:Number(match[1]),__numbering:'restart'},{at:listPath})
+      } else {
+        Transforms.wrapNodes(editor,{
+          type:'ordered-list-item',depth:blockDepth(node),blockChildren:true,
+          start:Number(match[1]),__numbering:'restart',children:[],
+        },{at:path})
+      }
+    } else {
+      Transforms.setNodes(editor,{type:'ordered-list-item',depth:blockDepth(node),start:Number(match[1]),__numbering:'restart'},{at:path})
+    }
+    Transforms.unsetNodes(editor,'__literalOrderedText',{at:node.type==='heading'?[...listPath,0]:listPath})
+    reflowFollowingLists(editor,listPath,blockDepth(node))
   });return true
 }

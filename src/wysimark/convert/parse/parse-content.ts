@@ -68,7 +68,7 @@ export function parseContent(
     case "blockquote":
       return parseBlockquote(content, options)
     case "code":
-      return parseCodeBlock(content)
+      return parseCodeBlock(content, options)
     case "definition":
       return [{
         type: "link-definition",

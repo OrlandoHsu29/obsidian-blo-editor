@@ -1,43 +1,48 @@
-import { Editor, Element, Path, Transforms } from "slate"
+import { Editor, Element, Node, Path, Range, Transforms } from "slate"
+import { HistoryEditor } from "slate-history"
 
+import { blockDepth } from "../../../blocks/model"
 import { curryOne, findElementUp } from "../../sink"
 
 function insertHorizontalRule(editor: Editor) {
   const { selection } = editor
-  if (!selection) return false
-
-  // Look for a parent that `isMaster`
-  const entry = findElementUp(
-    editor,
-    (node) => Element.isElement(node) && editor.isMaster(node)
-  )
-
+  if (!selection || editor.wysimark.readOnly) return false
+  const entry = findElementUp(editor, node => Element.isElement(node) && editor.isMaster(node))
+  const root = editor.children[selection.anchor.path[0]]
+  const depth = blockDepth(root)
+  const indentation = depth || (Element.isElement(root) && root.__blockDepth !== undefined)
+    ? { __blockDepth: depth } : {}
   const hrElement = {
     type: "horizontal-rule" as const,
+    ...indentation,
     children: [{ text: "" }] as [{ text: string }],
   }
-  const paragraphElement = {
-    type: "paragraph" as const,
-    children: [{ text: "" }],
-  }
-
-  if (entry == null) {
-    // Insert horizontal rule and a new paragraph after it
-    Editor.withoutNormalizing(editor, () => {
-      Transforms.insertNodes(editor, [hrElement, paragraphElement])
-      // Move cursor to the new paragraph
-      Transforms.move(editor)
-    })
-  } else {
-    // If inside a master element (like table), insert after it
-    const nextPath = Path.next(entry[1])
-    Editor.withoutNormalizing(editor, () => {
-      Transforms.insertNodes(editor, [hrElement, paragraphElement], { at: nextPath })
-      // Select the start of the new paragraph
-      const paragraphPath = Path.next(nextPath)
-      Transforms.select(editor, Editor.start(editor, paragraphPath))
-    })
-  }
+  const insert = () => Editor.withoutNormalizing(editor, () => {
+    if (entry) {
+      Transforms.insertNodes(editor, hrElement, { at: Path.next(entry[1]), select: true })
+    } else if (Range.isCollapsed(selection) && Element.isElement(root) &&
+      !editor.isVoid(root) && Node.string(root) === '') {
+      // Replace the empty insertion block instead of leaving it above the rule.
+      const at = [selection.anchor.path[0]]
+      Transforms.removeNodes(editor, { at })
+      Transforms.insertNodes(editor, hrElement, { at, select: true })
+    } else {
+      // Slate preserves the text on both sides when inserting in a paragraph.
+      Transforms.insertNodes(editor, hrElement, { select: true })
+    }
+    const nextPath = Path.next(Path.parent(editor.selection!.anchor.path))
+    const next = Node.has(editor, nextPath) ? Node.get(editor, nextPath) : null
+    if (!next || !Element.isElement(next) || editor.isVoid(next) || editor.isMaster(next)) {
+      Transforms.insertNodes(editor, {
+        type: 'paragraph', ...indentation, children: [{ text: '' }],
+      }, { at: nextPath })
+    }
+    // Reuse existing following text; only create a typing block when necessary.
+    Transforms.select(editor, Editor.start(editor, nextPath))
+    editor.marks = null
+  })
+  if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
+  else insert()
   return true
 }
 

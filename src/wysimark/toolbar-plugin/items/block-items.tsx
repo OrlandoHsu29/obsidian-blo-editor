@@ -64,7 +64,7 @@ export const expandedBlockItems: MenuItemData[] = [...blockItems]
 
 export const compactBlockItems: MenuItemData[] = [
   {
-    icon: Icon.H,
+    icon: Icon.ParagraphStyle,
     title: t("paragraphStyle"),
     more: true,
     children: blockItems,

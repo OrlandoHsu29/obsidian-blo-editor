@@ -1,5 +1,6 @@
 import { TablerIcon } from "../sink"
 import { useSlate } from "slate-react"
+import { Editor, Element } from "slate"
 export const Undo = () => <TablerIcon><path d="M3 7v6h6M3 13l4.5-4.5a7 7 0 1 1 1 10" /></TablerIcon>
 export const Redo = () => <TablerIcon><path d="M21 7v6h-6M21 13l-4.5-4.5a7 7 0 1 0-1 10" /></TablerIcon>
 export const ClearFormatting = () => <TablerIcon><path d="m16 3 5 5-11 11H5l-3-3L16 3zM9 10l8 8M10 19h11" /></TablerIcon>
@@ -68,6 +69,19 @@ export const H6 = () => (
   </TablerIcon>
 )
 
+/** Resolve only the focused block's ancestors, including headings inside lists. */
+export const ParagraphStyle = () => {
+  const editor = useSlate()
+  const entry = editor.selection && Editor.above(editor, {
+    at: editor.selection.focus,
+    match: node => Element.isElement(node) && node.type === 'heading',
+  })
+  const heading = entry?.[0]
+  const CurrentIcon = heading && Element.isElement(heading) && heading.type === 'heading'
+    ? [H1, H2, H3, H4, H5][heading.level - 1] || Normal
+    : Normal
+  return <CurrentIcon />
+}
 export const Normal = () => (
   <TablerIcon>
     <path d="M8 18V6h2l6 9V6h2v12h-2l-6-9v9H8z" />

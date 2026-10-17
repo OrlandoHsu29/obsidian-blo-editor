@@ -23,6 +23,18 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 
 ![Blo Editor 深色模式：标题、列表、行内代码、引用与大纲](assets/screenshot-dark.png)
 
+### 块结构与层级
+
+将段落、列表和代码组织成父子块，让内容层次更清晰。
+
+![Blo Editor 块结构：父子块、缩进文本、列表与代码块](assets/block-edit.png)
+
+### 快速创作
+
+在同一篇笔记中组合标题、有序列表、引用与表格。
+
+![Blo Editor 快速创作：标题、有序列表、引用与表格](assets/slash-menu.png)
+
 ## 安装与使用
 
 解压安装包，将 `blo-editor` 放入笔记库的 `.obsidian/plugins/`，

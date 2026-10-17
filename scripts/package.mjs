@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFile, mkdir, readFile, rm } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, rm } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -26,7 +26,11 @@ for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'READ
   await copyFile(resolve(root, file), resolve(destination, file))
 }
 await mkdir(resolve(destination, 'assets'), { recursive: true })
-await copyFile(resolve(root, 'assets/logo.png'), resolve(destination, 'assets/logo.png'))
+for (const asset of await readdir(resolve(root, 'assets'), { withFileTypes: true })) {
+  if (asset.isFile() && /\.(png|jpe?g|gif|webp|svg)$/i.test(asset.name)) {
+    await copyFile(resolve(root, 'assets', asset.name), resolve(destination, 'assets', asset.name))
+  }
+}
 // Keep distributable archives in releases/, separate from source files.
 const releases = resolve(root, 'releases')
 await mkdir(releases, { recursive: true })

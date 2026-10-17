@@ -26,6 +26,18 @@ Rich-text block editing with headings, nested lists, inline code, and quotes.
 
 ![Blo Editor in dark mode with headings, lists, inline code, quotes, and outline](assets/screenshot-dark.png)
 
+### Block structure
+
+Organize paragraphs, lists, and code into parent and child blocks.
+
+![Blo Editor showing parent and child blocks with indented text, lists, and a code block](assets/block-edit.png)
+
+### Writing workflow
+
+Combine headings, ordered lists, quotes, and tables in one document.
+
+![Blo Editor showing a writing plan with headings, an ordered list, a quote, and a table](assets/slash-menu.png)
+
 ## Installation
 
 1. Extract the release ZIP and copy `blo-editor` into your vault's `.obsidian/plugins/`.

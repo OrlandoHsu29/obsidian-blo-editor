@@ -27,4 +27,22 @@ for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'READ
 }
 await mkdir(resolve(destination, 'assets'), { recursive: true })
 await copyFile(resolve(root, 'assets/logo.png'), resolve(destination, 'assets/logo.png'))
-console.log(`Packaged ${manifest.name} ${manifest.version} in dist/${manifest.id}`)
+// Keep distributable archives beside the project, never in a personal vault.
+const archive = resolve(root, `${packageJson.name}-${manifest.version}.zip`)
+await rm(archive, { force: true })
+const zip = process.platform === 'win32'
+  ? spawnSync('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-Command',
+      'Compress-Archive -LiteralPath $env:BLO_PACKAGE_SOURCE -DestinationPath $env:BLO_PACKAGE_ARCHIVE -Force -ErrorAction Stop',
+    ], {
+      cwd: root,
+      stdio: 'inherit',
+      windowsHide: true,
+      env: { ...process.env, BLO_PACKAGE_SOURCE: destination, BLO_PACKAGE_ARCHIVE: archive },
+    })
+  : spawnSync('zip', ['-q', '-r', archive, manifest.id], { cwd: dist, stdio: 'inherit' })
+if (zip.error || zip.status !== 0) {
+  await rm(archive, { force: true })
+  throw zip.error ?? new Error('ZIP packaging failed; install zip on macOS/Linux')
+}
+console.log(`Packaged ${manifest.name} ${manifest.version}: ${archive}`)

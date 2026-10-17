@@ -26,3 +26,7 @@ observers, and timers when their owner closes.
 Do not commit personal vaults, credentials, `data.json`, dependencies, generated
 bundles, temporary profiling tools, or validation notes. Preserve the upstream
 copyright and MIT license when sharing modifications.
+
+Keep all development and release artifacts in this project. `npm run package`
+creates the versioned installation ZIP in the project root. Do not create
+source snapshots or release staging directories in a personal Obsidian vault.

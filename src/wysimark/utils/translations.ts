@@ -223,6 +223,10 @@ export const uiMessages = {
     "zh": "缩进为子块",
     "en": "Indent as child block"
   },
+  "删除块": {
+    "zh": "删除块",
+    "en": "Delete block"
+  },
   "减少缩进": {
     "zh": "减少缩进",
     "en": "Decrease indentation"

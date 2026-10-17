@@ -2,7 +2,9 @@ import { installImageViewerIntegration } from './image-viewer-integration';
 import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
-import { Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, MarkdownView, setIcon, setTooltip } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, MarkdownView, setIcon, setTooltip } from 'obsidian';
+import { DEFAULT_SETTINGS, InkNoteSettingsTab } from './settings';
+import type { EditorSettings } from './settings';
 import { InkNoteView, VIEW_TYPE_INKNOTE } from "./InkNoteView";
 import type { Editor } from 'slate';
 import { ReactEditor } from 'slate-react';
@@ -12,7 +14,7 @@ import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formattin
 
 export default class InkNoteEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
-  settings: { preferRichEditing: boolean; defaultTextColor: string | null; richEditingFolder: string } = { preferRichEditing: true, defaultTextColor: null, richEditingFolder: "" };
+  settings: EditorSettings = { ...DEFAULT_SETTINGS };
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
   async onload(): Promise<void> {
@@ -27,17 +29,7 @@ export default class InkNoteEditorPlugin extends Plugin {
       setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
     },true);
     this.settings = Object.assign(this.settings, await this.loadData());
-    const settingsTab = new (class extends PluginSettingTab { display() {} })(this.app, this);
-    settingsTab.display = () => {
-      settingsTab.containerEl.empty();
-      new Setting(settingsTab.containerEl).setName(ui("默认使用富文本编辑器")).setDesc(ui("Markdown 笔记默认使用富文本编辑；阅读视图不受影响。")).addToggle(toggle => toggle.setValue(this.settings.preferRichEditing).onChange(async value => {
-        this.settings.preferRichEditing = value; await this.saveData(this.settings);
-      }));
-      new Setting(settingsTab.containerEl).setName(ui("默认编辑范围")).setDesc(ui("留空应用于整个库；填写文件夹路径可限制范围。")).addText(text => text.setValue(this.settings.richEditingFolder).onChange(async value => {
-        this.settings.richEditingFolder = value.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""); await this.saveData(this.settings);
-      }));
-    };
-    this.addSettingTab(settingsTab);
+    this.addSettingTab(new InkNoteSettingsTab(this));
     installImageViewerIntegration(this);
 
     // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.
@@ -98,7 +90,7 @@ export default class InkNoteEditorPlugin extends Plugin {
     }, { capture: true });
 
     // Add ribbon icon to show/toggle the view
-    this.addRibbonIcon('pencil', '墨笺编辑器', () => {
+    this.addRibbonIcon('pencil', this.manifest.name, () => {
       void this.activateInkNoteView();
     });
 

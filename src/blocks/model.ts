@@ -65,6 +65,21 @@ export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
   if(delta<0&&blockDepth(editor.children[index])===0)return false
   return indentBlockGroups(editor,[index],delta)
 }
+/** Remove the same subtree that the block handle selects, as one undo step. */
+export function deleteBlockGroup(editor: Editor, index: number): boolean {
+  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
+  const end=groupEnd(editor.children,index)
+  batch(editor,()=>{
+    for(let i=end-1;i>=index;i--)Transforms.removeNodes(editor,{at:[i]})
+    if(!editor.children.length)Transforms.insertNodes(editor,{type:'paragraph',children:[{text:''}]},{at:[0]})
+    const target=Math.min(index,editor.children.length-1),node=editor.children[target]
+    // Structured neighbors stay selected rather than unexpectedly entering a cell or code.
+    const range=Editor.range(editor,[target])
+    Transforms.select(editor,Element.isElement(node)&&editor.isMaster(node)
+      ?range:target<index?range.focus:range.anchor)
+  })
+  return true
+}
 export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after') {
   if(editor.wysimark.readOnly||!editor.children[from]||!editor.children[target])return false
   const end=groupEnd(editor.children,from)

@@ -1,12 +1,13 @@
 {
   "name": "inknote-editor",
-  "version": "0.1.0",
-  "description": "富文本笔记、块编辑、表格、代码高亮与查找替换。基于 Wysimark Editor 二次开发。",
+  "version": "0.1.1",
+  "description": "Rich-text notes with block editing, tables, code highlighting, and find and replace. Based on Wysimark Editor.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
-    "typecheck": "tsc -noEmit -skipLibCheck"
+    "typecheck": "tsc -noEmit -skipLibCheck",
+    "package": "node scripts/package.mjs"
   },
   "keywords": [],
   "author": "OrlandoHsu29",

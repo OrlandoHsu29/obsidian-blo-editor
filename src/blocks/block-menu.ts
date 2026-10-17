@@ -2,7 +2,7 @@ import { Menu } from 'obsidian'
 import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, changeBlockIndent, indentSelectedBlocks } from './model'
+import { blockDepth, changeBlockIndent, deleteBlockGroup, indentSelectedBlocks } from './model'
 
 /** Both mouse buttons use the same native menu and the existing block selection. */
 export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement) {
@@ -21,6 +21,15 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
     .setIcon('indent-decrease')
     .setDisabled(blockDepth(editor.children[index]) === 0)
     .onClick(() => indent(-1)))
+
+  menu.addSeparator()
+  menu.addItem(item => item
+    .setTitle(ui('删除块'))
+    .setIcon('trash-2')
+    .onClick(() => {
+      deleteBlockGroup(editor, index)
+      ReactEditor.focus(editor)
+    }))
 
   // Tab must still indent the selected block while its menu has keyboard focus.
   const document = anchor.ownerDocument

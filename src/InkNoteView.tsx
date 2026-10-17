@@ -468,7 +468,7 @@ export class InkNoteView extends FileView {
   }
 
   getDisplayText(): string {
-    return this.currentFile ? this.currentFile.basename : '墨笺编辑器';
+    return this.currentFile ? this.currentFile.basename : this.plugin.manifest.name;
   }
 
   getIcon(): string {

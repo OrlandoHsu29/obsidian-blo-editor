@@ -1,2 +1,1 @@
-# The regression fixture intentionally includes whitespace-only Markdown lines.
-test/fixtures/startup-league.md whitespace=-blank-at-eol
+* text=auto eol=lf

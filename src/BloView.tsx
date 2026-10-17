@@ -13,7 +13,7 @@ import { DocumentTitle } from './DocumentTitle';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
-export const VIEW_TYPE_INKNOTE = 'inknote-view';
+export const VIEW_TYPE_BLO = 'blo-view';
 
 // Frontmatter regex: matches YAML frontmatter at the start of the file
 const FRONTMATTER_REGEX = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
@@ -409,7 +409,7 @@ function KnowledgeSpaceContainer({
   );
 }
 
-export class InkNoteView extends FileView {
+export class BloView extends FileView {
   plugin: Plugin;
   root: Root | null = null;
   currentFile: TFile | null = null;
@@ -464,7 +464,7 @@ export class InkNoteView extends FileView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_INKNOTE;
+    return VIEW_TYPE_BLO;
   }
 
   getDisplayText(): string {
@@ -513,7 +513,7 @@ export class InkNoteView extends FileView {
   async onLoadFile(file: TFile) { await this.loadContent(file); }
   async onUnloadFile(_file: TFile) { await this.saveFile(); this.currentFile = null; this.renderEditor(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
-  async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_INKNOTE, state: { file: file.path }, active: true }); }
+  async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path }, active: true }); }
   getMode() { return this.readOnly ? 'preview' : 'source'; }
   async setState(state: { file?: string; mode?: string }, result: { history: boolean }) {
     this.readOnly = state.mode === 'preview';

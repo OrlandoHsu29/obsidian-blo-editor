@@ -1,13 +1,13 @@
 # Contributing
 
 Use Node.js 22 and npm. Run `npm ci`, `npm run typecheck`, and `npm run package`.
-The installable plugin is generated in `dist/inknote-editor/`.
+The installable plugin is generated in `dist/blo-editor/`.
 
 ## Source layout
 
 - `src/main.ts`: Obsidian lifecycle, settings, and commands.
 - `src/settings.ts`: typed defaults and the native settings UI.
-- `src/InkNoteView.tsx`: file loading, saving, and rich-text view integration.
+- `src/BloView.tsx`: file loading, saving, and rich-text view integration.
 - `src/blocks/`: block structure, indentation, dragging, selection, and menus.
 - `src/search/`: document search and replacement.
 - `src/wysimark/`: editor plugins and Markdown parsing/serialization, derived from upstream.

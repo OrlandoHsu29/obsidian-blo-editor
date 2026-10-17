@@ -14,7 +14,7 @@ See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/
 
 ## Installation
 
-1. Extract the release ZIP and copy `inknote-editor` into your vault's `.obsidian/plugins/`.
+1. Extract the release ZIP and copy `blo-editor` into your vault's `.obsidian/plugins/`.
 2. Restart Obsidian and enable **Blo Editor** under Community plugins.
 3. Open a Markdown note. Disable other rich-text editor plugins to avoid competing default views.
 
@@ -52,7 +52,7 @@ npm run package
 ```
 
 Use Node.js 22. `npm run package` builds production code and creates a clean
-`dist/inknote-editor/` folder and `blo-editor-0.1.0.zip` in the project root.
+`dist/blo-editor/` folder and `blo-editor-0.1.0.zip` in the project root.
 Packaging uses PowerShell on Windows and `zip` on macOS/Linux.
 `npm run dev` watches source changes.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout and development rules.

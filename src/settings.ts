@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting } from 'obsidian'
-import type InkNoteEditorPlugin from './main'
+import type BloEditorPlugin from './main'
 import { ui } from './wysimark/utils/translations'
 
 export type EditorSettings = {
@@ -14,8 +14,8 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   richEditingFolder: '',
 }
 
-export class InkNoteSettingsTab extends PluginSettingTab {
-  constructor(private readonly editorPlugin: InkNoteEditorPlugin) {
+export class BloSettingsTab extends PluginSettingTab {
+  constructor(private readonly editorPlugin: BloEditorPlugin) {
     super(editorPlugin.app, editorPlugin)
   }
 

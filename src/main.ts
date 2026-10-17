@@ -3,16 +3,16 @@ import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
 import { Plugin, WorkspaceLeaf, TFile, MarkdownView, setIcon, setTooltip } from 'obsidian';
-import { DEFAULT_SETTINGS, InkNoteSettingsTab } from './settings';
+import { DEFAULT_SETTINGS, BloSettingsTab } from './settings';
 import type { EditorSettings } from './settings';
-import { InkNoteView, VIEW_TYPE_INKNOTE } from "./InkNoteView";
+import { BloView, VIEW_TYPE_BLO } from "./BloView";
 import type { Editor } from 'slate';
 import { ReactEditor } from 'slate-react';
 import { canOpenSlashMenu } from './slash-menu';
 import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods/text-color';
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 
-export default class InkNoteEditorPlugin extends Plugin {
+export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
@@ -29,7 +29,7 @@ export default class InkNoteEditorPlugin extends Plugin {
       setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
     },true);
     this.settings = Object.assign(this.settings, await this.loadData());
-    this.addSettingTab(new InkNoteSettingsTab(this));
+    this.addSettingTab(new BloSettingsTab(this));
     installImageViewerIntegration(this);
 
     // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.
@@ -44,28 +44,28 @@ export default class InkNoteEditorPlugin extends Plugin {
     this.registerDomEvent(document, 'click', previewImage);
 
     // Register the Wysimark view
-    this.registerView(VIEW_TYPE_INKNOTE, (leaf) => new InkNoteView(leaf, this));
+    this.registerView(VIEW_TYPE_BLO, (leaf) => new BloView(leaf, this));
     this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
-      const view=this.app.workspace.getActiveViewOfType(InkNoteView);if(!view?.editor||view.readOnly)return false;
+      const view=this.app.workspace.getActiveViewOfType(BloView);if(!view?.editor||view.readOnly)return false;
       if(!checking)clearFormatting(view.editor);return true;
     }});
     for (const [id, name, key, replace] of [['find-text',ui("查找当前文档"),'f',false],['replace-text',ui("替换当前文档"),'h',true]] as const) {
       this.addCommand({id, name, hotkeys:[{modifiers:['Mod'],key}], checkCallback:checking=>{
-        const view=this.app.workspace.getActiveViewOfType(InkNoteView);
+        const view=this.app.workspace.getActiveViewOfType(BloView);
         if (!view?.editor) return false;
         if (!checking) view.showSearch(replace);
         return true;
       }});
     }
     this.addCommand({id: 'slash-menu', name: ui("打开简洁命令菜单"), checkCallback: checking => {
-      const view = this.app.workspace.getActiveViewOfType(InkNoteView);
+      const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!view?.editor || !canOpenSlashMenu(view.editor)) return false;
       if (!checking) { view.editor.insertText('/'); ReactEditor.focus(view.editor); }
       return true;
     }});
     this.addCommand({ id: 'text-color', name: ui("应用上次字体颜色"), hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'C' }], checkCallback: checking => {
-      const view = this.app.workspace.getActiveViewOfType(InkNoteView);
-      if (!(view instanceof InkNoteView) || view.readOnly || !view.editor) return false;
+      const view = this.app.workspace.getActiveViewOfType(BloView);
+      if (!(view instanceof BloView) || view.readOnly || !view.editor) return false;
       if (!checking) {
         if (this.settings.defaultTextColor) toggleTextColor(view.editor, this.settings.defaultTextColor);
         else applyTextColor(view.editor, null);
@@ -80,9 +80,9 @@ export default class InkNoteEditorPlugin extends Plugin {
       const outline = this.app.workspace.getLeavesOfType('outline').find(leaf => leaf.view.containerEl.contains(item))?.view as any;
       const heading = outline?.cachedHeadingDom?.find((node: any) => node.selfEl === item)?.heading;
       if (!heading || !outline.file) return;
-      const active = this.app.workspace.getActiveViewOfType(InkNoteView);
-      const view = active instanceof InkNoteView && active.currentFile === outline.file ? active :
-        this.app.workspace.getLeavesOfType(VIEW_TYPE_INKNOTE).map(leaf => leaf.view).find(view => view instanceof InkNoteView && view.currentFile === outline.file) as InkNoteView | undefined;
+      const active = this.app.workspace.getActiveViewOfType(BloView);
+      const view = active instanceof BloView && active.currentFile === outline.file ? active :
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_BLO).map(leaf => leaf.view).find(view => view instanceof BloView && view.currentFile === outline.file) as BloView | undefined;
       if (!view) return;
       event.preventDefault(); event.stopImmediatePropagation();
       void this.app.workspace.revealLeaf(view.leaf);
@@ -91,7 +91,7 @@ export default class InkNoteEditorPlugin extends Plugin {
 
     // Add ribbon icon to show/toggle the view
     this.addRibbonIcon('pencil', this.manifest.name, () => {
-      void this.activateInkNoteView();
+      void this.activateBloView();
     });
 
     // Add command to toggle sidebar
@@ -99,22 +99,22 @@ export default class InkNoteEditorPlugin extends Plugin {
       id: 'toggle-sidebar',
       name: ui("打开富文本编辑器"),
       callback: () => {
-        void this.activateInkNoteView();
+        void this.activateBloView();
       },
     });
     this.addCommand({ id: 'open-native-editor', name: ui("在当前标签打开原生编辑器"), callback: async () => {
       const leaf = this.app.workspace.activeLeaf;
-      if (!leaf || !(leaf.view instanceof InkNoteView) || !leaf.view.currentFile) return;
+      if (!leaf || !(leaf.view instanceof BloView) || !leaf.view.currentFile) return;
       const file = leaf.view.currentFile; await leaf.view.saveFile(); this.nativeLeaves.add(leaf);
       await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
     }});
     this.addCommand({ id: 'toggle-reading', name: ui("切换富文本编辑与阅读"), callback: async () => {
       const leaf = this.app.workspace.activeLeaf;
       if (!leaf) return;
-      if (leaf.view instanceof InkNoteView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
+      if (leaf.view instanceof BloView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
       if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
       const file = leaf.view.file, mode = leaf.view.getMode(); await leaf.view.save();
-      await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
     }});
 
     // Listen for active file changes
@@ -148,7 +148,7 @@ export default class InkNoteEditorPlugin extends Plugin {
     try {
       await leaf.view.save();
       if (!(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
-      await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, state: { file: file.path, mode }, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode }, active: true });
     } finally { this.openingLeaves.delete(leaf); }
   }
 
@@ -171,18 +171,18 @@ export default class InkNoteEditorPlugin extends Plugin {
     void this.saveData(this.settings);
     applyTextColor(editor, color);
   }
-  async activateInkNoteView(): Promise<void> {
+  async activateBloView(): Promise<void> {
     const { workspace } = this.app;
     const activeFile = this.app.workspace.getActiveFile();
     let leaf: WorkspaceLeaf | null = null;
 
-    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_INKNOTE);
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_BLO);
     if (existingLeaves.length > 0) {
       leaf = existingLeaves[0];
     } else {
       leaf = workspace.getLeaf('tab');
       if (leaf) {
-        await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, active: true });
+        await leaf.setViewState({ type: VIEW_TYPE_BLO, active: true });
       }
     }
 
@@ -191,7 +191,7 @@ export default class InkNoteEditorPlugin extends Plugin {
 
       // Load the current active file
       if (activeFile && activeFile.extension === 'md') {
-        const view = leaf.view as InkNoteView;
+        const view = leaf.view as BloView;
         if (view && view.loadNote) {
           await view.loadNote(activeFile);
         }

@@ -11,7 +11,7 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 
 ## 安装与使用
 
-解压安装包，将 `inknote-editor` 放入笔记库的 `.obsidian/plugins/`，
+解压安装包，将 `blo-editor` 放入笔记库的 `.obsidian/plugins/`，
 重启 Obsidian 后在第三方插件中启用 **Blo Editor**。需要桌面版 Obsidian 1.8.7 或更新版本。
 
 点击六点块柄会选中整块并打开菜单；Tab / Shift+Tab 调整缩进，拖动父块时包含子块。
@@ -32,7 +32,7 @@ Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
 ## 构建
 
 使用 Node.js 22，依次执行 `npm ci`、`npm run typecheck`、`npm run package`。
-安装文件生成在 `dist/inknote-editor/`，安装包 ZIP 直接生成在项目根目录，文件名随版本变化。
+安装文件生成在 `dist/blo-editor/`，安装包 ZIP 直接生成在项目根目录，文件名随版本变化。
 Windows 使用 PowerShell 打包，macOS/Linux 需要 `zip` 命令。产物不包含个人设置、笔记、附件或迁移工具。
 项目结构和维护约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

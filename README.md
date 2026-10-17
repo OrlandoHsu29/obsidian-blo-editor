@@ -1,5 +1,9 @@
 # Blo Editor
 
+<p align="center">
+  <img src="assets/logo.png" alt="Blo Editor logo" width="128" height="128">
+</p>
+
 A Yuque-inspired block editor for Obsidian, built on Wysimark Editor and Slate.
 Blo comes from block. Maintained by **OrlandoHsu29**.
 Based on [Wysimark Editor](https://github.com/takeshy/obsidian-wysimark) 1.3.2

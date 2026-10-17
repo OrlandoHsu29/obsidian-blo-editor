@@ -25,4 +25,6 @@ await mkdir(destination, { recursive: true })
 for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'README.zh-CN.md', 'LICENSE', 'UPSTREAM.json']) {
   await copyFile(resolve(root, file), resolve(destination, file))
 }
+await mkdir(resolve(destination, 'assets'), { recursive: true })
+await copyFile(resolve(root, 'assets/logo.png'), resolve(destination, 'assets/logo.png'))
 console.log(`Packaged ${manifest.name} ${manifest.version} in dist/${manifest.id}`)

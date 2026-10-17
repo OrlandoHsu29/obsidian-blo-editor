@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 — 2026-10-17
+
+- Add the project logo to both READMEs and distributable packages.
+- Prepare bilingual GitHub release notes.
+
 ## 0.1.2 — 2026-10-17
 
 - Rename the plugin to Blo Editor, from block.

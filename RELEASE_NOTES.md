@@ -1,4 +1,4 @@
-# Blo Editor v0.1.3 · 块编辑 / Block Editing
+# Blo Editor v0.1.0 · 块编辑 / Block Editing
 
 遵循语雀编辑习惯的 Obsidian 块编辑器。Blo 取自 block，基于 Wysimark Editor 二次开发，底层使用 Slate。
 
@@ -14,9 +14,9 @@ A Yuque-inspired block editor for Obsidian. Blo comes from block, built on Wysim
 
 ## 安装 / Installation
 
-下载 `blo-editor-0.1.3.zip`，解压后将 `inknote-editor` 文件夹放入笔记库的 `.obsidian/plugins/`，重启 Obsidian 并启用 **Blo Editor**。
+下载 `blo-editor-0.1.0.zip`，解压后将 `inknote-editor` 文件夹放入笔记库的 `.obsidian/plugins/`，重启 Obsidian 并启用 **Blo Editor**。
 
-Download `blo-editor-0.1.3.zip`, extract the `inknote-editor` folder into your vault's `.obsidian/plugins/`, restart Obsidian, and enable **Blo Editor**.
+Download `blo-editor-0.1.0.zip`, extract the `inknote-editor` folder into your vault's `.obsidian/plugins/`, restart Obsidian, and enable **Blo Editor**.
 
 需要桌面版 Obsidian 1.8.7 或更新版本。内部插件 ID 暂保留为 `inknote-editor`，以兼容已有设置和快捷键。基于原生 CodeMirror 的编辑插件需要单独适配。
 

@@ -13,7 +13,7 @@ const valueStyle = { color: "var(--code-value, var(--color-orange))" }
 const keywordStyle = { color: "var(--code-keyword, var(--color-purple))" }
 const functionStyle = { color: "var(--code-function, var(--color-blue))" }
 const tagStyle = { color: "var(--code-tag, var(--color-blue))" }
-const boldStyle = { fontWeight: "bold" }
+const regularStyle = { fontWeight: "inherit" }
 const italicStyle = { fontStyle: "italic" }
 
 type TokenStyles = Record<string, CSSProperties>
@@ -51,11 +51,11 @@ export const tokenStyles: TokenStyles = {
   atrule: keywordStyle,
   keyword: keywordStyle,
   "attr-name": keywordStyle,
-  function: { ...functionStyle, ...boldStyle },
+  function: functionStyle,
   delete: functionStyle,
   tag: tagStyle,
   selector: tagStyle,
-  important: boldStyle,
-  bold: boldStyle,
+  important: regularStyle,
+  bold: regularStyle,
   italic: italicStyle,
 }

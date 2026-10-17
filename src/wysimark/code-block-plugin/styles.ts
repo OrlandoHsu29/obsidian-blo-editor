@@ -96,8 +96,8 @@ export const $CodeBlockLine = styled("div")`
   white-space: pre;
   line-height: 1.5em;
   counter-increment: line;
-  font-family: "Cascadia Code", "Cascadia Mono", Consolas, var(--font-monospace), monospace;
-  font-weight: 300;
+  font-family: Consolas, "SFMono-Regular", Menlo, Monaco, var(--font-monospace), monospace;
+  font-weight: 400;
   font-size: 0.875em;
   /*
     DO NOT REMOVE: Code for adding line numbering.

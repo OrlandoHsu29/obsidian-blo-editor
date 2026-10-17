@@ -1,0 +1,46 @@
+// Offline Prism grammars, ordered using Prism's dependency metadata.
+import Prism from "prismjs"
+import "prismjs/components/prism-clike"
+import "prismjs/components/prism-c"
+import "prismjs/components/prism-cpp"
+import "prismjs/components/prism-csharp"
+import "prismjs/components/prism-java"
+import "prismjs/components/prism-markup"
+import "prismjs/components/prism-javascript"
+import "prismjs/components/prism-css"
+import "prismjs/components/prism-yaml"
+import "prismjs/components/prism-markdown"
+import "prismjs/components/prism-sql"
+import "prismjs/components/prism-typescript"
+import "prismjs/components/prism-python"
+import "prismjs/components/prism-bash"
+import "prismjs/components/prism-powershell"
+import "prismjs/components/prism-batch"
+import "prismjs/components/prism-armasm"
+import "prismjs/components/prism-nasm"
+import "prismjs/components/prism-verilog"
+import "prismjs/components/prism-vhdl"
+import "prismjs/components/prism-makefile"
+import "prismjs/components/prism-cmake"
+import "prismjs/components/prism-rust"
+import "prismjs/components/prism-go"
+import "prismjs/components/prism-lua"
+import "prismjs/components/prism-json"
+import "prismjs/components/prism-toml"
+import "prismjs/components/prism-ini"
+import "prismjs/components/prism-diff"
+import "prismjs/components/prism-docker"
+import "prismjs/components/prism-latex"
+import "prismjs/components/prism-matlab"
+import "prismjs/components/prism-kotlin"
+import "prismjs/components/prism-swift"
+import "prismjs/components/prism-ruby"
+import "prismjs/components/prism-markup-templating"
+import "prismjs/components/prism-php"
+
+export const LanguageList=["text","c","cpp","csharp","java","javascript","typescript","python","bash","powershell","batch","armasm","nasm","verilog","vhdl","makefile","cmake","rust","go","lua","sql","json","yaml","toml","ini","html","svg","css","markdown","diff","docker","latex","matlab","kotlin","swift","ruby","php","mermaid"] as const
+export const languageAliases:Record<string,string>={"c++":"cpp","c#":"csharp","arm":"armasm","asm":"nasm","assembly":"nasm","ps1":"powershell","bat":"batch","cmd":"batch","cs":"csharp","dotnet":"csharp","js":"javascript","ts":"typescript","py":"python","sh":"bash","shell":"bash","arm-asm":"armasm","webmanifest":"json","yml":"yaml","html":"markup","xml":"markup","svg":"markup","mathml":"markup","ssml":"markup","atom":"markup","rss":"markup","md":"markdown","dockerfile":"docker","tex":"latex","context":"latex","kt":"kotlin","kts":"kotlin","rb":"ruby"}
+export function getCodeGrammar(language:string) {
+ const name=language.toLowerCase();return Prism.languages[languageAliases[name]||name] as Prism.Grammar|undefined
+}
+export default Prism

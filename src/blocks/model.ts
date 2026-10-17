@@ -1,0 +1,119 @@
+import { Editor, Element, Node, NodeEntry, Path, Point, Range, Transforms } from 'slate'
+import { HistoryEditor } from 'slate-history'
+
+type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart'; __firstAtDepth?: boolean; depth?: number; start?: number }
+export const blockDepth = (node: Node): number => Element.isElement(node) ? Math.max(0, (node as Block).__blockDepth ?? (node as Block).depth ?? 0) : 0
+export const isListBlock = (node: Node) => Element.isElement(node) && ['ordered-list-item','unordered-list-item','task-list-item'].includes(node.type)
+export const isEditorSpacer = (node: Node) => Element.isElement(node)&&node.type==='paragraph'&&node.__collapsible&&Node.string(node)===''
+export function groupEnd(nodes: Node[], start: number) {
+  let end=start+1;while(end<nodes.length&&(isEditorSpacer(nodes[end])||blockDepth(nodes[end])>blockDepth(nodes[start])))end++;return end
+}
+const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>}>()
+export function rootCache(editor: Editor) {
+  let cache=caches.get(editor)
+  if (!cache || cache.children!==editor.children) {
+    cache={children:editor.children,indices:new Map(editor.children.map((node,index)=>[node,index])),numbers:orderedNumbers(editor.children)};caches.set(editor,cache)
+  }
+  return cache
+}
+export function orderedNumbers(nodes: Node[]) {
+  const counts=new Map<number,number>(), result=new Map<Node,number>()
+  for(const node of nodes) {
+    if(isEditorSpacer(node))continue
+    const depth=blockDepth(node)
+    for(const level of counts.keys())if(level>depth)counts.delete(level)
+    if(Element.isElement(node)&&node.type==='ordered-list-item') {
+      const block=node as Block
+      const number=block.start ?? (block.__numbering==='restart' ? 1 : block.__numbering==='continue' ? (counts.get(depth)||0)+1 : block.__firstAtDepth ? 1 : (counts.get(depth)||0)+1)
+      counts.set(depth,number);result.set(node,number)
+    }
+    // Text at this level leaves its counter intact. A shallower block clears deeper levels.
+  }
+  return result
+}
+function batch(editor: Editor, run: ()=>void) {
+  const apply=()=>Editor.withoutNormalizing(editor,run)
+  if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,apply);else apply()
+}
+function depthProps(node: Node, depth: number) {return isEditorSpacer(node)?{}:isListBlock(node)?{depth,__blockDepth:depth}:{__blockDepth:depth}}
+/** Tab moves quote blocks and their descendants; it never wraps another quote. */
+export function indentSelectedQuoteBlocks(editor:Editor,delta:1|-1):boolean {
+  return indentSelection(editor,delta,true)
+}
+/** Every root block has the same indentation and subtree movement behavior. */
+export function indentSelectedBlocks(editor:Editor,delta:1|-1):boolean {
+  return indentSelection(editor,delta,false)
+}
+function indentSelection(editor:Editor,delta:1|-1,quotesOnly:boolean):boolean {
+  if(editor.wysimark.readOnly||!editor.selection)return false
+  const [start,end]=Range.edges(editor.selection)
+  const endsBeforeBlock=Range.isExpanded(editor.selection)&&end.path[0]>start.path[0]&&Point.equals(end,Editor.start(editor,[end.path[0]]))
+  const indices=editor.children.map((node,index)=>({node,index})).slice(start.path[0],end.path[0]+(endsBeforeBlock?0:1)).filter(({node})=>!isEditorSpacer(node))
+  if(!indices.length||indices.some(({node})=>!Element.isElement(node)||(quotesOnly&&node.type!=='block-quote')))return false
+  return indentBlockGroups(editor,indices.map(({index})=>index),delta)
+}
+function indentBlockGroups(editor:Editor,indices:number[],delta:1|-1):boolean {
+  if(editor.wysimark.readOnly||!indices.length)return false
+  const groups:{start:number;end:number}[]=[]
+  for(const index of indices)if(!groups.length||index>=groups[groups.length-1].end)groups.push({start:index,end:groupEnd(editor.children,index)})
+  if(delta>0&&groups.some(group=>editor.children.slice(group.start,group.end).some(node=>blockDepth(node)>=32)))return true
+  batch(editor,()=>{for(const group of groups){if(delta<0&&blockDepth(editor.children[group.start])===0)continue;for(let i=group.start;i<group.end;i++)Transforms.setNodes(editor,depthProps(editor.children[i],blockDepth(editor.children[i])+delta),{at:[i]})}})
+  return true
+}
+export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
+  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
+  if(delta<0&&blockDepth(editor.children[index])===0)return false
+  return indentBlockGroups(editor,[index],delta)
+}
+export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after') {
+  if(editor.wysimark.readOnly||!editor.children[from]||!editor.children[target])return false
+  const end=groupEnd(editor.children,from)
+  if(target>=from&&target<end)return false
+  const destination=position==='before'?target:position==='after'?groupEnd(editor.children,target):target+1
+  const depth=blockDepth(editor.children[target])+(position==='inside'?1:0),delta=depth-blockDepth(editor.children[from])
+  if(editor.children.slice(from,end).some(node=>blockDepth(node)+delta>32))return false
+  const nodes=editor.children.slice(from,end).map(node=>({...node,...depthProps(node,blockDepth(node)+delta)}))
+  const adjusted=destination>end-1?destination-(end-from):destination
+  batch(editor,()=>{
+    for(let i=end-1;i>=from;i--)Transforms.removeNodes(editor,{at:[i]})
+    Transforms.insertNodes(editor,nodes,{at:[adjusted]})
+    Transforms.select(editor,Editor.start(editor,[adjusted]))
+  });return true
+}
+export function setNumbering(editor: Editor, index: number, mode:'continue'|'restart') {
+  const node=editor.children[index]
+  if(editor.wysimark.readOnly||!Element.isElement(node)||node.type!=='ordered-list-item')return
+  batch(editor,()=>{Transforms.unsetNodes(editor,'start',{at:[index]});Transforms.setNodes(editor,{__numbering:mode},{at:[index]})})
+}
+/** Connected default lists are dynamic; source starts must not pin old numbers after a conversion. */
+export function reflowFollowingLists(editor: Editor, path: Path, depth = blockDepth(Node.get(editor,path))) {
+  const parent=Node.parent(editor,path),parentPath=Path.parent(path)
+  for(let i=path[path.length-1]+1;i<parent.children.length;i++) {
+    const node=parent.children[i]
+    if(isEditorSpacer(node))continue
+    if(blockDepth(node)<depth)break
+    if(blockDepth(node)!==depth||!Element.isElement(node)||node.type!=='ordered-list-item')continue
+    if(node.__numbering==='restart')break
+    const at=[...parentPath,i]
+    Transforms.unsetNodes(editor,'start',{at})
+    if(node.__numbering!=='continue')Transforms.setNodes(editor,{__numbering:'continue'},{at})
+  }
+}
+/** Normalize actual text, including native DOM insertions, paste and formatted prefixes. */
+export function normalizeOrderedText(editor: Editor, [node,path]: NodeEntry): boolean {
+  if(editor.wysimark.readOnly||!Element.isElement(node)||!['paragraph','unordered-list-item','task-list-item','ordered-list-item'].includes(node.type)||('blockChildren' in node&&node.blockChildren))return false
+  // Explicitly escaped source text stays literal until that block's text is edited.
+  if(node.__literalOrderedText===Node.string(node))return false
+  const match=Node.string(node).match(/^(\d{1,6})\. /)
+  if(!match||Number(match[1])<1)return false
+  let prefixLength=match[0].length
+  for(const [text] of Node.texts(node)){if(prefixLength<=0)break;if(text.text.length&&text.code)return false;prefixLength-=text.text.length}
+  const start=Editor.start(editor,path),end=Editor.after(editor,start,{distance:match[0].length,unit:'offset'})
+  if(!end)return false
+  Editor.withoutNormalizing(editor,()=>{
+    Transforms.delete(editor,{at:{anchor:start,focus:end}})
+    Transforms.setNodes(editor,{type:'ordered-list-item',depth:blockDepth(node),start:Number(match[1]),__numbering:'restart'},{at:path})
+    Transforms.unsetNodes(editor,'__literalOrderedText',{at:path})
+    reflowFollowingLists(editor,path,blockDepth(node))
+  });return true
+}

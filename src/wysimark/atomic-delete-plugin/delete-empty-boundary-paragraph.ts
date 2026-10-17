@@ -1,0 +1,39 @@
+import { Editor, Element, Node, Path, Range, Text, Transforms } from 'slate'
+import { HistoryEditor } from 'slate-history'
+
+/** Delete the empty text block, never merge it into an adjacent structured block. */
+export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backward' | 'forward'): boolean {
+  if(editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection))return false
+  const entry=Editor.above(editor,{match:n=>Element.isElement(n)&&n.type==='paragraph'})
+  if(!entry)return false
+  const [paragraph,path]=entry
+  if(!Element.isElement(paragraph)||paragraph.type!=='paragraph'||paragraph.__collapsible||!paragraph.children.every(n=>Text.isText(n)&&n.text===''))return false
+  const parent=Node.parent(editor,path),index=path[path.length-1],previous=parent.children[index-1],next=parent.children[index+1]
+  const protectedBlock=(n:Node|undefined)=>!!n&&Element.isElement(n)&&editor.isMaster(n)
+  if(!protectedBlock(previous)&&!protectedBlock(next))return false
+  const nextRef=next?Editor.pathRef(editor,Path.next(path)):null
+  const previousRef=previous?Editor.pathRef(editor,Path.previous(path)):null
+  const remove=()=>{
+    // A merge into preceding text records the caret movement in the structural
+    // operation, so undo/redo also restore the correct side of the boundary.
+    if(previous&&!protectedBlock(previous)&&(direction==='backward'||protectedBlock(next))) {
+      Transforms.mergeNodes(editor,{at:path})
+      if(previousRef?.current)Transforms.select(editor,Editor.end(editor,previousRef.current))
+      return
+    }
+    Transforms.removeNodes(editor,{at:path})
+    // Backspace returns to the preceding text; Delete advances to the next
+    // text. Neither may place the caret inside a table or code block.
+    const after=nextRef?.current || (Node.has(editor,path)?path:null)
+    const before=previousRef?.current
+    const previousText=before&&!protectedBlock(Node.get(editor,before))?before:null
+    const nextText=after&&!protectedBlock(Node.get(editor,after))?after:null
+    if(direction==='backward'&&previousText)Transforms.select(editor,Editor.end(editor,previousText))
+    else if(nextText)Transforms.select(editor,Editor.start(editor,nextText))
+    else if(previousText)Transforms.select(editor,Editor.end(editor,previousText))
+    else if(after||before)Transforms.select(editor,Editor.range(editor,(after||before)!))
+  }
+  try{if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,remove);else remove()}
+  finally{nextRef?.unref();previousRef?.unref()}
+  return true
+}

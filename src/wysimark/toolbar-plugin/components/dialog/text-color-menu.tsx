@@ -1,0 +1,46 @@
+import { ui } from "../../../utils/translations"
+import { useEffect, useId, useRef, useState } from 'react'
+import { Editor, Transforms } from 'slate'
+import { ReactEditor, useSlateStatic } from 'slate-react'
+import { $Panel, CloseMask } from '../../../shared-overlays'
+import { useAbsoluteReposition } from '../../../use-reposition'
+
+export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => void}) {
+  const labelId=useId()
+  const editor = useSlateStatic(), ref = useRef<HTMLDivElement>(null)
+  const [selection] = useState(() => editor.selection ? Editor.rangeRef(editor, editor.selection) : null)
+  const current = editor.wysimark.getTextColor?.() ?? null
+  const style = useAbsoluteReposition({src: ref, dest}, ({dest, src}, viewport) => ({
+    left: Math.max(viewport.left + 8, Math.min(dest.left, viewport.right - (src?.width || 300) - 8)),
+    top: dest.bottom + 8,
+  }))
+  useEffect(() => () => { selection?.unref() }, [selection])
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); ReactEditor.focus(editor) }
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [close, editor])
+  const apply = (color: string | null) => {
+    if (selection?.current) Transforms.select(editor, selection.current)
+    editor.wysimark.setTextColor?.(color)
+    close(); ReactEditor.focus(editor)
+  }
+  const colors = [[ui("红色"),'#DF2A3F'],[ui("橙色"),'#ED740C'],[ui("黄色"),'#AD8500'],[ui("绿色"),'#00A650'],[ui("蓝色"),'#1677FF'],[ui("紫色"),'#7C3AED'],[ui("灰色"),'#787878']]
+  const check=<svg className="wysimark-color-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10" /></svg>
+  return <>
+    <CloseMask close={close} />
+    <$Panel ref={ref} style={style} className="wysimark-text-color-menu" role="dialog" aria-labelledby={labelId} onMouseDown={event => {
+      if (!(event.target instanceof HTMLInputElement)) event.preventDefault()
+    }}>
+      <span id={labelId} hidden>{ui("字体颜色")}</span>
+      <div className="wysimark-color-palette" role="group" aria-labelledby={labelId+'-group'}>
+        <span id={labelId+'-group'} hidden>{ui("颜色")}</span>
+        <button aria-label={ui("系统颜色")} data-tooltip-position="bottom" data-text-color="system" aria-pressed={current === null} style={{'--swatch-color':'var(--text-normal)'} as React.CSSProperties} onClick={() => apply(null)}>{check}</button>
+        <span className="wysimark-color-separator" role="separator" aria-orientation="vertical" />
+        {colors.map(([name,color]) => <button key={color} aria-label={name} data-tooltip-position="bottom" data-text-color={color} aria-pressed={current?.toUpperCase() === color} style={{'--swatch-color':color} as React.CSSProperties} onClick={() => apply(color)}>{check}</button>)}
+      </div>
+    </$Panel>
+  </>
+}

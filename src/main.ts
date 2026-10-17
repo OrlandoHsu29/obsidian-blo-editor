@@ -1,0 +1,210 @@
+import { installImageViewerIntegration } from './image-viewer-integration';
+import { ui } from "./wysimark/utils/translations"
+import { createEditorStyleCache } from './style-cache';
+import { installOutlineFilter } from './outline';
+import { Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, MarkdownView, setIcon, setTooltip } from 'obsidian';
+import { InkNoteView, VIEW_TYPE_INKNOTE } from "./InkNoteView";
+import type { Editor } from 'slate';
+import { ReactEditor } from 'slate-react';
+import { canOpenSlashMenu } from './slash-menu';
+import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods/text-color';
+import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
+
+export default class InkNoteEditorPlugin extends Plugin {
+  readonly styleCache=createEditorStyleCache();
+  settings: { preferRichEditing: boolean; defaultTextColor: string | null; richEditingFolder: string } = { preferRichEditing: true, defaultTextColor: null, richEditingFolder: "" };
+  private nativeLeaves = new WeakSet<WorkspaceLeaf>();
+  private openingLeaves = new WeakSet<WorkspaceLeaf>();
+  async onload(): Promise<void> {
+    await super.onload();
+    this.register(()=>this.styleCache.sheet.flush());
+    installOutlineFilter(this);
+    // Set native tooltip options before Obsidian's delegated hover handler runs.
+    this.registerDomEvent(document,'mouseover',event=>{
+      const control=(event.target as Element|null)?.closest<HTMLElement>('[aria-label]');
+      if(!control?.closest('.wysimark-container, .wysimark-overlay, .oit-img-toolbar'))return;
+      const placement=control.dataset.tooltipPosition;
+      setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
+    },true);
+    this.settings = Object.assign(this.settings, await this.loadData());
+    const settingsTab = new (class extends PluginSettingTab { display() {} })(this.app, this);
+    settingsTab.display = () => {
+      settingsTab.containerEl.empty();
+      new Setting(settingsTab.containerEl).setName(ui("默认使用富文本编辑器")).setDesc(ui("Markdown 笔记默认使用富文本编辑；阅读视图不受影响。")).addToggle(toggle => toggle.setValue(this.settings.preferRichEditing).onChange(async value => {
+        this.settings.preferRichEditing = value; await this.saveData(this.settings);
+      }));
+      new Setting(settingsTab.containerEl).setName(ui("默认编辑范围")).setDesc(ui("留空应用于整个库；填写文件夹路径可限制范围。")).addText(text => text.setValue(this.settings.richEditingFolder).onChange(async value => {
+        this.settings.richEditingFolder = value.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""); await this.saveData(this.settings);
+      }));
+    };
+    this.addSettingTab(settingsTab);
+    installImageViewerIntegration(this);
+
+    // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.
+    const previewImage = (event: MouseEvent) => {
+      const image = event.target;
+      if (!(image instanceof HTMLImageElement) || !image.closest('.wysimark-container')) return;
+      if (event.type === 'click' && !image.closest('.wysimark-reading')) return;
+      const toolkit = (this.app as any).plugins.plugins['obsidian-image-toolkit'];
+      toolkit?.clickImage?.(event);
+    };
+    this.registerDomEvent(document, 'dblclick', previewImage);
+    this.registerDomEvent(document, 'click', previewImage);
+
+    // Register the Wysimark view
+    this.registerView(VIEW_TYPE_INKNOTE, (leaf) => new InkNoteView(leaf, this));
+    this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
+      const view=this.app.workspace.getActiveViewOfType(InkNoteView);if(!view?.editor||view.readOnly)return false;
+      if(!checking)clearFormatting(view.editor);return true;
+    }});
+    for (const [id, name, key, replace] of [['find-text',ui("查找当前文档"),'f',false],['replace-text',ui("替换当前文档"),'h',true]] as const) {
+      this.addCommand({id, name, hotkeys:[{modifiers:['Mod'],key}], checkCallback:checking=>{
+        const view=this.app.workspace.getActiveViewOfType(InkNoteView);
+        if (!view?.editor) return false;
+        if (!checking) view.showSearch(replace);
+        return true;
+      }});
+    }
+    this.addCommand({id: 'slash-menu', name: ui("打开简洁命令菜单"), checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(InkNoteView);
+      if (!view?.editor || !canOpenSlashMenu(view.editor)) return false;
+      if (!checking) { view.editor.insertText('/'); ReactEditor.focus(view.editor); }
+      return true;
+    }});
+    this.addCommand({ id: 'text-color', name: ui("应用上次字体颜色"), hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'C' }], checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(InkNoteView);
+      if (!(view instanceof InkNoteView) || view.readOnly || !view.editor) return false;
+      if (!checking) {
+        if (this.settings.defaultTextColor) toggleTextColor(view.editor, this.settings.defaultTextColor);
+        else applyTextColor(view.editor, null);
+      }
+      return true;
+    }});
+    this.registerDomEvent(document, 'click', event => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const target = event.target as HTMLElement;
+      const item = target.closest?.('.tree-item-self');
+      if (!item || target.closest('.collapse-icon')) return;
+      const outline = this.app.workspace.getLeavesOfType('outline').find(leaf => leaf.view.containerEl.contains(item))?.view as any;
+      const heading = outline?.cachedHeadingDom?.find((node: any) => node.selfEl === item)?.heading;
+      if (!heading || !outline.file) return;
+      const active = this.app.workspace.getActiveViewOfType(InkNoteView);
+      const view = active instanceof InkNoteView && active.currentFile === outline.file ? active :
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_INKNOTE).map(leaf => leaf.view).find(view => view instanceof InkNoteView && view.currentFile === outline.file) as InkNoteView | undefined;
+      if (!view) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      void this.app.workspace.revealLeaf(view.leaf);
+      view.navigateToHeading(heading.heading, heading.position.start.line);
+    }, { capture: true });
+
+    // Add ribbon icon to show/toggle the view
+    this.addRibbonIcon('pencil', '墨笺编辑器', () => {
+      void this.activateInkNoteView();
+    });
+
+    // Add command to toggle sidebar
+    this.addCommand({
+      id: 'toggle-sidebar',
+      name: ui("打开富文本编辑器"),
+      callback: () => {
+        void this.activateInkNoteView();
+      },
+    });
+    this.addCommand({ id: 'open-native-editor', name: ui("在当前标签打开原生编辑器"), callback: async () => {
+      const leaf = this.app.workspace.activeLeaf;
+      if (!leaf || !(leaf.view instanceof InkNoteView) || !leaf.view.currentFile) return;
+      const file = leaf.view.currentFile; await leaf.view.saveFile(); this.nativeLeaves.add(leaf);
+      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
+    }});
+    this.addCommand({ id: 'toggle-reading', name: ui("切换富文本编辑与阅读"), callback: async () => {
+      const leaf = this.app.workspace.activeLeaf;
+      if (!leaf) return;
+      if (leaf.view instanceof InkNoteView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
+      if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
+      const file = leaf.view.file, mode = leaf.view.getMode(); await leaf.view.save();
+      await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
+    }});
+
+    // Listen for active file changes
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', (leaf) => {
+        if (leaf) {
+          const view = leaf.view;
+          if (view instanceof MarkdownView) {
+            const file = view.file;
+            if (file && file.extension === 'md') {
+              void this.openRichByDefault(leaf, file);
+            }
+          }
+        }
+      })
+    );
+    this.registerEvent(this.app.workspace.on('file-open', file => {
+      const leaf = this.app.workspace.activeLeaf;
+      if (leaf && file) void this.openRichByDefault(leaf, file);
+    }));
+    this.app.workspace.onLayoutReady(() => {
+      const leaf = this.app.workspace.activeLeaf;
+      if (leaf?.view instanceof MarkdownView && leaf.view.file) void this.openRichByDefault(leaf, leaf.view.file);
+    });
+  }
+  private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
+    if (!this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || (this.settings.richEditingFolder && !file.path.startsWith(this.settings.richEditingFolder + "/")) ||
+      !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+    const mode = leaf.view.getMode();
+    this.openingLeaves.add(leaf);
+    try {
+      await leaf.view.save();
+      if (!(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+      await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, state: { file: file.path, mode }, active: true });
+    } finally { this.openingLeaves.delete(leaf); }
+  }
+
+  onunload(): void {
+    // Views, events, and commands registered via registerView/registerEvent/addCommand
+    // are automatically cleaned up by Obsidian's plugin system.
+    // Do NOT call detachLeavesOfType here to preserve user's layout during plugin updates.
+  }
+
+  // Activate/reveal the Wysimark view
+  openTextColor(editor: Editor) {
+    if (editor.wysimark.readOnly) return;
+    const root = ReactEditor.toDOMNode(editor, editor).closest('.wysimark-container');
+    root?.querySelector('[data-wysimark-text-color-icon]')?.closest<HTMLElement>('[data-item-type="button"]')?.click();
+  }
+  setTextColor(editor: Editor, color: string | null) {
+    if (editor.wysimark.readOnly) return;
+    color = color?.toUpperCase() || null;
+    this.settings.defaultTextColor = color;
+    void this.saveData(this.settings);
+    applyTextColor(editor, color);
+  }
+  async activateInkNoteView(): Promise<void> {
+    const { workspace } = this.app;
+    const activeFile = this.app.workspace.getActiveFile();
+    let leaf: WorkspaceLeaf | null = null;
+
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_INKNOTE);
+    if (existingLeaves.length > 0) {
+      leaf = existingLeaves[0];
+    } else {
+      leaf = workspace.getLeaf('tab');
+      if (leaf) {
+        await leaf.setViewState({ type: VIEW_TYPE_INKNOTE, active: true });
+      }
+    }
+
+    if (leaf) {
+      void workspace.revealLeaf(leaf);
+
+      // Load the current active file
+      if (activeFile && activeFile.extension === 'md') {
+        const view = leaf.view as InkNoteView;
+        if (view && view.loadNote) {
+          await view.loadNote(activeFile);
+        }
+      }
+    }
+  }
+
+}

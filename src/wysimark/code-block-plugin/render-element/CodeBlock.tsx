@@ -1,0 +1,79 @@
+import { useCallback, useRef } from "react"
+import { Editor, Node, Transforms } from "slate"
+import { ReactEditor, useFocused, useSelected, useSlateStatic, useReadOnly } from "slate-react"
+
+import { Menu, MenuItemData } from "../../shared-overlays"
+import { ConstrainedRenderElementProps } from "../../sink"
+import { useLayer } from "../../use-layer"
+import { ChevronDownIcon } from "../icons/ChevronDownIcon"
+import { $CodeBlock, $CodeBlockControls, $CodeBlockLanguage, $CodeBlockLines, $CodeBlockScroller } from "../styles"
+import { CodeBlockElement, LanguageList } from "../types"
+import { CodeBlockActions } from "./CodeBlockActions"
+
+export function CodeBlock({
+  element,
+  attributes,
+  children,
+}: ConstrainedRenderElementProps<CodeBlockElement>) {
+  const ref = useRef<HTMLDivElement>(null)
+  const editor = useSlateStatic()
+  const selected = useSelected()
+  const focused = useFocused()
+  const readOnly = useReadOnly()
+  const dropdown = useLayer("code-block-dropdown")
+  const onClick = useCallback(() => {
+    if (readOnly) return
+    if (dropdown.layer) dropdown.close()
+    const dest = ref.current
+    if (dest === null) return
+    const items: MenuItemData[] = LanguageList.map((language) => {
+      return {
+        icon: () => <span />,
+        title: language,
+        action: (editor) => {
+          editor.codeBlock.setCodeBlockLanguage(language, { at: element })
+        },
+      }
+    })
+    // Menu
+    dropdown.open(() => (
+      <Menu dest={dest} items={items} close={dropdown.close} />
+    ))
+  }, [element, readOnly])
+
+  const isMermaid = element.language.toLowerCase() === "mermaid"
+  if (isMermaid && !(selected && focused) && editor.wysimark.renderMermaidPreview) {
+    const code = element.children.map((line) => Node.string(line)).join("\n")
+    return (
+      <$CodeBlock
+        {...attributes}
+        onMouseDown={(event) => {
+          event.preventDefault()
+          const path = ReactEditor.findPath(editor, element)
+          Transforms.select(editor, Editor.start(editor, path))
+          ReactEditor.focus(editor)
+        }}
+      >
+        <div contentEditable={false} style={{ padding: "1em", overflowX: "auto" }}>
+          {editor.wysimark.renderMermaidPreview(code)}
+        </div>
+        <div aria-hidden="true" style={{ display: "none" }}>{children}</div>
+      </$CodeBlock>
+    )
+  }
+
+  return (
+    <$CodeBlock data-wysimark-code-block className={selected && !readOnly ? "--selected" : ""} {...attributes}>
+      <$CodeBlockScroller data-wysimark-code-scroller>
+        <$CodeBlockLines data-wysimark-code-lines>{children}</$CodeBlockLines>
+        <$CodeBlockControls contentEditable={false} data-wysimark-code-controls>
+          {selected && focused && !readOnly ? <CodeBlockActions element={element} /> : null}
+          <$CodeBlockLanguage data-wysimark-code-language onClick={onClick} ref={ref}>
+            <span>{element.language || "text"}</span>
+            <ChevronDownIcon />
+          </$CodeBlockLanguage>
+        </$CodeBlockControls>
+      </$CodeBlockScroller>
+    </$CodeBlock>
+  )
+}

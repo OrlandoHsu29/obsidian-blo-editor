@@ -1,0 +1,9 @@
+{
+  "id": "inknote-editor",
+  "name": "墨笺编辑器",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.7",
+  "description": "富文本笔记、块编辑、表格、代码高亮与查找替换。基于 Wysimark Editor 二次开发。",
+  "author": "OrlandoHsu29",
+  "isDesktopOnly": true
+}

@@ -1,0 +1,445 @@
+/* Wysimark Editor for Obsidian */
+.wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:3; height:0; flex:0 0 0; overflow:visible; }
+.wysimark-reading .wysimark-find-slot { top:8px; }
+.wysimark-find-panel { position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--font-ui-small) var(--font-interface); }
+.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 0; padding:0 clamp(16px,4vw,48px); }
+.wysimark-accessible-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.wysimark-container .wysimark-document-title input { display:block; width:100%; height:auto; min-height:1.4em; padding:0; margin:0; text-align:left; font-family:var(--font-text); font-size:32px; font-weight:700; line-height:1.35; letter-spacing:normal; color:var(--text-normal); background:transparent; border:0; border-radius:0; box-shadow:none; }
+.wysimark-container .wysimark-document-title input:focus { outline:none; box-shadow:0 1px 0 var(--background-modifier-border-focus); }
+.wysimark-find-panel[hidden],.wysimark-find-row[hidden] { display:none; }
+.wysimark-find-row { display:flex; align-items:center; gap:4px; }
+.wysimark-find-row + .wysimark-find-row { margin-top:6px; }
+.wysimark-find-panel input { flex:1; min-width:0; width:0; height:30px; }
+.wysimark-find-panel button { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:4px; border:0; background:transparent; box-shadow:none; color:var(--text-muted); cursor:pointer; }
+.wysimark-find-panel button:hover,.wysimark-find-panel button[aria-pressed="true"] { background:var(--background-modifier-hover); color:var(--text-accent); }
+.wysimark-find-panel button:disabled { opacity:.4; cursor:default; }
+.wysimark-find-panel svg { width:18px; height:18px; }
+.wysimark-find-count { white-space:nowrap; font-size:11px; color:var(--text-muted); }
+.wysimark-container button.wysimark-block-handle { position:absolute; display:flex; align-items:center; justify-content:center; left:-26px; top:var(--wysimark-handle-center,15px); transform:translateY(-50%); width:22px; height:24px; min-height:0; padding:2px; border:0; box-shadow:none; border-radius:4px; color:var(--text-faint); background:transparent; cursor:grab; opacity:0; z-index:1; }
+.wysimark-block:hover > button.wysimark-block-handle, .wysimark-block:focus-within > button.wysimark-block-handle { opacity:1; }
+.wysimark-container button.wysimark-block-handle:hover { color:var(--text-normal); background:var(--background-modifier-hover); box-shadow:inset 0 0 0 1px var(--background-modifier-border); }
+.wysimark-container button.wysimark-block-handle:active { cursor:grabbing; }
+.wysimark-block.drop-before::before,.wysimark-block.drop-after::after { content:''; position:absolute; left:0; right:0; height:2px; background:var(--interactive-accent); }
+.wysimark-block.drop-before::before { top:-3px; }.wysimark-block.drop-after::after { bottom:-3px; }
+.wysimark-block.drop-inside { outline:2px solid var(--interactive-accent); outline-offset:3px; }
+.wysimark-container button.wysimark-list-number { display:inline-block; vertical-align:baseline; width:1.5em; min-width:1.5em; height:auto; min-height:0; margin:0 .5em 0 -2em; padding:0; font:inherit; line-height:inherit; text-align:center; border:0; box-shadow:none; border-radius:4px; background:transparent; color:var(--text-muted); cursor:pointer; }
+.wysimark-container button.wysimark-list-number:hover:not(:disabled) { background:var(--background-modifier-hover); color:var(--text-normal); box-shadow:inset 0 0 0 1px var(--background-modifier-border); }
+.wysimark-container button.wysimark-list-number:disabled { opacity:1; cursor:default; }
+.wysimark-container button.wysimark-list-number { position:absolute; top:var(--wysimark-list-marker-center,.825em); left:calc(-1.5em - 8px); margin:0; transform:translateY(-50%); font-size:var(--wysimark-list-number-size,1em); line-height:var(--wysimark-list-number-line,1.65); font-weight:var(--wysimark-list-number-weight,inherit); }
+.wysimark-editor li[data-list-heading-level] { --wysimark-list-number-weight:var(--font-bold,700); }
+.wysimark-editor li[data-list-heading-level] > button.wysimark-list-number { top:0; transform:none; }
+.wysimark-editor li[data-list-heading-level="1"] { --wysimark-list-number-size:1.75em; --wysimark-list-number-line:1.4; }
+.wysimark-editor li[data-list-heading-level="2"] { --wysimark-list-number-size:1.5em; --wysimark-list-number-line:1.45; }
+.wysimark-editor li[data-list-heading-level="3"] { --wysimark-list-number-size:1.3em; --wysimark-list-number-line:1.5; }
+.wysimark-editor li[data-list-heading-level="4"] { --wysimark-list-number-size:1.15em; --wysimark-list-number-line:1.55; }
+.wysimark-editor li[data-list-heading-level="5"] { --wysimark-list-number-size:1em; --wysimark-list-number-line:1.65; }
+
+/* Use the same controls and focus treatment as Obsidian's settings and menus. */
+.wysimark-overlay { font-family:var(--font-interface); font-size:var(--font-ui-medium); color:var(--text-normal); }
+.wysimark-overlay :is(input,textarea,select):not([type="checkbox"]):not([type="radio"]) { font-family:var(--font-interface); font-size:var(--font-ui-small); color:var(--text-normal); background:var(--background-modifier-form-field); border:1px solid var(--background-modifier-border); border-radius:var(--radius-s,6px); padding:6px 8px; box-shadow:none; }
+.wysimark-overlay :is(input,textarea,select):focus { outline:2px solid var(--interactive-accent); outline-offset:1px; border-color:var(--interactive-accent); }
+.wysimark-overlay button:not([data-text-color]) { font-family:var(--font-interface); font-size:var(--font-ui-small); min-height:30px; padding:5px 12px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-s,6px); background:var(--interactive-normal); color:var(--text-normal); box-shadow:var(--input-shadow); }
+.wysimark-overlay button:not([data-text-color]):hover { background:var(--interactive-hover); }
+.wysimark-overlay button:focus-visible { outline:2px solid var(--interactive-accent); outline-offset:2px; }
+.wysimark-overlay button:disabled { opacity:.45; cursor:default; }
+.wysimark-overlay .wysimark-menu-tabs { display:flex; gap:4px; padding:3px; width:100%; border-radius:var(--radius-s,6px); background:var(--background-modifier-hover); }
+.wysimark-overlay .wysimark-menu-tabs button { flex:1 1 0; min-width:0; border:0; box-shadow:none; background:transparent; color:var(--text-muted); }
+.wysimark-overlay .wysimark-menu-tabs button[aria-pressed="true"] { background:var(--interactive-normal); color:var(--text-normal); box-shadow:var(--input-shadow); }
+.wysimark-overlay .wysimark-menu-tabs button:hover { color:var(--text-normal); background:var(--interactive-hover); }
+
+/* Image Toolkit uses raster sprite icons upstream; the plugin replaces them with native SVGs. */
+.oit-normal .oit-img-footer { bottom:20px; }
+.oit-normal .oit-img-footer .oit-img-toolbar { display:flex; align-items:center; justify-content:center; width:max-content; max-width:calc(100vw - 40px); height:auto; gap:4px; padding:8px; margin:0 auto; background:var(--background-secondary); color:var(--text-muted); border:1px solid var(--background-modifier-border); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.16); }
+.oit-normal .oit-img-footer .oit-img-toolbar:hover { background:var(--background-secondary); }
+.oit-normal .oit-img-footer .oit-img-toolbar > li { float:none; display:flex; align-items:center; justify-content:center; width:32px; height:32px; margin:0; border-radius:6px; line-height:1; flex:0 0 32px; }
+.oit-normal .oit-img-footer .oit-img-toolbar > li:hover { animation:none; background:var(--background-modifier-hover); color:var(--text-normal); }
+.oit-normal .oit-img-footer .oit-img-toolbar > li::before { content:none !important; background-image:none !important; }
+.oit-normal .oit-img-footer .oit-img-toolbar svg { width:20px; height:20px; stroke-width:1.5px; pointer-events:none; }
+.oit-normal .oit-img-footer .oit-img-toolbar svg * { pointer-events:none; }
+.oit-normal .oit-img-footer .oit-img-title { color:var(--text-normal); background:var(--background-secondary); padding:5px 8px; border-radius:6px; }
+.wysimark-text-color-menu { padding:12px; }
+.wysimark-text-color-menu .wysimark-color-palette { flex-wrap:nowrap; gap:10px; margin:0; padding:8px; overflow-x:auto; }
+.wysimark-text-color-menu .wysimark-color-palette button { width:24px; height:24px; flex:0 0 24px; padding:0; box-shadow:none; }
+.wysimark-color-separator { width:1px; height:24px; flex:0 0 1px; background:var(--background-modifier-border); }
+.wysimark-slash-popover { z-index:1000; width:260px; max-height:280px; overflow:auto; padding:6px; border:1px solid var(--background-modifier-border); border-radius:8px; box-shadow:var(--shadow-l); background:var(--background-secondary); color:var(--text-normal); font:var(--font-ui-medium) var(--font-interface); }
+.wysimark-slash-popover [role="option"] { padding:8px 12px; border-radius:5px; cursor:pointer; }
+.wysimark-slash-popover .is-selected { background:var(--background-modifier-hover); color:var(--text-accent); }
+.wysimark-color-palette { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.wysimark-color-palette button { width:32px; height:32px; border-radius:50%; background:var(--swatch-color); border:2px solid var(--background-modifier-border); }
+.wysimark-color-palette button[aria-pressed="true"] { outline:none; outline-offset:0; }
+.wysimark-overlay button:not(:disabled) { cursor:pointer; }
+.wysimark-text-color-menu .wysimark-color-palette button { position:relative; border-width:1px; outline:none !important; outline-offset:0 !important; color:#fff; transition:transform 140ms ease,box-shadow 140ms ease; cursor:pointer; }
+.wysimark-text-color-menu .wysimark-color-palette button[data-text-color="system"] { color:var(--background-primary); }
+.wysimark-text-color-menu .wysimark-color-palette button:hover { transform:scale(1.08); box-shadow:0 0 0 3px var(--background-modifier-hover); }
+.wysimark-text-color-menu .wysimark-color-palette button:focus-visible { outline:none; box-shadow:inset 0 0 0 2px var(--interactive-accent); }
+.wysimark-color-check { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0; pointer-events:none; filter:drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.wysimark-color-palette button[aria-pressed="true"] .wysimark-color-check { opacity:1; }
+@media (prefers-reduced-motion:reduce) { .wysimark-text-color-menu .wysimark-color-palette button { transition:none; } }
+.wysimark-container, .wysimark-overlay { color: var(--text-normal); }
+.wysimark-container [data-wysimark-shell] { border:0 !important; outline:none !important; color:var(--text-normal) !important; }
+.wysimark-reading [data-wysimark-toolbar] { display:none; }
+
+/* The renderer draws the rule once with ::before; suppress theme hr borders. */
+.wysimark-container .wysimark-editor hr {
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+.wysimark-container .wysimark-editor hr::before {
+    border: 0;
+    box-shadow: none;
+    background: var(--hr-color, var(--background-modifier-border));
+}
+.wysimark-container .wysimark-editor hr::after { content: none; }
+
+/* Container styling */
+.wysimark-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
+    background-color: var(--background-primary);
+}
+
+/* React root container */
+.wysimark-react-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* Empty state styling */
+.wysimark-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-faint);
+}
+
+.wysimark-empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.wysimark-empty-state-text {
+    font-size: var(--font-ui-medium);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+}
+
+.wysimark-empty-state-hint {
+    font-size: var(--font-ui-small);
+    color: var(--text-faint);
+}
+
+/* Header styling */
+.wysimark-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
+}
+
+.wysimark-header-filename {
+    font-size: var(--font-ui-medium);
+    font-weight: 500;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wysimark-header-save {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.wysimark-header-save:hover {
+    opacity: 1;
+}
+
+/* Editor wrapper */
+.wysimark-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Editor container */
+.wysimark-editor-container {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+}
+
+/* Editor styling */
+.wysimark-editor {
+    min-height: 100%;
+    padding: 1rem;
+    --wysimark-block-spacing: var(--p-spacing, 1rem);
+    font-family: var(--font-text);
+    font-size: var(--font-text-size);
+    line-height: var(--line-height-normal);
+    color: var(--text-normal);
+    background-color: var(--background-primary);
+}
+
+/* Focus styling */
+.wysimark-editor:focus {
+    outline: none;
+}
+
+/* Fixed typography; each root block owns its single preceding gap. */
+.wysimark-editor { --wysimark-block-spacing: 1em; line-height: 1.65 !important; }
+.wysimark-editor, .wysimark-editor * { letter-spacing: normal !important; word-spacing: normal !important; }
+.wysimark-editor [data-wysimark-block] { display: flow-root; margin-bottom: 0; }
+/* Native Slate chunks retain model/DOM selection mapping and include gutters
+   for external controls without moving the document's content. */
+.wysimark-editor { display:flex; flex-direction:column; }
+.ks-editor-chunk { display:flex; flex-direction:column; flex:none; }
+/* Chunks may nest after paste/delete. Vertical padding with negative margins
+   lets a later chunk intercept clicks on the preceding line. Keep only the
+   horizontal gutter needed by block handles and list markers. */
+.ks-editor-chunk-leaf { margin: 0 calc(-1 * clamp(16px,4vw,48px)); padding:0 clamp(16px,4vw,48px); overflow-clip-margin:24px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
+.wysimark-editor :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,table,hr,[data-wysimark-code-block]) { margin-block: 0 !important; }
+.wysimark-editor :is(p,li) { line-height: 1.65 !important; }
+.wysimark-editor :is(p,li,[data-wysimark-block])[data-subtitle="true"] { font-weight:var(--font-bold,700); }
+.wysimark-editor :is([data-slate-leaf],[data-slate-string],strong,em,a,code,span) { line-height: inherit !important; }
+.wysimark-editor :is(h1,h2,h3,h4,h5,h6) { color: var(--text-normal); font-weight: var(--font-bold); }
+.wysimark-editor h1 { font-size: 1.75em !important; line-height: 1.4 !important; }
+.wysimark-editor h2 { font-size: 1.5em !important; line-height: 1.45 !important; }
+.wysimark-editor h3 { font-size: 1.3em !important; line-height: 1.5 !important; }
+.wysimark-editor h4 { font-size: 1.15em !important; line-height: 1.55 !important; }
+.wysimark-editor h5 { font-size: 1em !important; line-height: 1.65 !important; }
+.wysimark-editor h6 { font-size: 1em !important; line-height: 1.65 !important; }
+.wysimark-editor code[class] { line-height: 1 !important; }
+.wysimark-editor blockquote { line-height: 1.75 !important; }
+.wysimark-editor blockquote :is(p,li) { line-height: 1.75 !important; }
+.wysimark-editor blockquote > :not([contenteditable="false"]) + :not([contenteditable="false"]) { margin-top: .45em !important; }
+.wysimark-editor :is(td,th) { line-height: 1.6 !important; }
+.wysimark-editor [data-wysimark-code-lines] { line-height: 1.5 !important; }
+.wysimark-editor [data-wysimark-code-lines] > div { line-height: 1.5em !important; }
+/* Editor navigation spacers never expand when selected. */
+.wysimark-editor p.--collapsible.--empty { height: 0; min-height: 0; margin: 0 !important; padding: 0 !important; font-size: inherit !important; line-height: 0 !important; transition: none; }
+.wysimark-editor p.--collapsible.--empty:last-child { height: 1.65em; line-height: 1.65 !important; }
+.wysimark-editor :is(ul,ol) { margin-block: 0 !important; }
+
+/* Links */
+.wysimark-editor a {
+    color: var(--text-accent);
+    text-decoration: underline;
+}
+
+.wysimark-editor a:hover {
+    color: var(--text-accent-hover);
+}
+
+/* Code blocks */
+.wysimark-editor pre {
+    background-color: var(--code-background);
+    border-radius: var(--radius-s);
+    padding: 1em;
+    margin-block: var(--wysimark-block-spacing);
+    overflow-x: auto;
+    font-family: var(--font-monospace);
+    font-size: var(--font-smaller);
+}
+
+.wysimark-editor code {
+    background-color: var(--code-background);
+    border-radius: var(--radius-s);
+    padding: 0.2em 0.4em;
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+}
+
+/* Blockquotes */
+.wysimark-editor blockquote {
+    border-left: 3px solid var(--text-accent);
+    margin: var(--wysimark-block-spacing) 0;
+    padding-left: 1em;
+    color: var(--text-muted);
+}
+
+/* Lists */
+.wysimark-editor ul,
+.wysimark-editor ol {
+    padding-left: 2em;
+    margin: var(--wysimark-block-spacing) 0;
+}
+
+.wysimark-editor li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Tables */
+.wysimark-block[data-block-type="table"] > button.wysimark-block-handle { left:-48px; }
+.wysimark-editor [data-table-header="true"] { background:var(--background-secondary); font-weight:var(--font-bold,700); }
+.wysimark-table-settings { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--background-modifier-border); }
+.wysimark-table-settings label { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.wysimark-table-actions { display:flex; gap:2px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-m,8px); background:var(--background-primary); box-shadow:var(--shadow-s); z-index:var(--layer-menu,65); }
+.wysimark-table-actions[data-table-action-axis="row"] { flex-direction:column; }
+.wysimark-overlay.wysimark-table-actions button { display:flex; align-items:center; justify-content:center; width:26px; height:24px; min-height:0; padding:0; border:0; box-shadow:none; color:var(--text-muted); background:transparent; cursor:pointer; }
+.wysimark-overlay.wysimark-table-actions button:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.wysimark-editor table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+.wysimark-editor th,
+.wysimark-editor td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 0.5em;
+}
+
+.wysimark-editor th {
+    background-color: var(--background-secondary);
+    font-weight: var(--font-bold);
+}
+
+/* Images */
+.wysimark-editor img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-s);
+}
+
+/* Horizontal rule */
+.wysimark-editor hr {
+    border: none;
+    border-top: 1px solid var(--background-modifier-border);
+    margin: 2em 0;
+}
+
+/* Task lists */
+.wysimark-editor input[type="checkbox"] {
+    margin-right: 0.5em;
+}
+
+/* Selection */
+.wysimark-editor ::selection {
+    background-color: var(--text-selection);
+}
+
+/* Placeholder */
+.wysimark-editor [data-placeholder]::before {
+    color: var(--text-faint);
+    font-style: italic;
+}
+
+/* Toolbar overrides for Obsidian theme compatibility */
+.wysimark-editor [class*="toolbar"] {
+    background-color: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.wysimark-editor [class*="toolbar"] button {
+    color: var(--text-muted);
+}
+
+.wysimark-editor [class*="toolbar"] button:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+/* Slate editor specific fixes */
+.wysimark-editor [data-slate-editor="true"] {
+    min-height: 100%;
+    outline: none;
+}
+
+/* Fix for editable area */
+.wysimark-editor [contenteditable="true"] {
+    outline: none;
+    min-height: 200px;
+}
+
+
+/* Fixed editor theme variables; no per-view Global style injection. */
+
+  .wysimark-container, .wysimark-overlay {
+    /* Tailwind Colors */
+    
+--blue-50: rgb(239 246 255);
+--blue-100: rgb(219 234 254);
+--blue-200: rgb(191 219 254);
+--blue-300: rgb(147 197 253);
+--blue-400: rgb(96 165 250);
+--blue-500: rgb(59 130 246);
+--blue-600: rgb(37 99 235);
+--blue-700: rgb(29 78 216);
+--blue-800: rgb(30 64 175);
+--blue-900: rgb(30 58 138);
+
+    
+--shade-50: rgb(250 250 250);
+--shade-100: rgb(244 244 245);
+--shade-200: rgb(228 228 231);
+--shade-300: rgb(212 212 216);
+--shade-400: rgb(161 161 170);
+--shade-500: rgb(113 113 122);
+--shade-600: rgb(82 82 91);
+--shade-700: rgb(63 63 70);
+--shade-800: rgb(39 39 42);
+--shade-900: rgb(24 24 27);
+
+    --shade-50: var(--background-primary);
+    --shade-100: var(--background-secondary);
+    --shade-200: var(--background-modifier-hover);
+    --shade-300: var(--background-modifier-border);
+    --shade-400: var(--text-faint);
+    --shade-500: var(--text-muted);
+    --shade-600: var(--text-normal);
+    --shade-700: var(--text-normal);
+    --shade-800: var(--text-normal);
+    --shade-900: var(--text-normal);
+    --blue-100: var(--background-modifier-hover);
+    --blue-200: var(--background-modifier-hover);
+    --blue-300: var(--interactive-accent);
+    --blue-400: var(--interactive-accent);
+    --blue-600: var(--text-accent);
+    --blue-700: var(--text-accent-hover);
+    /* Select Colors */
+    --select-color: var(--blue-400);
+    --select-editor-color: var(--text-selection);
+    --hover-color: var(--blue-200);
+    /* Link Colors */
+    --link-color: var(--blue-600);
+    --link-hover-color: var(--blue-700);
+    /* Code Block Colors */
+    --code-block-bgcolor: var(--code-background, var(--background-secondary));
+    --code-block-border-color: var(--background-modifier-border);
+    /* Inline Code Colors */
+    --inline-code-bgcolor: var(--shade-100);
+    --inline-code-border-color: var(--shade-200);
+    /* Table Colors */
+    --table-border-color: var(--shade-300);
+    --table-row-border-color: var(--shade-300);
+    --table-column-border-color: var(--shade-100);
+    --table-head-bgcolor: var(--shade-50);
+    --table-menu-bgcolor: var(--shade-100);
+    --table-menu-hover-bgcolor: var(--shade-200);
+    /* Horizontal Rule Colors */
+    --hr-color: var(--shade-300);
+  }
+

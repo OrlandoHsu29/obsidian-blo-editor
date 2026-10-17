@@ -1,5 +1,5 @@
 import { ui } from "./wysimark/utils/translations"
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
 import { ReactEditor, useFocused, useSlate } from 'slate-react'
@@ -9,7 +9,8 @@ export function SlashPopover() {
   const editor = useSlate(), focused = useFocused(), context = focused ? getSlashContext(editor) : null
   const [dismissed, setDismissed] = useState('')
   const [choice, setChoice] = useState({key: '', index: 0})
-  const [position, setPosition] = useState({left: 0, top: 0})
+  const popup = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState({left: 0, top: 0, maxHeight: 280})
   const matches = slashCommands.filter(command => command.title.includes(context?.query || ''))
   const visible = !!context && context.key !== dismissed && matches.length > 0
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
@@ -26,8 +27,21 @@ export function SlashPopover() {
     if (!visible || !editor.selection) return
     const update = () => {
       try {
-        const rect = ReactEditor.toDOMRange(editor, editor.selection!).getBoundingClientRect()
-        setPosition({left: Math.max(8, Math.min(rect.left, window.innerWidth - 268)), top: rect.bottom + 6 + Math.min(0, window.innerHeight - rect.bottom - Math.min(matches.length * 36 + 16, 280) - 14)})
+        if (!popup.current || !editor.selection) return
+        const rect = ReactEditor.toDOMRange(editor, editor.selection).getBoundingClientRect()
+        const menu = popup.current
+        const gap = 12, edge = 8
+        // Measure rendered content instead of guessing option heights or shifting
+        // a below-caret menu upward through the current line.
+        const naturalHeight = Math.min(menu.scrollHeight + menu.offsetHeight - menu.clientHeight, 280)
+        const above = Math.max(0, rect.top - gap - edge)
+        const below = Math.max(0, window.innerHeight - rect.bottom - gap - edge)
+        const placeAbove = above >= naturalHeight || above >= below
+        const maxHeight = Math.min(naturalHeight, placeAbove ? above : below)
+        const width = menu.getBoundingClientRect().width
+        const left = Math.max(edge, Math.min(rect.left, window.innerWidth - width - edge))
+        const top = placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap
+        setPosition({left, top, maxHeight})
       } catch { /* Wait for Slate's DOM selection to update. */ }
     }
     update()
@@ -49,7 +63,7 @@ export function SlashPopover() {
     return () => document.removeEventListener('keydown', onKey, true)
   }, [visible, context?.key, selected])
   if (!visible) return null
-  return createPortal(<div className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', ...position}} onMouseDown={event => event.preventDefault()}>
+  return createPortal(<div ref={popup} className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', boxSizing:'border-box', maxWidth:'calc(100vw - 16px)', ...position}} onMouseDown={event => event.preventDefault()}>
     {matches.map((command, index) => <div key={command.title} role="option" aria-selected={index === selected} className={index === selected ? 'is-selected' : ''} onMouseEnter={() => setChoice({key:context!.key,index})} onClick={() => choose(index)}>{command.title}</div>)}
   </div>, document.body)
 }

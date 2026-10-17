@@ -30,13 +30,13 @@ Rich-text block editing with headings, nested lists, inline code, and quotes.
 
 Organize paragraphs, lists, and code into parent and child blocks.
 
-![Blo Editor showing parent and child blocks with indented text, lists, and a code block](assets/block-edit.png)
+![Blo Editor showing parent and child blocks with indented text, lists, and a code block](assets/block-edit-menu.png)
 
-### Writing workflow
+### Slash commands
 
-Combine headings, ordered lists, quotes, and tables in one document.
+Type `/` to open the command menu and insert content without leaving the editor.
 
-![Blo Editor showing a writing plan with headings, an ordered list, a quote, and a table](assets/slash-menu.png)
+![Blo Editor with the slash command menu open](assets/slash-command-menu.png)
 
 ## Installation
 

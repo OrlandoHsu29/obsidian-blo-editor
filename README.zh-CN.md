@@ -27,13 +27,13 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 
 将段落、列表和代码组织成父子块，让内容层次更清晰。
 
-![Blo Editor 块结构：父子块、缩进文本、列表与代码块](assets/block-edit.png)
+![Blo Editor 块结构：父子块、缩进文本、列表与代码块](assets/block-edit-menu.png)
 
-### 快速创作
+### 斜杠菜单
 
-在同一篇笔记中组合标题、有序列表、引用与表格。
+输入 `/` 打开命令菜单，快速选择段落样式或插入内容。
 
-![Blo Editor 快速创作：标题、有序列表、引用与表格](assets/slash-menu.png)
+![Blo Editor 斜杠菜单：通过命令菜单快速选择样式和插入内容](assets/slash-command-menu.png)
 
 ## 安装与使用
 

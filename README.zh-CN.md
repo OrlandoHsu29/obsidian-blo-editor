@@ -1,4 +1,6 @@
-# InkNote Editor
+# Blo Editor
+
+Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使用 Slate。
 
 作者：OrlandoHsu29。基于 Takeshi Morita 的 Wysimark Editor 1.3.2 二次开发，
 保留原作者版权、MIT 许可证和上游来源记录。
@@ -6,7 +8,7 @@
 ## 安装与使用
 
 解压安装包，将 `inknote-editor` 放入笔记库的 `.obsidian/plugins/`，
-重启 Obsidian 后在第三方插件中启用 **InkNote Editor**。需要桌面版 Obsidian 1.8.7 或更新版本。
+重启 Obsidian 后在第三方插件中启用 **Blo Editor**。需要桌面版 Obsidian 1.8.7 或更新版本。
 
 点击六点块柄会选中整块并打开菜单；Tab / Shift+Tab 调整缩进，拖动父块时包含子块。
 菜单中的“删除块”删除当前块及其子块，支持撤销；删除图片块不会删除附件文件。
@@ -18,7 +20,7 @@
 
 Ctrl+B 加粗，Ctrl+I 斜体，Ctrl+U 下划线，Ctrl+Alt+C 切换字体颜色，
 Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
-更多快捷键在 Obsidian 设置中搜索 **InkNote Editor**。
+更多快捷键在 Obsidian 设置中搜索 **Blo Editor**。
 
 图片插入及缩放可以独立使用，图片查看器 Obsidian Image Toolkit 是可选插件。
 底层编辑器是 Slate，依赖原生 CodeMirror 接口的第三方编辑插件需要单独适配。

@@ -1,6 +1,7 @@
-# InkNote Editor
+# Blo Editor
 
-A desktop rich-text editor for Obsidian, maintained by **OrlandoHsu29**.
+A Yuque-inspired block editor for Obsidian, built on Wysimark Editor and Slate.
+Blo comes from block. Maintained by **OrlandoHsu29**.
 Based on [Wysimark Editor](https://github.com/takeshy/obsidian-wysimark) 1.3.2
 by Takeshi Morita. Upstream copyright and the MIT license are retained.
 See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/takeshy/obsidian-wysimark#readme).
@@ -10,7 +11,7 @@ See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/
 ## Installation
 
 1. Extract the release ZIP and copy `inknote-editor` into your vault's `.obsidian/plugins/`.
-2. Restart Obsidian and enable **InkNote Editor** under Community plugins.
+2. Restart Obsidian and enable **Blo Editor** under Community plugins.
 3. Open a Markdown note. Disable other rich-text editor plugins to avoid competing default views.
 
 Requires desktop Obsidian 1.8.7 or later. Release packages contain no personal
@@ -53,4 +54,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout and development rul
 ## License
 
 MIT. Copyright belongs to the respective upstream authors and OrlandoHsu29 for
-InkNote Editor modifications. Preserve [LICENSE](LICENSE) and the upstream attribution.
+Blo Editor modifications. Preserve [LICENSE](LICENSE) and the upstream attribution.

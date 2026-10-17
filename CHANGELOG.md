@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — 2026-10-17
+
+- Rename the plugin to Blo Editor, from block.
+- Preserve the existing plugin ID, settings, and hotkey bindings.
+
 ## 0.1.1 — 2026-10-17
 
 - Restore the block menu on left click while preserving whole-block selection.

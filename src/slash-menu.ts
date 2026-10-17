@@ -36,7 +36,7 @@ function command(label: Parameters<typeof ui>[0], icon: string, run: SlashComman
   }
 }
 
-/** Display the system language, but search both complete translated names. */
+/** Search translated names, common aliases, and Chinese pinyin initials. */
 export function filterSlashCommands(query: string): SlashCommand[] {
   const search = normalizeSearch(query)
   return slashCommands.filter(command => command.searchTerms.some(name => name.includes(search)))
@@ -44,12 +44,12 @@ export function filterSlashCommands(query: string): SlashCommand[] {
 
 /** These use the same editor methods as the toolbar and formatting shortcuts. */
 export const slashCommands: SlashCommand[] = [
-  command('正文', 'pilcrow', editor => editor.collapsibleParagraph.convertParagraph()),
-  ...([1, 2, 3] as const).map(level => command('标题 {level}', `heading-${level}`, editor => editor.heading.convertHeading(level, false), {level})),
-  command('无序列表', 'list', editor => editor.list.convertUnorderedList(true)),
-  command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true)),
-  command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent()),
-  command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock()),
-  command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线']),
-  command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.()),
+  command('正文', 'pilcrow', editor => editor.collapsibleParagraph.convertParagraph(), {}, ['zw']),
+  ...([1, 2, 3] as const).map(level => command('标题 {level}', `heading-${level}`, editor => editor.heading.convertHeading(level, false), {level}, [`bt${level}`])),
+  command('无序列表', 'list', editor => editor.list.convertUnorderedList(true), {}, ['wxlb']),
+  command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true), {}, ['yxlb']),
+  command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
+  command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),
+  command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线', 'fgx']),
+  command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.(), {}, ['ztys', 'ys']),
 ]

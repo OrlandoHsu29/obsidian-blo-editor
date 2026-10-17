@@ -12,6 +12,20 @@ See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/
 
 [中文说明](README.zh-CN.md)
 
+## Screenshots
+
+### Light theme
+
+Floating toolbar, paragraph styles, tables, code highlighting, and the native outline.
+
+![Blo Editor in light mode with the paragraph menu, table, code block, and outline](assets/screenshot-light.png)
+
+### Dark theme
+
+Rich-text block editing with headings, nested lists, inline code, and quotes.
+
+![Blo Editor in dark mode with headings, lists, inline code, quotes, and outline](assets/screenshot-dark.png)
+
 ## Installation
 
 1. Extract the release ZIP and copy `blo-editor` into your vault's `.obsidian/plugins/`.

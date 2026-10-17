@@ -9,6 +9,20 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 作者：OrlandoHsu29。基于 Takeshi Morita 的 Wysimark Editor 1.3.2 二次开发，
 保留原作者版权、MIT 许可证和上游来源记录。
 
+## 界面预览
+
+### 浅色模式
+
+悬浮工具栏与段落样式菜单，搭配表格、代码高亮和原生大纲。
+
+![Blo Editor 浅色模式：段落菜单、表格、代码块与大纲](assets/screenshot-light.png)
+
+### 深色模式
+
+展示标题、嵌套列表、行内代码和引用的富文本块编辑界面。
+
+![Blo Editor 深色模式：标题、列表、行内代码、引用与大纲](assets/screenshot-dark.png)
+
 ## 安装与使用
 
 解压安装包，将 `blo-editor` 放入笔记库的 `.obsidian/plugins/`，

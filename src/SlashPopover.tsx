@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
 import { ReactEditor, useFocused, useSlate } from 'slate-react'
-import { getSlashContext, slashCommands } from './slash-menu'
+import { getSlashContext, filterSlashCommands } from './slash-menu'
 
 export function SlashPopover() {
   const editor = useSlate(), focused = useFocused(), context = focused ? getSlashContext(editor) : null
@@ -11,7 +11,7 @@ export function SlashPopover() {
   const [choice, setChoice] = useState({key: '', index: 0})
   const popup = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({left: 0, top: 0, maxHeight: 280})
-  const matches = slashCommands.filter(command => command.title.includes(context?.query || ''))
+  const matches = filterSlashCommands(context?.query || '')
   const visible = !!context && context.key !== dismissed && matches.length > 0
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
   const choose = (index: number) => {

@@ -18,14 +18,38 @@ export function canOpenSlashMenu(editor: Editor): boolean {
   return !!block && /^\s*$/.test(Node.string(block[0]))
 }
 
+type SlashCommand = {
+  title: string
+  searchTerms: string[]
+  icon: string
+  run: (editor: Editor) => void
+}
+
+const normalizeSearch = (text: string) => text.normalize('NFKC').toLowerCase().replace(/[\s_-]+/g, '')
+
+function command(label: Parameters<typeof ui>[0], icon: string, run: SlashCommand['run'], params: Record<string, string | number> = {}): SlashCommand {
+  return {
+    title: ui(label, params),
+    searchTerms: [ui(label, params, 'zh'), ui(label, params, 'en')].map(normalizeSearch),
+    icon,
+    run,
+  }
+}
+
+/** Display the system language, but search both complete translated names. */
+export function filterSlashCommands(query: string): SlashCommand[] {
+  const search = normalizeSearch(query)
+  return slashCommands.filter(command => command.searchTerms.some(name => name.includes(search)))
+}
+
 /** These use the same editor methods as the toolbar and formatting shortcuts. */
-export const slashCommands: {title: string; icon: string; run: (editor: Editor) => void}[] = [
-  {title: ui("正文"), icon: 'pilcrow', run: editor => editor.collapsibleParagraph.convertParagraph()},
-  ...([1, 2, 3] as const).map(level => ({title: ui('标题 {level}',{level}), icon: `heading-${level}`, run: (editor: Editor) => editor.heading.convertHeading(level, false)})),
-  {title: ui("无序列表"), icon: 'list', run: editor => editor.list.convertUnorderedList(true)},
-  {title: ui("有序列表"), icon: 'list-ordered', run: editor => editor.list.convertOrderedList(true)},
-  {title: ui("引用"), icon: 'quote', run: editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent()},
-  {title: ui("代码块"), icon: 'code', run: editor => editor.codeBlock.toggleCodeBlock()},
-  {title: ui("分割线"), icon: 'minus', run: editor => editor.horizontalRule.insertHorizontalRule()},
-  {title: ui("字体颜色"), icon: 'palette', run: editor => editor.wysimark.openTextColor?.()},
+export const slashCommands: SlashCommand[] = [
+  command('正文', 'pilcrow', editor => editor.collapsibleParagraph.convertParagraph()),
+  ...([1, 2, 3] as const).map(level => command('标题 {level}', `heading-${level}`, editor => editor.heading.convertHeading(level, false), {level})),
+  command('无序列表', 'list', editor => editor.list.convertUnorderedList(true)),
+  command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true)),
+  command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent()),
+  command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock()),
+  command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule()),
+  command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.()),
 ]

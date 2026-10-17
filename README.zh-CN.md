@@ -32,7 +32,7 @@ Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
 ## 构建
 
 使用 Node.js 22，依次执行 `npm ci`、`npm run typecheck`、`npm run package`。
-安装文件生成在 `dist/blo-editor/`，安装包 ZIP 直接生成在项目根目录，文件名随版本变化。
+安装文件生成在 `dist/blo-editor/`，安装包 ZIP 生成在项目的 `releases/` 文件夹，文件名随版本变化。
 Windows 使用 PowerShell 打包，macOS/Linux 需要 `zip` 命令。产物不包含个人设置、笔记、附件或迁移工具。
 项目结构和维护约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

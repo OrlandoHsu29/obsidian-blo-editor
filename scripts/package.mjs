@@ -27,8 +27,10 @@ for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'READ
 }
 await mkdir(resolve(destination, 'assets'), { recursive: true })
 await copyFile(resolve(root, 'assets/logo.png'), resolve(destination, 'assets/logo.png'))
-// Keep distributable archives beside the project, never in a personal vault.
-const archive = resolve(root, `${packageJson.name}-${manifest.version}.zip`)
+// Keep distributable archives in releases/, separate from source files.
+const releases = resolve(root, 'releases')
+await mkdir(releases, { recursive: true })
+const archive = resolve(releases, `${packageJson.name}-${manifest.version}.zip`)
 await rm(archive, { force: true })
 const zip = process.platform === 'win32'
   ? spawnSync('powershell.exe', [

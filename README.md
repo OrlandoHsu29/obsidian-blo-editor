@@ -52,7 +52,7 @@ npm run package
 ```
 
 Use Node.js 22. `npm run package` builds production code and creates a clean
-`dist/blo-editor/` folder and `blo-editor-0.1.0.zip` in the project root.
+`dist/blo-editor/` folder and `releases/blo-editor-0.1.0.zip`.
 Packaging uses PowerShell on Windows and `zip` on macOS/Linux.
 `npm run dev` watches source changes.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout and development rules.

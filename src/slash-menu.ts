@@ -27,10 +27,10 @@ type SlashCommand = {
 
 const normalizeSearch = (text: string) => text.normalize('NFKC').toLowerCase().replace(/[\s_-]+/g, '')
 
-function command(label: Parameters<typeof ui>[0], icon: string, run: SlashCommand['run'], params: Record<string, string | number> = {}): SlashCommand {
+function command(label: Parameters<typeof ui>[0], icon: string, run: SlashCommand['run'], params: Record<string, string | number> = {}, aliases: string[] = []): SlashCommand {
   return {
     title: ui(label, params),
-    searchTerms: [ui(label, params, 'zh'), ui(label, params, 'en')].map(normalizeSearch),
+    searchTerms: [ui(label, params, 'zh'), ui(label, params, 'en'), ...aliases].map(normalizeSearch),
     icon,
     run,
   }
@@ -50,6 +50,6 @@ export const slashCommands: SlashCommand[] = [
   command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true)),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent()),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock()),
-  command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule()),
+  command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线']),
   command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.()),
 ]

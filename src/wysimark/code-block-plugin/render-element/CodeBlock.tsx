@@ -1,3 +1,4 @@
+import { ui } from "../../utils/translations"
 import { useCallback, useRef } from "react"
 import { Editor, Node, Transforms } from "slate"
 import { ReactEditor, useFocused, useSelected, useSlateStatic, useReadOnly } from "slate-react"
@@ -15,7 +16,7 @@ export function CodeBlock({
   attributes,
   children,
 }: ConstrainedRenderElementProps<CodeBlockElement>) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLButtonElement>(null)
   const editor = useSlateStatic()
   const selected = useSelected()
   const focused = useFocused()
@@ -68,7 +69,7 @@ export function CodeBlock({
         <$CodeBlockLines data-wysimark-code-lines>{children}</$CodeBlockLines>
         <$CodeBlockControls contentEditable={false} data-wysimark-code-controls>
           {selected && focused && !readOnly ? <CodeBlockActions element={element} /> : null}
-          <$CodeBlockLanguage data-wysimark-code-language onClick={onClick} ref={ref}>
+          <$CodeBlockLanguage data-wysimark-code-language type="button" disabled={readOnly} aria-label={ui("代码语言")} onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={onClick} ref={ref}>
             <span>{element.language || "text"}</span>
             <ChevronDownIcon />
           </$CodeBlockLanguage>

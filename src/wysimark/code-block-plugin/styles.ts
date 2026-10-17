@@ -26,28 +26,39 @@ export const $CodeBlockActions = styled("div")`
   gap: 0.25em;
 `
 
-export const $CodeBlockActionButton = styled("button")`
-  box-sizing: border-box;
-  width: 2em;
-  height: 2em;
-  min-height: 0;
-  padding: 0;
-  box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 0.5em;
-  color: var(--shade-700);
-  background: var(--shade-200);
-  font: inherit;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--shade-900);
-    background: var(--shade-200);
+const $CodeBlockControl = styled("button")`
+  && {
+    box-sizing: border-box;
+    height: 2em;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 0.5em;
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
   }
+  &&:hover:not(:disabled) {
+    color: var(--text-normal);
+    background: var(--background-modifier-border);
+    box-shadow: none;
+  }
+  &&:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+  }
+  &&:disabled { opacity: 1; cursor: default; }
+`
+
+export const $CodeBlockActionButton = styled($CodeBlockControl)`
+  && { width: 2em; }
 `
 
 export const $CodeBlockScroller = styled("div")`
@@ -67,6 +78,7 @@ export const $CodeBlockLines = styled("div")`
 
 export const $CodeBlockControls = styled("div")`
   font-size: 0.75em;
+  font-family: var(--font-interface);
   line-height: 1;
   flex: 0 0 auto;
   display: flex;
@@ -74,39 +86,18 @@ export const $CodeBlockControls = styled("div")`
   gap: 0.25em;
 `
 
-export const $CodeBlockLanguage = styled("span")`
-  box-sizing: border-box;
-  height: 2em;
-  border: 1px solid transparent;
-  cursor: pointer;
-  width: max-content;
-  display: flex;
-  font-size: inherit;
-  color: var(--shade-700);
-  background: var(--shade-200);
-  padding: 0 0.5em;
-  border-radius: 0.5em;
-  align-items: center;
-  gap: 0.25em;
-  span {
-    text-align: left;
-    flex: 0 0 auto;
-  }
-  svg {
-    flex: 0 0 auto;
-    position: relative;
-  }
-  &:hover {
-    color: var(--shade-800);
-    background: var(--shade-300);
-  }
+export const $CodeBlockLanguage = styled($CodeBlockControl)`
+  && { width: max-content; padding: 0 0.5em; gap: 0.25em; }
+  span { text-align: left; flex: 0 0 auto; }
+  svg { flex: 0 0 auto; }
 `
 
 export const $CodeBlockLine = styled("div")`
   white-space: pre;
   line-height: 1.5em;
   counter-increment: line;
-  font-family: "andale mono", AndaleMono, monospace;
+  font-family: "Cascadia Code", "Cascadia Mono", Consolas, var(--font-monospace), monospace;
+  font-weight: 500;
   font-size: 0.875em;
   /*
     DO NOT REMOVE: Code for adding line numbering.

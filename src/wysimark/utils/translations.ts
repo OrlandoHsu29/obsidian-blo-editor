@@ -235,9 +235,9 @@ export const uiMessages = {
     "zh": "拖动整块及子块；点击设置缩进",
     "en": "Drag this block and its children; click for indentation"
   },
-  "拖动整块及子块；点击选中，右键打开块菜单": {
-    "zh": "拖动整块及子块；点击选中，右键打开块菜单",
-    "en": "Drag block and children; click to select, right-click for block menu"
+  "拖动整块及子块；点击选中并打开块菜单": {
+    "zh": "拖动整块及子块；点击选中并打开块菜单",
+    "en": "Drag block and children; click to select and open the block menu"
   },
   "当前文档查找和替换": {
     "zh": "当前文档查找和替换",

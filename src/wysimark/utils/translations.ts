@@ -517,6 +517,10 @@ export const uiMessages = {
     "zh": "无法预览：{target}",
     "en": "Preview unavailable: {target}"
   },
+  "搜索代码语言": {
+    "zh": "搜索代码语言",
+    "en": "Search code languages"
+  },
   "代码语言": {
     "zh": "代码语言",
     "en": "Code language"

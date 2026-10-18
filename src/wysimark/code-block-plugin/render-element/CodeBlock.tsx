@@ -3,12 +3,12 @@ import { useCallback, useRef } from "react"
 import { Editor, Node, Transforms } from "slate"
 import { ReactEditor, useFocused, useSelected, useSlateStatic, useReadOnly } from "slate-react"
 
-import { Menu, MenuItemData } from "../../shared-overlays"
 import { ConstrainedRenderElementProps } from "../../sink"
 import { useLayer } from "../../use-layer"
 import { ChevronDownIcon } from "../icons/ChevronDownIcon"
 import { $CodeBlock, $CodeBlockControls, $CodeBlockLanguage, $CodeBlockLines, $CodeBlockScroller } from "../styles"
-import { CodeBlockElement, LanguageList } from "../types"
+import { CodeBlockElement } from "../types"
+import { LanguageMenu } from './LanguageMenu'
 import { CodeBlockActions } from "./CodeBlockActions"
 import { useBlockSelection } from '../../../blocks/use-block-selection'
 
@@ -26,23 +26,13 @@ export function CodeBlock({
   const dropdown = useLayer("code-block-dropdown")
   const onClick = useCallback(() => {
     if (readOnly) return
-    if (dropdown.layer) dropdown.close()
+    if (dropdown.layer) { dropdown.close(); return }
     const dest = ref.current
     if (dest === null) return
-    const items: MenuItemData[] = LanguageList.map((language) => {
-      return {
-        icon: () => <span />,
-        title: language,
-        action: (editor) => {
-          editor.codeBlock.setCodeBlockLanguage(language, { at: element })
-        },
-      }
-    })
-    // Menu
     dropdown.open(() => (
-      <Menu dest={dest} items={items} close={dropdown.close} />
+      <LanguageMenu dest={dest} element={element} close={dropdown.close} />
     ))
-  }, [element, readOnly])
+  }, [element, readOnly, dropdown])
 
   const isMermaid = element.language.toLowerCase() === "mermaid"
   if (isMermaid && !(selected && focused) && editor.wysimark.renderMermaidPreview) {

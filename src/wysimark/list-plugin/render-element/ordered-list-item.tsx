@@ -3,7 +3,7 @@ import { clsx } from "clsx"
 import { useEffect } from "react"
 import { ReactEditor, useReadOnly, useSlate } from "slate-react"
 import { Menu } from 'obsidian'
-import { orderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
+import { resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
 import { Element, Node } from 'slate'
 
 import { ConstrainedRenderElementProps } from "../../sink"
@@ -24,10 +24,15 @@ export function OrderedListItem({
   const heading=element.blockChildren&&Element.isElement(first)&&first.type==='heading'?first:undefined
   const readOnly=useReadOnly(),cache=rootCache(editor),index=cache.indices.get(element)
   let number=cache.numbers.get(element) ?? element.start ?? 1
+  let label=cache.numberLabels.get(element)
   if(index===undefined) {
     const path=ReactEditor.findPath(editor,element),parent=Node.parent(editor,path)
-    number=orderedNumbers(parent.children).get(element) ?? number
+    const resolved=resolveOrderedNumbers(parent.children)
+    number=resolved.numbers.get(element) ?? number
+    label=resolved.numberLabels.get(element)
   }
+  label??=`${number}.`
+  const markerWidth=`max(1.5em, ${label.length}ch)`
   useEffect(() => {
     const path = ReactEditor.findPath(editor, element)
     normalizeOrderedFirstAtDepth(editor, [element, path])
@@ -46,7 +51,7 @@ export function OrderedListItem({
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))
         menu.addItem(item=>item.setTitle(ui("重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
         menu.showAtMouseEvent(event.nativeEvent)
-      }}>{number}.</button>
+      }} style={{width:markerWidth,minWidth:markerWidth,whiteSpace:'nowrap'}}>{label}</button>
       <div className="wysimark-list-content">{children}</div>
     </$OrderedListItem>
   )

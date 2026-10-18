@@ -8,11 +8,52 @@ export const isEditorSpacer = (node: Node) => Element.isElement(node)&&node.type
 export function groupEnd(nodes: Node[], start: number) {
   let end=start+1;while(end<nodes.length&&(isEditorSpacer(nodes[end])||blockDepth(nodes[end])>blockDepth(nodes[start])))end++;return end
 }
-const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>}>()
+export type BlockHeading={node:Element;number?:number;numberLabel?:string;listIndex?:number}
+type HeadingProjection={headings:{node:Element;listOffset?:number;numberedOwner?:Node}[];listCount:number}
+const headingNodes=new WeakMap<Node,HeadingProjection>(),emptyHeadings:HeadingProjection={headings:[],listCount:0}
+function blockHeadings(node:Node):HeadingProjection {
+  if(!Element.isElement(node))return emptyHeadings
+  if(node.type==='heading')return {headings:[{node}],listCount:0}
+  if(isListBlock(node)&&!('blockChildren' in node&&node.blockChildren))return {headings:[],listCount:1}
+  if(node.type!=='block-quote'&&!('blockChildren' in node&&node.blockChildren))return emptyHeadings
+  let projection=headingNodes.get(node)
+  if(!projection){
+    projection={headings:[],listCount:0}
+    const lists=new Map<Node,number>()
+    for(const [element,path] of Node.elements(node)) {
+      if(isListBlock(element))lists.set(element,projection.listCount++)
+      if(element.type!=='heading')continue
+      let listOffset:number|undefined,numberedOwner:Node|undefined
+      for(let length=path.length-1;length>=0;length--){
+        const parent=Node.get(node,path.slice(0,length))
+        if(!isListBlock(parent))continue
+        listOffset=lists.get(parent)
+        if(Element.isElement(parent)&&parent.type==='ordered-list-item'&&parent.children[0]===element)numberedOwner=parent
+        break
+      }
+      projection.headings.push({node:element,listOffset,numberedOwner})
+    }
+    headingNodes.set(node,projection)
+  }
+  return projection
+}
+const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number}>()
 export function rootCache(editor: Editor) {
   let cache=caches.get(editor)
   if (!cache || cache.children!==editor.children) {
-    cache={children:editor.children,indices:new Map(editor.children.map((node,index)=>[node,index])),numbers:orderedNumbers(editor.children)};caches.set(editor,cache)
+    const {numbers,numberLabels}=resolveOrderedNumbers(editor.children),indices=new Map<Node,number>(),headings:BlockHeading[]=[]
+    let listCount=0
+    editor.children.forEach((node,index)=>{
+      indices.set(node,index)
+      const projection=blockHeadings(node)
+      for(const heading of projection.headings)headings.push({node:heading.node,number:heading.numberedOwner?numbers.get(heading.numberedOwner):undefined,
+        numberLabel:heading.numberedOwner?numberLabels.get(heading.numberedOwner):undefined,
+        listIndex:heading.listOffset===undefined?undefined:listCount+heading.listOffset})
+      listCount+=projection.listCount
+    })
+    // Body edits retain the outline projection when heading nodes/numbers are unchanged.
+    const unchanged=cache?.headings.length===headings.length&&headings.every((heading,index)=>heading.node===cache!.headings[index].node&&heading.numberLabel===cache!.headings[index].numberLabel&&heading.listIndex===cache!.headings[index].listIndex)
+    cache={children:editor.children,indices,numbers,numberLabels,headings:unchanged?cache!.headings:headings,listCount};caches.set(editor,cache)
   }
   return cache
 }
@@ -27,13 +68,23 @@ export function listHeadingLevel(node: Node): number | undefined {
   }
 }
 export function orderedNumbers(nodes: Node[]) {
-  const counters=new Map<number,Map<number,number>>(), result=new Map<Node,number>()
+  return resolveOrderedNumbers(nodes).numbers
+}
+/** Display paths include numbered heading ancestors only; Markdown keeps local integers. */
+export function resolveOrderedNumbers(nodes: Node[]) {
+  const counters=new Map<number,Map<number,number>>(), numbers=new Map<Node,number>(),numberLabels=new Map<Node,string>()
+  const ancestors:{level:number;depth:number;path:string}[]=[]
   for(const node of nodes) {
     if(isEditorSpacer(node))continue
     const headingLevel=listHeadingLevel(node)
     const style=headingLevel??7
     for(const level of counters.keys())if(level>style)counters.delete(level)
     const depth=blockDepth(node)
+    if(headingLevel!==undefined)while(ancestors.length){
+      const parent=ancestors[ancestors.length-1]
+      if(parent.level<headingLevel||(parent.level===headingLevel&&parent.depth<depth))break
+      ancestors.pop()
+    }
     let counts=counters.get(style)
     if(!counts){counts=new Map();counters.set(style,counts)}
     // A same-style parent ends child series, even when the parent has no number.
@@ -41,10 +92,17 @@ export function orderedNumbers(nodes: Node[]) {
     if(Element.isElement(node)&&node.type==='ordered-list-item') {
       const block=node as Block
       const number=block.__numbering==='restart'||(headingLevel===undefined&&!block.__numbering&&block.__firstAtDepth)?1:(counts.get(depth)||0)+1
-      counts.set(depth,number);result.set(node,number)
+      counts.set(depth,number);numbers.set(node,number)
+      if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
+      else {
+        const parent=ancestors[ancestors.length-1]
+        const path=parent?`${parent.path}.${number}`:String(number)
+        numberLabels.set(node,parent?path:`${number}.`)
+        ancestors.push({level:headingLevel,depth,path})
+      }
     }
   }
-  return result
+  return {numbers,numberLabels}
 }
 /** A new list restarts unless the preceding meaningful sibling is also numbered. */
 export function defaultOrderedNumbering(editor: Editor, path: Path, converting?: ReadonlySet<Node>): 'continue'|'restart' {

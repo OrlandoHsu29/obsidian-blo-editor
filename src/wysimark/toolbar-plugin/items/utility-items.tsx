@@ -12,8 +12,8 @@ function selectedDepths(editor:Editor) {
   return editor.children.slice(start.path[0],end.path[0]+1).filter(n=>!isEditorSpacer(n)).map(blockDepth)
 }
 export const blockIndentItems:MenuItemData[]=[
-  {title:t('decreaseDepth'),icon:Icon.DecreaseDepth,hotkey:'mod+[',disabled:editor=>!selectedDepths(editor).some(depth=>depth>0),action:editor=>{indentSelectedBlocks(editor,-1)}},
-  {title:t('increaseDepth'),icon:Icon.IncreaseDepth,hotkey:'mod+]',disabled:editor=>{const depths=selectedDepths(editor);return !depths.length||depths.some(depth=>depth>=32)},action:editor=>{indentSelectedBlocks(editor,1)}},
+  {title:t('decreaseDepth'),icon:Icon.DecreaseDepth,hotkey:'shift+tab',disabled:editor=>!selectedDepths(editor).some(depth=>depth>0),action:editor=>{indentSelectedBlocks(editor,-1)}},
+  {title:t('increaseDepth'),icon:Icon.IncreaseDepth,hotkey:'tab',disabled:editor=>{const depths=selectedDepths(editor);return !depths.length||depths.some(depth=>depth>=32)},action:editor=>{indentSelectedBlocks(editor,1)}},
 ]
 export const clearStyleItem:MenuItemData={title:ui("清除格式"),icon:Icon.ClearFormatting,action:editor=>clearFormatting(editor)}
 export const historyItems:MenuItemData[]=[

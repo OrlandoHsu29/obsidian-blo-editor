@@ -1,8 +1,8 @@
 import { Editor, Element, Node, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
-import { ReactEditor } from 'slate-react'
 import { isWholeBlockSelected } from '../../blocks/selection'
 import type { TableElement } from './types'
+import { clipboardFragmentHtml } from '../paste-markdown-plugin/clipboard-html'
 
 export type TableCellSelection = {
   table: TableElement; path: Path; left: number; right: number; top: number; bottom: number
@@ -122,16 +122,8 @@ export function installTableCellClipboard(editor: Editor): void {
     if (!selected) return setFragmentData(data, origin)
     const fragment = selectedFragment(selected)
     const encoded = window.btoa(encodeURIComponent(JSON.stringify([fragment])))
-    const table = ReactEditor.toDOMNode(editor, selected.table).cloneNode(true) as HTMLTableElement
-    Array.from(table.rows).forEach((row, y) => {
-      if (y < selected.top || y > selected.bottom) row.remove()
-      else Array.from(row.cells).forEach((cell, x) => { if (x < selected.left || x > selected.right) cell.remove() })
-    })
-    table.querySelectorAll('[data-table-axis],.wysimark-table-actions,.wysimark-block-handle').forEach(control => control.remove())
-    table.querySelectorAll('[data-slate-zero-width]').forEach(placeholder => placeholder.remove())
-    table.setAttribute('data-slate-fragment', encoded)
     data.setData('application/x-slate-fragment', encoded)
-    data.setData('text/html', table.outerHTML)
+    data.setData('text/html', clipboardFragmentHtml([fragment], encoded))
     data.setData('text/plain', fragment.children.map(row => row.children.map(cell => Node.string(cell)).join('\t')).join('\n'))
   }
 }

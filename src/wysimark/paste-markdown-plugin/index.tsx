@@ -1,5 +1,6 @@
 import { createPlugin, stopEvent, TypedPlugin } from "../sink"
 import { clipboardHtmlToMarkdown } from "./html-markdown"
+import { installRichClipboard } from "./clipboard-html"
 
 import { createPasteMarkdownMethods } from "./methods"
 
@@ -18,6 +19,7 @@ export type PasteMarkdownPluginCustomTypes = {
 
 export const PasteMarkdownPlugin = createPlugin<PasteMarkdownPluginCustomTypes>(
   (editor) => {
+    installRichClipboard(editor)
     editor.pasteMarkdown = createPasteMarkdownMethods(editor)
     return {
       name: "paste-markdown",

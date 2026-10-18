@@ -1,4 +1,4 @@
-import { Element as SlateElement, Text as SlateText } from "slate"
+import { Element as SlateElement, Text as SlateText, Node } from "slate"
 
 import { MarkKey, Segment } from "../../types"
 import { diffMarks } from "./diff-marks"
@@ -11,6 +11,26 @@ import {
   getMarksFromSegment,
   isPlainSpace,
 } from "./utils"
+
+/** Delimiter runs beside punctuation/word characters may not parse as marks. */
+function htmlBoundaryMarks(segments: Segment[]): Set<MarkKey> {
+  const result = new Set<MarkKey>()
+  const texts = segments.map(segment => Node.string(segment))
+  const punctuationStart = /^[\p{P}\p{S}]/u, punctuationEnd = /[\p{P}\p{S}]$/u
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]
+    if (isPlainSpace(segment) || (SlateElement.isElement(segment) && segment.type !== 'anchor')) continue
+    const text = texts[i], before = texts[i - 1] || '', after = texts[i + 1] || ''
+    const previousWord = !!before && !/\s$/.test(before) && !punctuationEnd.test(before)
+    const nextWord = !!after && !/^\s/.test(after) && !punctuationStart.test(after)
+    for (const mark of getMarksFromSegment(segment)) {
+      if ((mark === 'bold' || mark === 'italic' || mark === 'strike') &&
+        ((punctuationStart.test(text) && previousWord) || (punctuationEnd.test(text) && nextWord) ||
+          (mark === 'italic' && (previousWord || nextWord)))) result.add(mark)
+    }
+  }
+  return result
+}
 
 /**
  * A lone literal backtick in a line cannot form a code span, so it does not
@@ -69,6 +89,13 @@ export function serializeLine(
    */
   const segments = normalizeLine(inputSegments)
   const substrings: string[] = []
+  const htmlMarks = htmlBoundaryMarks(segments)
+  const htmlTags: Partial<Record<MarkKey, string>> = { bold: 'strong', italic: 'em', strike: 's' }
+  const markSymbols = (marks: MarkKey[], closing = false) => marks.map(mark => {
+    const tag = htmlMarks.has(mark) && htmlTags[mark]
+    return tag ? `<${closing ? '/' : ''}${tag}>` :
+      closing ? convertMarksToCloseSymbols([mark]) : convertMarksToOpenSymbols([mark])
+  }).join('')
 
   /**
    * When called recursively (e.g. for anchor children), the backtick decision
@@ -129,7 +156,7 @@ export function serializeLine(
      * First we start by adding the symbols needed to add the marks to this
      * segment.
      */
-    substrings.push(convertMarksToOpenSymbols(leadingDiff.add))
+    substrings.push(markSymbols(leadingDiff.add))
 
     /**
      * Then we add the Text or the Anchor for the segment
@@ -145,7 +172,7 @@ export function serializeLine(
      */
     const nextMarks = getNextMarks(segments, i, trailingMarks)
     const trailingDiff = diffMarks(leadingDiff.nextOrderedMarks, nextMarks)
-    substrings.push(convertMarksToCloseSymbols(trailingDiff.remove))
+    substrings.push(markSymbols(trailingDiff.remove, true))
 
     /**
      * The `trailingDiff` becomes the new `leadingDiff`

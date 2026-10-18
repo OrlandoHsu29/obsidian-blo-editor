@@ -1,4 +1,5 @@
 import { createPlugin, stopEvent, TypedPlugin } from "../sink"
+import { clipboardHtmlToMarkdown } from "./html-markdown"
 
 import { createPasteMarkdownMethods } from "./methods"
 
@@ -23,11 +24,15 @@ export const PasteMarkdownPlugin = createPlugin<PasteMarkdownPluginCustomTypes>(
       editor: {},
       editableProps: {
         onPaste(e) {
-          const { types } = e.clipboardData
-          if (types.length !== 1 || types[0] !== "text/plain") {
-            return false
-          }
-          const markdown = e.clipboardData.getData("text/plain")
+          const data = e.clipboardData
+          const html = data.getData("text/html")
+          // Slate's own fragment preserves block metadata and rectangular cells.
+          if (data.files.length || data.getData("application/x-slate-fragment") || /\bdata-slate-fragment\s*=/i.test(html)) return false
+          // Browser plain text omits headings, list markers and inline marks.
+          // Convert HTML first so its block spacing is parsed as Markdown, rather
+          // than turning every newline of the fallback text into a paragraph.
+          const markdown = html ? clipboardHtmlToMarkdown(html) : data.getData("text/plain")
+          if (!markdown) return false
           editor.pasteMarkdown.pasteMarkdown(markdown)
           stopEvent(e)
           return true

@@ -38,7 +38,8 @@ export function insertTable(
   rowCount: number,
   { at = editor.selection }: { at?: Location | null } = {}
 ): boolean {
-  const table = createTable(columnCount, rowCount)
+  const table = { ...createTable(columnCount, rowCount),
+    ...(editor.wysimark.getTableDefaults?.() ?? { headerRow: true, headerColumn: false }) }
   return insertRootElement(editor, table, { at })
 }
 

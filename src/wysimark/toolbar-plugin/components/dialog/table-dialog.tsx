@@ -1,9 +1,6 @@
 import { clsx } from "clsx"
 import { useCallback, useRef, useState } from "react"
 import { ReactEditor, useSlate } from "slate-react"
-import { Editor, Element } from 'slate'
-import { setTableHeader } from '../../../table-plugin/headers'
-import { TableElement } from '../../../table-plugin/types'
 import { ui } from '../../../utils/translations'
 
 import { CloseMask } from "../../../shared-overlays"
@@ -28,7 +25,12 @@ export function TableDialog({
 }) {
   const [hover, setHover] = useState({ x: 0, y: 0 })
   const editor = useSlate()
-  const table=editor.selection?Editor.above<TableElement>(editor,{match:n=>Element.isElement(n)&&n.type==='table'})?.[0]:undefined
+  const [defaults,setDefaults]=useState(()=>editor.wysimark.getTableDefaults?.()??{headerRow:true,headerColumn:false})
+  const changeDefault=(key:'headerRow'|'headerColumn',checked:boolean)=>{
+    const next={...defaults,[key]:checked}
+    setDefaults(next)
+    editor.wysimark.setTableDefaults?.(next)
+  }
   const ref = useRef<HTMLDivElement>(null)
   const style = useAbsoluteReposition({ src: ref, dest }, ({ dest }) => {
     return { left: dest.left - 8, top: dest.top + dest.height }
@@ -56,10 +58,10 @@ export function TableDialog({
     <>
       <CloseMask close={close} />
       <$TableDialog ref={ref} style={style}>
-        {table&&<div className="wysimark-table-settings">
-          <label><input type="checkbox" checked={table.headerRow!==false} onChange={event=>setTableHeader(editor,'headerRow',event.target.checked)} />{ui('标题行')}</label>
-          <label><input type="checkbox" checked={!!table.headerColumn} onChange={event=>setTableHeader(editor,'headerColumn',event.target.checked)} />{ui('标题列')}</label>
-        </div>}
+        <div className="wysimark-table-settings">
+          <label><input type="checkbox" checked={defaults.headerRow} onChange={event=>changeDefault('headerRow',event.target.checked)} />{ui('默认标题行')}</label>
+          <label><input type="checkbox" checked={defaults.headerColumn} onChange={event=>changeDefault('headerColumn',event.target.checked)} />{ui('默认标题列')}</label>
+        </div>
         <$TableDialogGrid onMouseLeave={() => hoverCell(0, 0)}>
           {rows.map((y) => {
             return cols.map((x) => {

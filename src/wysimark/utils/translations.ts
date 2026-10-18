@@ -139,6 +139,8 @@ export const uiMessages = {
   "上方插入行":{zh:"上方插入行",en:"Insert row above"},
   "删除行":{zh:"删除行",en:"Delete row"},
   "标题列":{zh:"标题列",en:"Header column"},
+  "默认标题行":{zh:"默认标题行",en:"Default header row"},
+  "默认标题列":{zh:"默认标题列",en:"Default header column"},
   "标题行":{zh:"标题行",en:"Header row"},
   "清除格式": {"zh":"清除格式","en":"Clear formatting"},
   "撤销": {"zh":"撤销","en":"Undo"},

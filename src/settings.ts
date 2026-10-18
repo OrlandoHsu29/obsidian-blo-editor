@@ -6,12 +6,14 @@ export type EditorSettings = {
   preferRichEditing: boolean
   defaultTextColor: string | null
   richEditingFolder: string
+  tableDefaults: { headerRow: boolean; headerColumn: boolean }
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {
   preferRichEditing: true,
   defaultTextColor: null,
   richEditingFolder: '',
+  tableDefaults: { headerRow: true, headerColumn: false },
 }
 
 export class BloSettingsTab extends PluginSettingTab {

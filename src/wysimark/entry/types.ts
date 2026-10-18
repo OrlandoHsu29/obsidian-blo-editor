@@ -39,6 +39,8 @@ export type WysimarkEditor = {
     openTextColor?: () => void
     getTextColor?: () => string | null
     setTextColor?: (color: string | null) => void
+    getTableDefaults?: () => { headerRow: boolean; headerColumn: boolean }
+    setTableDefaults?: (defaults: { headerRow: boolean; headerColumn: boolean }) => void
     enableInternalLinks?: boolean
     disableCodeBlock?: boolean
     disableHighlight?: boolean

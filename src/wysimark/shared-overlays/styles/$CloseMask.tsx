@@ -8,5 +8,5 @@ export const $CloseMask = styled("div")`
   right: 0;
   bottom: 0;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.01);
+  background: transparent;
 `

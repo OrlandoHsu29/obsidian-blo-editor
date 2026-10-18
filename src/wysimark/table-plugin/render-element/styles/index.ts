@@ -40,6 +40,8 @@ export const $TableCell = styled("td")`
   min-width: 2em;
   &.--selected {
     outline: 2px solid var(--select-color, blue);
+    outline-offset: -2px;
+    z-index: 1;
   }
   /**
    * Stronger borders on the left and right edge

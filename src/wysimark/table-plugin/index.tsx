@@ -10,6 +10,7 @@ import {
 } from "../sink"
 
 import { deleteFragmentWithProtectedTypes } from "./delete-fragment"
+import { deleteSelectedTableAxis, installTableCellClipboard, replaceSelectedCells } from './cell-selection'
 import { createTableMethods } from "./methods"
 import { normalizeTableIndexes } from "./normalize/normalize-table"
 import { normalizeTableCell } from "./normalize/normalize-table-cell"
@@ -42,6 +43,7 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
   (editor, _options, { createPolicy }) => {
     editor.supportsTable = true
     editor.tablePlugin = createTableMethods(editor)
+    installTableCellClipboard(editor)
     return createPolicy({
       name: "table",
       editor: {
@@ -50,17 +52,18 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
            * If we're at start of a cell, disable delete backward because we
            * don't want the cell to be deleted.
            */
-          return isStartOfElement(editor, "table-cell")
+          return deleteSelectedTableAxis(editor) || isStartOfElement(editor, "table-cell")
         },
         deleteForward: () => {
           /**
            * If we're at end of a cell, disable delete forward because we don't
            * want the cell to be deleted.
            */
-          return isEndOfElement(editor, "table-cell")
+          return deleteSelectedTableAxis(editor) || isEndOfElement(editor, "table-cell")
         },
-        deleteFragment: () =>
-          deleteFragmentWithProtectedTypes(editor, ["table-cell"]),
+        deleteFragment: () => deleteSelectedTableAxis(editor) || replaceSelectedCells(editor) || deleteFragmentWithProtectedTypes(editor, ["table-cell"]),
+        insertText: text => replaceSelectedCells(editor, () => editor.insertText(text)),
+        insertFragment: fragment => replaceSelectedCells(editor, () => editor.insertFragment(fragment as unknown as Parameters<typeof editor.insertFragment>[0])),
         insertBreak: () => {
           /**
            * IF we're anywhere in a table cell, insert a soft break instead

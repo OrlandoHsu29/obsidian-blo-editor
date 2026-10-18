@@ -12,45 +12,73 @@ See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/
 
 [中文说明](README.zh-CN.md)
 
+## Preview
+
+Light mode — headings, lists, tables, code, and the native outline:
+
+![Light mode overview using a synthetic knowledge-base note](assets/preview-light.png)
+
+Dark mode — the same note follows the current theme:
+
+![Dark mode overview of the same synthetic note](assets/preview-dark.png)
+
+Open any image to view the original high-resolution PNG.
+
 ## A block editing workflow
 
 Alongside Obsidian's native Markdown editor, Blo offers:
 
-- **Parent and child blocks.** Drag a parent together with its text, lists, quotes,
-  tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
-  adjust indentation. Repeating the active paragraph-style shortcut restores body text.
-- **Hierarchical heading numbers.** Combine heading levels and indentation to
-  display `1.2.3`, counting only numbered ancestors. Continue/restart rules respect
-  heading and parent-block boundaries; body lists keep ordinary `1.` numbering.
-  Heading numbers also appear in the native outline.
-- **Table editing by cells, rows, or columns.** Select a rectangle or use row/column
-  handles, adjust alignment and headers from the floating toolbar, insert at the
-  handles, and delete selected rows/columns with Backspace or Delete. Set default
-  header styles for new tables.
-- **Styled copy and paste.** Import Yuque Markdown color tags combined with bold,
-  lists, and inline code, or paste web HTML. Copy out as standard rich HTML and
-  plain text. Imported colors map to the toolbar palette; near-black/white text
-  and neutral backgrounds follow the current theme.
+**Parent and child blocks.** Drag a parent together with its text, lists, quotes,
+tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
+adjust indentation. Repeating the active paragraph-style shortcut restores body text.
 
 <details>
-<summary>Two screenshots and sample notes</summary>
+<summary>View block dragging and indentation</summary>
 
-Open either image to view the original high-resolution PNG.
+![Block drag preview with indentation levels 0, 1, and 2](assets/feature-drag-indent.png)
 
-Numbered headings, indented blocks, and the native outline:
+</details>
+
+**Hierarchical heading numbers.** Combine heading levels and indentation to
+display `1.2.3`, counting only numbered ancestors. Continue/restart rules respect
+heading and parent-block boundaries; body lists keep ordinary `1.` numbering.
+Heading numbers also appear in the native outline.
+
+<details>
+<summary>View heading numbers and outline</summary>
 
 ![Synthetic project plan with hierarchical numbers and matching outline entries](assets/feature-blocks-outline.png)
 
-Column selection, the table toolbar, and imported formatting in dark mode:
+</details>
+
+**Table editing by cells, rows, or columns.** Select a rectangle or use row/column
+handles, adjust alignment and headers from the floating toolbar, insert at the
+handles, and delete selected rows/columns with Backspace or Delete. Set default
+header styles for new tables.
+
+<details>
+<summary>View table selection and floating controls</summary>
 
 ![Synthetic feature table with a selected column and theme-aware imported text](assets/feature-table-clipboard.png)
+
+</details>
+
+**Styled copy and paste.** Import Yuque Markdown color tags combined with bold,
+underline, lists, and inline code, or paste web HTML. Copy out as standard rich
+HTML and plain text. Imported colors map to the toolbar palette; near-black/white
+text and neutral backgrounds follow the current theme.
+
+<details>
+<summary>View imported formatting and theme-aware colors</summary>
+
+![Imported bold, underline, colored code, and neutral text in dark mode](assets/feature-styled-clipboard.png)
+
+</details>
 
 Try the [block structure example](examples/block-structure.md) and
 [table and formatting example](examples/tables-and-formatting.md).
 Copy them into your vault and open them with Blo Editor.
 The notes contain synthetic content; the screenshots exclude private tabs and the file tree.
-
-</details>
 
 ## Installation
 

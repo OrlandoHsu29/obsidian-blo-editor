@@ -15,7 +15,7 @@ export function handleScopedHotkey(editor: Editor, event: KeyboardEvent): boolea
   if (!event.altKey && event.shiftKey && key === '7') action = () => editor.list.convertOrderedList(true)
   if (!event.altKey && event.shiftKey && key === '8') action = () => editor.list.convertUnorderedList(true)
   if (event.altKey && !event.shiftKey && key === 'h') action = () => editor.marksPlugin.toggleHighlight()
-  if (event.altKey && !event.shiftKey && /^[0-5]$/.test(key)) action = () => key === '0' ? editor.collapsibleParagraph.convertParagraph() : editor.heading.convertHeading(Number(key) as 1 | 2 | 3 | 4 | 5, false)
+  if (event.altKey && !event.shiftKey && /^[0-5]$/.test(key)) action = () => key === '0' ? editor.collapsibleParagraph.convertParagraph() : editor.heading.convertHeading(Number(key) as 1 | 2 | 3 | 4 | 5, true)
   if (!event.altKey && !event.shiftKey && key === ']') action = () => {indentSelectedBlocks(editor,1)}
   if (!event.altKey && !event.shiftKey && key === '[') action = () => {indentSelectedBlocks(editor,-1)}
   if (action) { event.preventDefault(); event.stopPropagation(); action(); return true }

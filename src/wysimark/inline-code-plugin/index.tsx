@@ -6,6 +6,7 @@ import { createHotkeyHandler, createPlugin, TypedPlugin } from "../sink"
 
 import { $InlineCode, $InvisibleSpan } from "./styles"
 import { InlineCodePluginCustomTypes } from "./types"
+import { cleanInlineStyle } from '../../blocks/typography'
 export * from "./styles"
 export * from "./types"
 
@@ -44,6 +45,9 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(
       editableProps: {
         renderLeaf: ({ leaf, text, children, leafPosition }: RenderLeafProps) => {
           if (leaf.code) {
+            const colors = Object.fromEntries((cleanInlineStyle(leaf.inlineStyle)?.split(';') || []).map(part => {
+              const colon = part.indexOf(':'); return [part.slice(0, colon), part.slice(colon + 1)]
+            }))
             // Slate supplies its own outside caret while pending marks differ.
             // Another zero-width span here would hide that mark placeholder
             // from Slate's model-to-DOM point conversion.
@@ -53,7 +57,7 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(
               /**
                * Disable spellCheck because it's computer code usually.
                */
-              <><$InlineCode spellCheck={false}>
+              <><$InlineCode spellCheck={false} style={{color: colors.color, backgroundColor: colors['background-color']}}>
                 {/* These invisible spans are necessary. See comments for $InvisibleSpan. */}
                 <$InvisibleSpan contentEditable={false}>|</$InvisibleSpan>
                 {children}

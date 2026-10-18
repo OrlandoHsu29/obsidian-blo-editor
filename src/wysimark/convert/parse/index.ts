@@ -16,12 +16,33 @@ import { parseBlockDocument } from '../../../blocks/persistence'
 
 const parser = unified().use(remarkParse).use(customRemarkGfm())
 
+function repairYuqueStrong(source:string,ast:Root):string {
+  if(!/<\/font>\*{4}/i.test(source))return source
+  const codeRanges:{start:number;end:number}[]=[]
+  visit(ast,node=>{
+    if(node.type!=='code'&&node.type!=='inlineCode')return
+    const start=node.position?.start.offset,end=node.position?.end.offset
+    if(start!==undefined&&end!==undefined)codeRanges.push({start,end})
+  })
+  codeRanges.sort((a,b)=>a.start-b.start)
+  let range=0
+  return source.replace(/\*\*(<font\b[^>]*>[^\n]*?<\/font>)\*{4}(?=\S)/gi,(match,wrapped:string,offset:number)=>{
+    while(range<codeRanges.length&&codeRanges[range].end<=offset)range++
+    if(codeRanges[range]?.start<offset+match.length)return match
+    return '**'+wrapped
+  })
+}
+
 export function parseToAst(
   markdown: string,
   options: InternalLinkOptions = { enableInternalLinks: true }
 ) {
-  const source = options.enableInternalLinks ? protectEscapedWikiLinks(markdown) : markdown
-  const ast = parser.parse(source) as Root
+  let source = options.enableInternalLinks ? protectEscapedWikiLinks(markdown) : markdown
+  let ast = parser.parse(source) as Root
+  if(options.yuqueFormatting){
+    const repaired=repairYuqueStrong(source,ast)
+    if(repaired!==source){source=repaired;ast=parser.parse(source) as Root}
+  }
   visit(ast, 'paragraph', node => {
     const start=node.position?.start.offset
     if(start!==undefined&&/^\d{1,6}\\\. /.test(source.slice(start)))node.data={...node.data,escapedOrderedPrefix:true}
@@ -56,6 +77,7 @@ export function parse(
   markdown: string,
   options: InternalLinkOptions = { enableInternalLinks: true }
 ): Element[] {
+  if(options.yuqueFormatting===undefined)options={...options,yuqueFormatting:/<font\b[^>]*\b(?:style|color)\s*=/i.test(markdown)}
   const blockDocument=parseBlockDocument(markdown, text=>parse(text,options))
   if(blockDocument)return blockDocument
   const lineEnding = getLineEnding(markdown)

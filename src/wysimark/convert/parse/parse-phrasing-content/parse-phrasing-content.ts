@@ -12,6 +12,7 @@ import {
   wikiLinkHref,
 } from "../../obsidian-links"
 import { unescapeMarkdown } from "../../utils"
+import { cleanInlineStyle } from '../../../../blocks/typography'
 
 /**
  * Parse inline HTML content, with special handling for <mark> tags
@@ -99,32 +100,76 @@ function parseInlineTag(
 }
 
 /**
- * Returns the indexes of formatting tags that have a matching open/close tag
- * among the same siblings. Only these become marks: an unmatched tag is kept
+ * Match formatting tags in document order across nested Markdown phrasing.
+ * Only paired tags become marks: an unmatched tag is kept
  * as raw HTML, so it is neither dropped on save nor applied to the rest of
  * the paragraph.
  */
-function findPairedInlineTags(phrasingContents: PhrasingContent[]): Set<number> {
-  const paired = new Set<number>()
-  const openTags: Record<string, number[]> = {}
-  phrasingContents.forEach((phrasingContent, index) => {
+function findPairedInlineTags(phrasingContents: PhrasingContent[]): Set<PhrasingContent> {
+  const paired = new Set<PhrasingContent>()
+  const openTags: Record<string, PhrasingContent[]> = {}
+  const visit = (phrasingContent: PhrasingContent) => {
     const tag = parseInlineTag(phrasingContent)
-    if (!tag) return
-    const stack = (openTags[tag.name] ??= [])
-    if (!tag.closing) {
-      stack.push(index)
-    } else if (stack.length) {
-      paired.add(stack.pop())
-      paired.add(index)
+    if (tag) {
+      const stack = (openTags[tag.name] ??= [])
+      if (!tag.closing) stack.push(phrasingContent)
+      else if (stack.length) { paired.add(stack.pop()!); paired.add(phrasingContent) }
     }
-  })
+    if ('children' in phrasingContent) phrasingContent.children.forEach(visit)
+  }
+  phrasingContents.forEach(visit)
   return paired
+}
+
+type InlineContext = {
+  pairedTags: Set<PhrasingContent>
+  tagDepths: Record<string, number>
+  styleStack: { name: string; style: string }[]
+}
+function contextMarks(marks: MarkProps, context?: InlineContext): MarkProps {
+  if (!context) return marks
+  const active = { ...marks }
+  for (const key of Object.keys(context.tagDepths) as (keyof MarkProps)[]) if (context.tagDepths[key] > 0) Object.assign(active, { [key]: true })
+  const style = cleanInlineStyle([marks.inlineStyle, ...context.styleStack.map(s => s.style)].filter(Boolean).join(';'))
+  if (style) active.inlineStyle = style; else delete active.inlineStyle
+  return active
+}
+
+/** Yuque places presentation wrappers inside code spans; fenced code stays literal. */
+function parseFontCode(value: string, marks: MarkProps, yuqueFormatting=false): Segment[] {
+  const bareBold=yuqueFormatting&&/^(\*\*|__)[\s\S]+\1$/.test(value)
+  if (!/<font\b/i.test(value)&&!bareBold) return [{ text: restoreEscapedWikiLinks(value, true), ...marks, code: true }]
+  let text = value, hasFont = false
+  const active = { ...marks, code: true as const }, styles = [marks.inlineStyle]
+  while (true) {
+    const delimiter = /^(\*\*|__|~~|\*|_)([\s\S]+)\1$/.exec(text)
+    if (delimiter) {
+      const key = delimiter[1] === '~~' ? 'strike' : delimiter[1].length === 2 ? 'bold' : 'italic'
+      active[key] = true; text = delimiter[2]; continue
+    }
+    const font = /^(<font\b[^>]*>)([\s\S]*)<\/font>$/i.exec(text)
+    const tag = font && parseInlineTag({ type: 'html', value: font[1] })
+    if (!font || !tag?.style) break
+    // Only unwrap a complete outer font, not adjacent or malformed font tags.
+    let depth = 0, balanced = true
+    for (const inner of font[2].matchAll(/<(\/?)font\b[^>]*>/gi)) {
+      depth += inner[1] ? -1 : 1
+      if (depth < 0) { balanced = false; break }
+    }
+    if (!balanced || depth !== 0) break
+    hasFont = true; styles.push(tag.style); text = font[2]
+  }
+  if (!hasFont&&!bareBold) return [{ text: restoreEscapedWikiLinks(value, true), ...marks, code: true }]
+  const style = cleanInlineStyle(styles.filter(Boolean).join(';'))
+  if(style)active.inlineStyle=style;else delete active.inlineStyle
+  return [{ text: restoreEscapedWikiLinks(text, true), ...active }]
 }
 
 export function parsePhrasingContents(
   phrasingContents: PhrasingContent[],
   marks: MarkProps = {},
-  options: InternalLinkOptions = {}
+  options: InternalLinkOptions = {},
+  context?: InlineContext
 ): Segment[] {
   // Convert paired Obsidian highlight delimiters into the existing mark schema.
   const highlights = phrasingContents.flatMap((node, index) => node.type === 'text' ? [...node.value.matchAll(/==/g)].map(m => ({ index, offset: m.index! })) : [])
@@ -136,35 +181,27 @@ export function parsePhrasingContents(
       const result: PhrasingContent[] = []; let cursor = 0
       for (const token of tokens) {
         if (token.offset > cursor) result.push({ type: 'text', value: node.value.slice(cursor, token.offset) })
-        result.push({ type: 'html', value: sequence++ % 2 ? '</mark>' : '<mark>' }); cursor = token.offset + 2
+        const tag: PhrasingContent = { type: 'html', value: sequence++ % 2 ? '</mark>' : '<mark>' }
+        context?.pairedTags.add(tag); result.push(tag); cursor = token.offset + 2
       }
       if (cursor < node.value.length) result.push({ type: 'text', value: node.value.slice(cursor) }); return result
     })
   }
   const segments: Segment[] = []
-  const pairedTags = findPairedInlineTags(phrasingContents)
-  const tagDepths: Record<string, number> = {}
-  let activeMarks = { ...marks }
-  const styleStack: { name: string; style: string }[] = []
-  phrasingContents.forEach((phrasingContent, index) => {
-    const tag = pairedTags.has(index) ? parseInlineTag(phrasingContent) : null
+  context ??= { pairedTags: findPairedInlineTags(phrasingContents), tagDepths: {}, styleStack: [] }
+  const { pairedTags, tagDepths, styleStack } = context
+  phrasingContents.forEach(phrasingContent => {
+    const tag = pairedTags.has(phrasingContent) ? parseInlineTag(phrasingContent) : null
     if (tag) {
       if (tag.name === 'span' || tag.name === 'font' || tag.name === 'mark' && (tag.style || styleStack.at(-1)?.name === 'mark')) {
         if (tag.closing) styleStack.pop(); else styleStack.push({ name: tag.name, style: tag.style || '' })
-        activeMarks = { ...activeMarks, inlineStyle: [marks.inlineStyle, ...styleStack.map(s => s.style)].filter(Boolean).join(';') || undefined }
         if (tag.name !== 'mark') return
       }
       const key = INLINE_TAG_MARKS[tag.name]
-      activeMarks = { ...activeMarks }
       tagDepths[key] = (tagDepths[key] || 0) + (tag.closing ? -1 : 1)
-      if (tagDepths[key] > 0 || marks[key]) {
-        activeMarks = { ...activeMarks, [key]: marks[key] || true }
-      } else {
-        delete activeMarks[key]
-      }
       return
     }
-    segments.push(...parsePhrasingContent(phrasingContent, activeMarks, options))
+    segments.push(...parsePhrasingContent(phrasingContent, marks, options, context))
   })
   const nextInlines = normalizeSegments(segments)
   return nextInlines
@@ -172,21 +209,23 @@ export function parsePhrasingContents(
 
 function parsePhrasingContent(
   phrasingContent: PhrasingContent,
-  marks: MarkProps = {},
-  options: InternalLinkOptions = {}
+  baseMarks: MarkProps = {},
+  options: InternalLinkOptions = {},
+  context?: InlineContext
 ): Segment[] {
+  const marks = contextMarks(baseMarks, context)
   switch (phrasingContent.type) {
     case "delete":
       return parsePhrasingContents(
         phrasingContent.children,
-        { ...marks, strike: true },
-        options
+        { ...baseMarks, strike: true },
+        options, context
       )
     case "emphasis":
       return parsePhrasingContents(
         phrasingContent.children,
-        { ...marks, italic: true },
-        options
+        { ...baseMarks, italic: true },
+        options, context
       )
     case "footnoteReference":
       return [{ text: phrasingContent.identifier, ...marks, footnote: phrasingContent.identifier }]
@@ -195,9 +234,7 @@ function parsePhrasingContent(
     case "image":
       return parseInlineImage(phrasingContent)
     case "inlineCode": {
-      return [
-        { text: restoreEscapedWikiLinks(phrasingContent.value, true), ...marks, code: true },
-      ]
+      return parseFontCode(phrasingContent.value, marks, options.yuqueFormatting)
     }
     case "link":
       return [
@@ -213,16 +250,16 @@ function parsePhrasingContent(
             phrasingContent.title == null ? undefined : phrasingContent.title,
           children: parsePhrasingContents(
             phrasingContent.children,
-            marks,
-            options
+            baseMarks,
+            options, context
           ),
         },
       ]
     case "strong":
       return parsePhrasingContents(
         phrasingContent.children,
-        { ...marks, bold: true },
-        options
+        { ...baseMarks, bold: true },
+        options, context
       )
     case "text":
       return phrasingContent.value.split("\n").flatMap((line, index) => [

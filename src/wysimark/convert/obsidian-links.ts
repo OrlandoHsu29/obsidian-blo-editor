@@ -5,6 +5,8 @@ const ESCAPED_WIKI_CLOSE = "\uE000WYSIMARK_ESCAPED_WIKI_CLOSE\uE000"
 
 export type InternalLinkOptions = {
   enableInternalLinks?: boolean
+  /** Import compatibility inferred from Yuque's styled font wrappers. */
+  yuqueFormatting?: boolean
 }
 
 export function protectEscapedWikiLinks(markdown: string): string {

@@ -23,9 +23,12 @@ function htmlBoundaryMarks(segments: Segment[]): Set<MarkKey> {
     const text = texts[i], before = texts[i - 1] || '', after = texts[i + 1] || ''
     const previousWord = !!before && !/\s$/.test(before) && !punctuationEnd.test(before)
     const nextWord = !!after && !/^\s/.test(after) && !punctuationStart.test(after)
+    // Styled leaves/code emit tags or backticks rather than their text at the
+    // boundary. Use paired tags so neighboring words cannot disable the marks.
     for (const mark of getMarksFromSegment(segment)) {
       if ((mark === 'bold' || mark === 'italic' || mark === 'strike') &&
-        ((punctuationStart.test(text) && previousWord) || (punctuationEnd.test(text) && nextWord) ||
+        ((SlateText.isText(segment) && (segment.inlineStyle || segment.code)) ||
+          (punctuationStart.test(text) && previousWord) || (punctuationEnd.test(text) && nextWord) ||
           (mark === 'italic' && (previousWord || nextWord)))) result.add(mark)
     }
   }

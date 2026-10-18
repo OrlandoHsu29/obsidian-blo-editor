@@ -17,7 +17,7 @@ import { parseBlockDocument } from '../../../blocks/persistence'
 const parser = unified().use(remarkParse).use(customRemarkGfm())
 
 function repairYuqueStrong(source:string,ast:Root):string {
-  if(!/<\/font>\*{4}/i.test(source))return source
+  if(!source.includes('**')||!/<font\b/i.test(source))return source
   const codeRanges:{start:number;end:number}[]=[]
   visit(ast,node=>{
     if(node.type!=='code'&&node.type!=='inlineCode')return
@@ -25,12 +25,29 @@ function repairYuqueStrong(source:string,ast:Root):string {
     if(start!==undefined&&end!==undefined)codeRanges.push({start,end})
   })
   codeRanges.sort((a,b)=>a.start-b.start)
-  let range=0
-  return source.replace(/\*\*(<font\b[^>]*>[^\n]*?<\/font>)\*{4}(?=\S)/gi,(match,wrapped:string,offset:number)=>{
-    while(range<codeRanges.length&&codeRanges[range].end<=offset)range++
-    if(codeRanges[range]?.start<offset+match.length)return match
-    return '**'+wrapped
-  })
+  // Hide literal code delimiters while finding Yuque's presentation wrappers.
+  // Keep offsets unchanged, including newlines, so replacements use the source.
+  let cursor=0
+  const parts:string[]=[]
+  for(const range of codeRanges){
+    if(range.start<cursor)continue
+    parts.push(source.slice(cursor,range.start),source.slice(range.start,range.end).replace(/[^\n]/g,' '))
+    cursor=range.end
+  }
+  parts.push(source.slice(cursor))
+  const masked=parts.join(''),result:string[]=[]
+  cursor=0
+  for(const match of masked.matchAll(/\*\*((?:(?!\*\*)[^\n])+)\*\*/g)){
+    const start=match.index!,end=start+match[0].length,wrapped=source.slice(start+2,end-2)
+    let escapes=0
+    for(let i=start-1;i>=0&&source[i]==='\\';i--)escapes++
+    if(escapes%2||!/<font\b/i.test(wrapped))continue
+    // HTML strong tags avoid Markdown delimiter ambiguity at adjacent bold
+    // runs, nested underline tags, and font/code boundaries (including spaces).
+    result.push(source.slice(cursor,start),'<strong>',wrapped,'</strong>')
+    cursor=end
+  }
+  return cursor?result.join('')+source.slice(cursor):source
 }
 
 export function parseToAst(

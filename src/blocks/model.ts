@@ -103,15 +103,52 @@ export function deleteBlockGroup(editor: Editor, index: number): boolean {
   })
   return true
 }
-export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after') {
-  if(editor.wysimark.readOnly||!editor.children[from]||!editor.children[target])return false
-  const end=groupEnd(editor.children,from)
-  if(target>=from&&target<end)return false
-  const destination=position==='before'?target:position==='after'?groupEnd(editor.children,target):target+1
-  const depth=blockDepth(editor.children[target])+(position==='inside'?1:0),delta=depth-blockDepth(editor.children[from])
-  if(editor.children.slice(from,end).some(node=>blockDepth(node)+delta>32))return false
+export type BlockDragGroup={children:Node[];from:number;end:number;depth:number;maxRelativeDepth:number;ends:Map<number,number>}
+export function blockDragGroup(children:Node[],from:number):BlockDragGroup|undefined {
+  if(!children[from]||isEditorSpacer(children[from]))return
+  const end=groupEnd(children,from),depth=blockDepth(children[from])
+  let maxRelativeDepth=0
+  for(let i=from;i<end;i++)if(!isEditorSpacer(children[i]))maxRelativeDepth=Math.max(maxRelativeDepth,blockDepth(children[i])-depth)
+  return {children,from,end,depth,maxRelativeDepth,ends:new Map([[from,end]])}
+}
+/** Share the exact insertion boundary and depth between the guide and the move. */
+export function blockDropTarget(group:BlockDragGroup,target:number,position:'before'|'inside'|'after',requestedDepth?:number) {
+  const {children,from,end}=group
+  if(!children[target]||isEditorSpacer(children[target])||(target>from&&target<end))return
+  const targetDepth=blockDepth(children[target])
+  const requested=requestedDepth??targetDepth+(position==='inside'?1:0)
+  if(!Number.isFinite(requested))return
+  const desired=Math.max(0,Math.min(32-group.maxRelativeDepth,Math.round(requested)))
+  let destination=target
+  if(position!=='before') {
+    if(target!==from&&desired>targetDepth)destination=target+1
+    else {
+      let last=group.ends.get(target)
+      if(last===undefined){last=groupEnd(children,target);group.ends.set(target,last)}
+      destination=last
+    }
+  }
+  // Find the preceding real block after removing the source subtree.
+  let previous=destination-1
+  while(previous>=0) {
+    if(previous>=from&&previous<end){previous=from-1;continue}
+    if(!isEditorSpacer(children[previous]))break
+    previous--
+  }
+  const maxDepth=Math.min(32-group.maxRelativeDepth,previous<0?0:blockDepth(children[previous])+1)
+  const depth=Math.min(desired,maxDepth)
+  return {destination,depth,maxDepth}
+}
+export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after',requestedDepth?:number) {
+  if(editor.wysimark.readOnly)return false
+  const group=blockDragGroup(editor.children,from)
+  if(!group)return false
+  const drop=blockDropTarget(group,target,position,requestedDepth)
+  if(!drop)return false
+  const {end}=group,{destination,depth}=drop,delta=depth-group.depth
   const nodes=editor.children.slice(from,end).map(node=>({...node,...depthProps(node,blockDepth(node)+delta)}))
   const adjusted=destination>end-1?destination-(end-from):destination
+  if(adjusted===from&&delta===0)return false
   batch(editor,()=>{
     for(let i=end-1;i>=from;i--)Transforms.removeNodes(editor,{at:[i]})
     Transforms.insertNodes(editor,nodes,{at:[adjusted]})

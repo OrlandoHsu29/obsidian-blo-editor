@@ -1,5 +1,7 @@
 import { Editor, Node, Range, Text, Transforms } from "slate"
 
+export const DEFAULT_TEXT_COLOR = '#DF2A3F'
+
 export function toggleTextColor(editor: Editor, color: string) {
   if (!editor.selection || editor.wysimark.readOnly) return
   const leaves = Range.isExpanded(editor.selection)

@@ -1,6 +1,7 @@
 import { PluginSettingTab, Setting } from 'obsidian'
 import type BloEditorPlugin from './main'
 import { ui } from './wysimark/utils/translations'
+import { DEFAULT_TEXT_COLOR } from './wysimark/marks-plugin/methods/text-color'
 
 export type EditorSettings = {
   preferRichEditing: boolean
@@ -11,7 +12,7 @@ export type EditorSettings = {
 
 export const DEFAULT_SETTINGS: EditorSettings = {
   preferRichEditing: true,
-  defaultTextColor: null,
+  defaultTextColor: DEFAULT_TEXT_COLOR,
   richEditingFolder: '',
   tableDefaults: { headerRow: true, headerColumn: false },
 }

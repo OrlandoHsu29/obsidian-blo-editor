@@ -1,4 +1,4 @@
-import { Editor, Transforms } from "slate"
+import { Editor, Element, Range, Transforms } from "slate"
 
 import { curryOne } from "../../sink"
 
@@ -11,7 +11,15 @@ function pasteMarkdown(editor: Editor, markdown: string) {
     delete element.__markdownLeadingNewlines
     delete element.__markdownTrailingNewlines
   }
-  Transforms.insertNodes(editor, fragment)
+  // Paragraph fragments merge their edges with the text around the selection.
+  // Explicit Markdown blocks (headings, tables, etc.) retain their own structure.
+  const emptyParagraph = editor.selection && Range.isCollapsed(editor.selection) &&
+    Editor.above(editor, { match: node => Element.isElement(node) && node.type === "paragraph" && Editor.isEmpty(editor, node) })
+  if (emptyParagraph || fragment.every(element => element.type === "paragraph")) {
+    editor.insertFragment(fragment)
+  } else {
+    Transforms.insertNodes(editor, fragment)
+  }
 }
 
 export function createPasteMarkdownMethods(editor: Editor) {

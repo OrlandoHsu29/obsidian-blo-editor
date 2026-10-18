@@ -79,7 +79,10 @@ export function replaceSelectedCells(editor: Editor, insert?: () => void): boole
   clearTableAxisSelection(editor)
   const replace = () => Editor.withoutNormalizing(editor, () => {
     for (let y = selected.bottom; y >= selected.top; y--) for (let x = selected.right; x >= selected.left; x--) {
-      Transforms.delete(editor, { at: Editor.range(editor, [...selected.path, y, x]) })
+      const range = Editor.range(editor, [...selected.path, y, x])
+      // Deleting a collapsed empty-cell range performs a character deletion
+      // across its boundary. An empty cell already has no content to clear.
+      if (Range.isExpanded(range)) Transforms.delete(editor, { at: range })
     }
     Transforms.select(editor, Editor.start(editor, [...selected.path, selected.top, selected.left]))
     insert?.()

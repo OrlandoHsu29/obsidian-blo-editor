@@ -52,14 +52,14 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
            * If we're at start of a cell, disable delete backward because we
            * don't want the cell to be deleted.
            */
-          return deleteSelectedTableAxis(editor) || isStartOfElement(editor, "table-cell")
+          return deleteSelectedTableAxis(editor) || replaceSelectedCells(editor) || isStartOfElement(editor, "table-cell")
         },
         deleteForward: () => {
           /**
            * If we're at end of a cell, disable delete forward because we don't
            * want the cell to be deleted.
            */
-          return deleteSelectedTableAxis(editor) || isEndOfElement(editor, "table-cell")
+          return deleteSelectedTableAxis(editor) || replaceSelectedCells(editor) || isEndOfElement(editor, "table-cell")
         },
         deleteFragment: () => deleteSelectedTableAxis(editor) || replaceSelectedCells(editor) || deleteFragmentWithProtectedTypes(editor, ["table-cell"]),
         insertText: text => replaceSelectedCells(editor, () => editor.insertText(text)),

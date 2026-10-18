@@ -12,31 +12,45 @@ See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/
 
 [中文说明](README.zh-CN.md)
 
-## Screenshots
+## A block editing workflow
 
-### Light theme
+Alongside Obsidian's native Markdown editor, Blo offers:
 
-Floating toolbar, paragraph styles, tables, code highlighting, and the native outline.
+- **Parent and child blocks.** Drag a parent together with its text, lists, quotes,
+  tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
+  adjust indentation. Repeating the active paragraph-style shortcut restores body text.
+- **Hierarchical heading numbers.** Combine heading levels and indentation to
+  display `1.2.3`, counting only numbered ancestors. Continue/restart rules respect
+  heading and parent-block boundaries; body lists keep ordinary `1.` numbering.
+  Heading numbers also appear in the native outline.
+- **Table editing by cells, rows, or columns.** Select a rectangle or use row/column
+  handles, adjust alignment and headers from the floating toolbar, insert at the
+  handles, and delete selected rows/columns with Backspace or Delete. Set default
+  header styles for new tables.
+- **Styled copy and paste.** Import Yuque Markdown color tags combined with bold,
+  lists, and inline code, or paste web HTML. Copy out as standard rich HTML and
+  plain text. Imported colors map to the toolbar palette; near-black/white text
+  and neutral backgrounds follow the current theme.
 
-![Blo Editor in light mode with the paragraph menu, table, code block, and outline](assets/screenshot-light.png)
+<details>
+<summary>Two screenshots and sample notes</summary>
 
-### Dark theme
+Open either image to view the original high-resolution PNG.
 
-Rich-text block editing with headings, nested lists, inline code, and quotes.
+Numbered headings, indented blocks, and the native outline:
 
-![Blo Editor in dark mode with headings, lists, inline code, quotes, and outline](assets/screenshot-dark.png)
+![Synthetic project plan with hierarchical numbers and matching outline entries](assets/feature-blocks-outline.png)
 
-### Block structure
+Column selection, the table toolbar, and imported formatting in dark mode:
 
-Organize paragraphs, lists, and code into parent and child blocks.
+![Synthetic feature table with a selected column and theme-aware imported text](assets/feature-table-clipboard.png)
 
-![Blo Editor showing parent and child blocks with indented text, lists, and a code block](assets/block-edit-menu.png)
+Try the [block structure example](examples/block-structure.md) and
+[table and formatting example](examples/tables-and-formatting.md).
+Copy them into your vault and open them with Blo Editor.
+The notes contain synthetic content; the screenshots exclude private tabs and the file tree.
 
-### Slash commands
-
-Type `/` to open the command menu and insert content without leaving the editor.
-
-![Blo Editor with the slash command menu open](assets/slash-command-menu.png)
+</details>
 
 ## Installation
 
@@ -47,26 +61,23 @@ Type `/` to open the command menu and insert content without leaving the editor.
 Requires desktop Obsidian 1.8.7 or later. Release packages contain no personal
 settings, notes, attachments, dependencies, or migration tools.
 
-## Features
+## Editing and compatibility
 
-- Rich-text formatting with theme-aware colors and Markdown storage.
-- Parent/child block dragging and indentation; click a block handle to select
-  the block and open its menu. Tab and Shift+Tab adjust indentation.
-  Delete a block and its children from the menu; undo restores the group.
-- Lists, quotes, tables with header row/column controls, and code highlighting.
-- Find and replace, slash commands, native outline navigation, and reading mode.
-- Automatic saving and save-before-close; Ctrl+S saves immediately.
+Use `/` for commands, the block handle for block actions, and the floating toolbar
+for formatting. Find/replace, reading mode, code highlighting, image insertion and
+resizing are included. Changes save automatically and before closing; Ctrl+S saves
+immediately. Deleting an image block removes its reference, never the attachment file.
 
 Headings 1–4 appear in the outline. Subheadings use H5 styling with extra spacing
 and stay out of the outline. Headings can be combined with ordered lists.
 The default editor can cover the whole vault or a folder configured in settings.
+Leave **Default editing scope** empty to include new notes created anywhere in the vault.
 
 Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
-Image insertion and resizing work independently. Obsidian Image Toolkit is an
-optional image viewer. The editor uses Slate; third-party editing extensions
+Obsidian Image Toolkit is an optional image viewer. The editor uses Slate; third-party editing extensions
 that require CodeMirror do not automatically apply to this view.
 
 ## Development

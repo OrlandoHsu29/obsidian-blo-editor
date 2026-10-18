@@ -1,9 +1,10 @@
 import { createPlugin, TypedPlugin } from '../wysimark/sink'
-import { blockDepth, indentSelectedBlocks, normalizeOrderedText } from './model'
+import { blockDepth, normalizeOrderedText } from './model'
 import { cleanPastedFragment } from './typography'
 import { Editor, Element, Range, Transforms } from 'slate'
 import type { Descendant } from 'slate'
-import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, navigateBlockBoundary } from './selection'
+import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isWholeBlockSelected, navigateBlockBoundary } from './selection'
+import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
 import { boundaryBlockIndex, insertBreakAtBoundary, normalizeStructuredBoundary } from './boundary'
 import { exitEmptyQuote } from './subtitle'
 type Types={Name:'block-structure';Editor:{}}
@@ -42,7 +43,10 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  editableProps:{onKeyDown:event=>{
   if(navigateBlockBoundary(editor,event)){event.preventDefault();event.stopPropagation();return true}
   if(event.key!=='Tab'||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
-  if(!indentSelectedBlocks(editor,event.shiftKey?-1:1))return false
+  const delta=event.shiftKey?-1:1
+  const whole=editor.selection&&isWholeBlockSelected(editor,editor.selection.anchor.path[0])
+  const textHandled=!whole&&indentCodeSelection(editor,delta)
+  if(!textHandled&&!indentBlockSelection(editor,delta))return false
   event.preventDefault();event.stopPropagation();return true
  }},
 }}) as TypedPlugin<Types>

@@ -1,5 +1,5 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
-import { deleteBlockGroup, groupEnd, isEditorSpacer } from './model'
+import { deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from './model'
 import { boundaryBlockIndex, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
@@ -22,6 +22,13 @@ export function isWholeBlockSelected(editor:Editor,index:number):boolean {
  const pending=staged.get(editor)
  return !!pending&&!!editor.selection&&Range.equals(editor.selection,pending.range)&&
   index>=pending.index&&index<=Math.max(pending.range.anchor.path[0],pending.range.focus.path[0])
+}
+/** Keep explicit block selection after indentation, including repeated Tab. */
+export function indentBlockSelection(editor:Editor,delta:1|-1):boolean {
+ const pending=staged.get(editor),index=pending&&isWholeBlockSelected(editor,pending.index)?pending.index:undefined
+ const handled=indentSelectedBlocks(editor,delta)
+ if(handled&&index!==undefined)selectBlockContents(editor,index)
+ return handled
 }
 export function deleteWholeBlockSelection(editor:Editor):boolean {
  const pending=staged.get(editor)

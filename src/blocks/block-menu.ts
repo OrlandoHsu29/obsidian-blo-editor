@@ -2,7 +2,8 @@ import { Menu } from 'obsidian'
 import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, changeBlockIndent, deleteBlockGroup, indentSelectedBlocks } from './model'
+import { blockDepth, changeBlockIndent, deleteBlockGroup } from './model'
+import { indentBlockSelection } from './selection'
 
 /** Both mouse buttons use the same native menu and the existing block selection. */
 export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement) {
@@ -38,7 +39,7 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
     event.preventDefault()
     event.stopImmediatePropagation()
     menu.hide()
-    indentSelectedBlocks(editor, event.shiftKey ? -1 : 1)
+    indentBlockSelection(editor, event.shiftKey ? -1 : 1)
     ReactEditor.focus(editor)
   }
   const window = document.defaultView!

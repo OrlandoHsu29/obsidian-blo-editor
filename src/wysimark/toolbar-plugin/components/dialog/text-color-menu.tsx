@@ -5,6 +5,7 @@ import { ReactEditor, useSlateStatic } from 'slate-react'
 import { $Panel, CloseMask } from '../../../shared-overlays'
 import { useAbsoluteReposition } from '../../../use-reposition'
 import { DEFAULT_TEXT_COLOR } from '../../../marks-plugin/methods/text-color'
+import { TEXT_COLORS } from '../../../../blocks/colors'
 
 export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => void}) {
   const labelId=useId()
@@ -28,7 +29,7 @@ export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => vo
     editor.wysimark.setTextColor?.(color)
     close(); ReactEditor.focus(editor)
   }
-  const colors = [[ui("红色"),DEFAULT_TEXT_COLOR],[ui("橙色"),'#ED740C'],[ui("黄色"),'#AD8500'],[ui("绿色"),'#00A650'],[ui("蓝色"),'#1677FF'],[ui("紫色"),'#7C3AED'],[ui("灰色"),'#787878']]
+  const colors = [[ui("红色"),DEFAULT_TEXT_COLOR],[ui("橙色"),TEXT_COLORS.orange],[ui("黄色"),TEXT_COLORS.yellow],[ui("绿色"),TEXT_COLORS.green],[ui("蓝色"),TEXT_COLORS.blue],[ui("紫色"),TEXT_COLORS.purple],[ui("灰色"),TEXT_COLORS.gray]]
   const check=<svg className="wysimark-color-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10" /></svg>
   return <>
     <CloseMask close={close} />

@@ -7,6 +7,7 @@ import { EscapeTextOptions } from "../utils"
 import { serializeCodeText } from "../segment/serialize-code-text"
 import { serializeAnchor } from "./serialize-anchor"
 import { serializeNonCodeText } from "./serialize-non-code-text"
+import { cleanInlineStyle } from '../../../../../blocks/typography'
 
 export function serializeSegment(
   segment: Segment,
@@ -15,7 +16,8 @@ export function serializeSegment(
   if (SlateText.isText(segment)) {
     if (segment.inlineStyle) {
       const { inlineStyle, ...text } = segment;
-      return `<span style="${inlineStyle}">${serializeSegment(text, options)}</span>`;
+      const style=cleanInlineStyle(inlineStyle)
+      return style?`<span style="${style}">${serializeSegment(text, options)}</span>`:serializeSegment(text, options);
     }
     if (segment.html) return segment.text
     if (segment.footnote) return `[^${segment.footnote}]`

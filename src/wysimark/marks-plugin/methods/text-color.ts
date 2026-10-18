@@ -1,6 +1,8 @@
 import { Editor, Node, Range, Text, Transforms } from "slate"
+import { cleanInlineStyle, isDefaultTextColor } from '../../../blocks/typography'
+import { TEXT_COLORS } from '../../../blocks/colors'
 
-export const DEFAULT_TEXT_COLOR = '#DF2A3F'
+export const DEFAULT_TEXT_COLOR = TEXT_COLORS.red
 
 export function toggleTextColor(editor: Editor, color: string) {
   if (!editor.selection || editor.wysimark.readOnly) return
@@ -14,14 +16,15 @@ export function toggleTextColor(editor: Editor, color: string) {
 
 /** Replace just the foreground color, retaining background and other marks. */
 export function withTextColor(style: string | undefined, color: string | null): string {
-  const declarations = new Map((style || "").split(";").filter(Boolean).map(part => {
+  const declarations = new Map((cleanInlineStyle(style) || "").split(";").filter(Boolean).map(part => {
     const colon = part.indexOf(":")
     return [part.slice(0, colon).trim(), part.slice(colon + 1).trim()] as [string, string]
   }))
   declarations.delete("color")
   if (color) {
     if (!/^#[\da-f]{6}$/i.test(color)) throw new Error("Invalid text color")
-    declarations.set("color", color.toUpperCase())
+    const mapped=cleanInlineStyle('color:'+color)
+    if(!isDefaultTextColor(color)&&mapped)declarations.set("color", mapped.slice('color:'.length))
   }
   return Array.from(declarations, ([key, value]) => `${key}:${value}`).join(";")
 }

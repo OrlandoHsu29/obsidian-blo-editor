@@ -1,5 +1,6 @@
 import { Descendant, Element, Node, Text } from 'slate'
 import { isEditorSpacer, isListBlock } from './model'
+import { mappedTextColors } from './colors'
 
 export function blockSpacing(node:Node):{before:number;after:number} {
   if(Element.isElement(node)&&node.__subtitle)return {before:1.2,after:.85}
@@ -19,6 +20,9 @@ export function blockGap(nodes:Node[],index:number):string {
   return previous<0?'0px':`${Math.max(blockSpacing(nodes[index]).before,blockSpacing(nodes[previous]).after)}em`
 }
 /** Imported text may carry color, never font/layout/spacing declarations. */
+export function isDefaultTextColor(value:string):boolean {
+  return mappedTextColors(value).foreground===undefined
+}
 export function cleanInlineStyle(style:string|undefined):string|undefined {
   const colors=new Map<string,string>()
   for(const part of style?.split(';')||[]) {
@@ -27,7 +31,10 @@ export function cleanInlineStyle(style:string|undefined):string|undefined {
     if(property==='background')property='background-color'
     const value=part.slice(colon+1).trim().replace(/\s*!important\s*$/i,'')
     if(!['color','background-color'].includes(property))continue
-    if(/^(?:#[\da-f]{3,8}|[a-z]+|(?:rgb|hsl)a?\([\d\s.,%/+\-]+\)|var\(--[\w-]+\))$/i.test(value))colors.set(property,value)
+    if(/^(?:#[\da-f]{3,8}|[a-z]+|(?:rgb|hsl)a?\([\d\s.,%/+\-]+\)|var\(--[\w-]+\))$/i.test(value)) {
+      const mapped=mappedTextColors(value),color=property==='color'?mapped.foreground:mapped.background
+      if(color)colors.set(property,color);else colors.delete(property)
+    }
   }
   return colors.size?Array.from(colors,([key,value])=>`${key}:${value}`).join(';'):undefined
 }

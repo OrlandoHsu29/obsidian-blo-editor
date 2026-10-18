@@ -1,16 +1,19 @@
 import { Element } from "../types"
 import { Node } from "slate"
+import { orderedNumbers } from '../../../blocks/model'
 import { InternalLinkOptions } from "../obsidian-links"
 import { serializeElement } from "./serialize-element"
 
 export function serializeElements(
   elements: Element[],
-  options: InternalLinkOptions = {}
+  options: InternalLinkOptions = {},
+  resolvedNumbers?: ReadonlyMap<Node,number>
 ): string {
   elements = elements.filter((element) =>
     !(element.type === "paragraph" && element.__collapsible && Node.string(element) === "")
   )
   const segments: string[] = []
+  const numbers=resolvedNumbers||orderedNumbers(elements)
 
   /**
    * The orders array keeps track of the number of ordered list items at each
@@ -24,10 +27,9 @@ export function serializeElements(
 
     if (element.type === "ordered-list-item") {
       /**
-       * When we're at an ordered list item, we increment the order at the
-       * current depth level and we remove any orders at a deeper depth level.
+       * Use the same resolved number as the editor, including style boundaries.
        */
-      orders[element.depth] = element.start ?? (orders[element.depth] || 0) + 1
+      orders[element.depth] = numbers.get(element) ?? 1
       orders = orders.slice(0, element.depth + 1)
     } else if (
       element.type === "unordered-list-item" ||

@@ -20,8 +20,12 @@ export function rewrapElement<T extends Element = Element>(
 ) {
   Editor.withoutNormalizing(editor, () => {
     const originalEntry = Editor.node(editor, at) as NodeEntry<Element>
-    const nextElement = createTargetElement(originalEntry[0], targetElement)
     const isList = (type: string) => ['ordered-list-item','unordered-list-item','task-list-item'].includes(type)
+    const source = originalEntry[0]
+    const nextElement = {
+      ...createTargetElement(source, targetElement),
+      ...(source.__blockDepth !== undefined || isList(source.type) ? { __blockDepth: blockDepth(source) } : {}),
+    }
     if(originalEntry[0].__subtitle&&(nextElement.type==='paragraph'||isList(nextElement.type)))nextElement.__subtitle=true
     // Lists provide structure; a heading remains an independently editable child.
     if (originalEntry[0].type === 'heading' && isList(nextElement.type)) {

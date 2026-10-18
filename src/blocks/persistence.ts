@@ -5,13 +5,13 @@ import { blockDepth, isEditorSpacer, isListBlock, orderedNumbers } from './model
 const prefix='<!-- wysimark-block:v1 '
 const subtitlePaths=(node:Element)=>[...Node.elements(node)].filter(([n])=>n.__subtitle).map(([,path])=>path)
 export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>n.__blockDepth!==undefined||n.__numbering!==undefined||subtitlePaths(n).length>0)}
-export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Element)=>string) {
+export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Element,number?:number)=>string) {
   const numbers=orderedNumbers(nodes)
   return nodes.filter(n=>!isEditorSpacer(n)).map(node=>{
     const subtitles=subtitlePaths(node)
     const metadata={depth:blockDepth(node),subtitles:subtitles.length?subtitles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
     const plain=isListBlock(node)?{...node,depth:0,...(node.type==='ordered-list-item'?{start:numbers.get(node)}:{})}:node
-    return `${prefix}${encodeURIComponent(JSON.stringify(metadata))} -->\n\n${serializeOne(plain as Element).trimEnd()}\n\n`
+    return `${prefix}${encodeURIComponent(JSON.stringify(metadata))} -->\n\n${serializeOne(plain as Element,numbers.get(node)).trimEnd()}\n\n`
   }).join('').trimEnd()+'\n'
 }
 export function parseBlockDocument(source: string, parseOne:(text:string)=>Element[]): Element[]|null {

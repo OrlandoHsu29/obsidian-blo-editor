@@ -9,7 +9,7 @@ export function serialize(
   elements: Element[],
   options: InternalLinkOptions = { enableInternalLinks: true }
 ): string {
-  if(needsBlockMetadata(elements))return serializeBlockDocument(elements,node=>serializeElements([node],options))
+  if(needsBlockMetadata(elements))return serializeBlockDocument(elements,(node,number)=>serializeElements([node],options,number===undefined?undefined:new Map([[node,number]])))
   const normalizedElements = normalizeElementListDepths(elements)
   const lineEnding = elements.find((element) => element.__markdownLineEnding)?.__markdownLineEnding || "\n"
   return withLineEnding(serializeElements(normalizedElements, options), lineEnding)

@@ -218,7 +218,7 @@
 /* Chunks may nest after paste/delete. Vertical padding with negative margins
    lets a later chunk intercept clicks on the preceding line. Keep only the
    horizontal gutter needed by block handles and list markers. */
-.ks-editor-chunk-leaf { margin: 0 calc(-1 * clamp(16px,4vw,48px)); padding:0 clamp(16px,4vw,48px); overflow-clip-margin:24px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
+.ks-editor-chunk-leaf { margin: 0 calc(-1 * clamp(16px,4vw,48px)); padding:0 clamp(16px,4vw,48px); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
 .wysimark-editor :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,table,hr,[data-wysimark-code-block]) { margin-block: 0 !important; }
 .wysimark-editor :is(p,li) { line-height: 1.65 !important; }
 .wysimark-editor :is(p,li,[data-wysimark-block])[data-subtitle="true"] { font-weight:var(--font-bold,700); }
@@ -240,6 +240,26 @@
 /* Editor navigation spacers never expand when selected. */
 .wysimark-editor p.--collapsible.--empty { height: 0; min-height: 0; margin: 0 !important; padding: 0 !important; font-size: inherit !important; line-height: 0 !important; transition: none; }
 .wysimark-editor p.--collapsible.--empty:last-child { height: 1.65em; line-height: 1.65 !important; }
+/* A real Slate navigation paragraph owns the caret beside a structured block. */
+.wysimark-editor [data-wysimark-block]:is([data-block-type="table"],[data-block-type="code-block"]) { padding-right: 18px; }
+.wysimark-editor [data-wysimark-block] > :is(table,[data-wysimark-code-block]) { anchor-name: var(--blo-block-anchor); }
+.wysimark-editor p[data-block-boundary="true"].--collapsible.--empty {
+    position: absolute;
+    position-anchor: var(--blo-boundary-anchor);
+    left: calc(anchor(right) + 4px);
+    top: calc(anchor(bottom) - 1.65em);
+    width: 1px;
+    height: 1.65em !important;
+    min-height: 0;
+    line-height: 1.65 !important;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    cursor: text;
+    visibility: hidden;
+}
+.wysimark-editor p[data-block-boundary="true"].--collapsible.--empty.--selected { visibility: visible; }
+.wysimark-reading p[data-block-boundary="true"] { display:none; }
 .wysimark-editor :is(ul,ol) { margin-block: 0 !important; }
 
 /* Links */

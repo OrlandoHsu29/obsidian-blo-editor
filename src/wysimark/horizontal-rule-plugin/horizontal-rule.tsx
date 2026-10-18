@@ -11,7 +11,7 @@ export function HorizontalRule({
 }: ConstrainedRenderElementProps<HorizontalRuleElement>) {
   const selected = useSelected()
   return (
-    <div {...attributes} draggable>
+    <div {...attributes} draggable style={{ caretColor: "transparent" }}>
       {children}
       <div contentEditable={false}>
         <$HorizontalRule className={selected ? "--selected" : ""} />

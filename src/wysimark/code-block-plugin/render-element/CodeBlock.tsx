@@ -10,6 +10,7 @@ import { ChevronDownIcon } from "../icons/ChevronDownIcon"
 import { $CodeBlock, $CodeBlockControls, $CodeBlockLanguage, $CodeBlockLines, $CodeBlockScroller } from "../styles"
 import { CodeBlockElement, LanguageList } from "../types"
 import { CodeBlockActions } from "./CodeBlockActions"
+import { useBlockSelection } from '../../../blocks/use-block-selection'
 
 export function CodeBlock({
   element,
@@ -19,6 +20,7 @@ export function CodeBlock({
   const ref = useRef<HTMLButtonElement>(null)
   const editor = useSlateStatic()
   const selected = useSelected()
+  const blockSelected = useBlockSelection(element)
   const focused = useFocused()
   const readOnly = useReadOnly()
   const dropdown = useLayer("code-block-dropdown")
@@ -47,6 +49,9 @@ export function CodeBlock({
     const code = element.children.map((line) => Node.string(line)).join("\n")
     return (
       <$CodeBlock
+        data-wysimark-code-block
+        data-block-selected={blockSelected && !readOnly || undefined}
+        className={blockSelected && !readOnly ? "--selected" : ""}
         {...attributes}
         onMouseDown={(event) => {
           event.preventDefault()
@@ -64,7 +69,7 @@ export function CodeBlock({
   }
 
   return (
-    <$CodeBlock data-wysimark-code-block className={selected && !readOnly ? "--selected" : ""} {...attributes}>
+    <$CodeBlock data-wysimark-code-block data-block-selected={blockSelected && !readOnly || undefined} className={blockSelected && !readOnly ? "--selected" : ""} {...attributes}>
       <$CodeBlockScroller data-wysimark-code-scroller>
         <$CodeBlockLines data-wysimark-code-lines>{children}</$CodeBlockLines>
         <$CodeBlockControls contentEditable={false} data-wysimark-code-controls>

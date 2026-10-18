@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
-import type { DragEvent, MouseEvent, ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CSSProperties, DragEvent, MouseEvent, ReactNode } from 'react'
 import type { Menu } from 'obsidian'
 import type { Editor, Element } from 'slate'
-import { ReactEditor, useReadOnly, useSlateStatic } from 'slate-react'
+import { ReactEditor, useReadOnly, useSlateSelector, useSlateStatic } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
 import { blockDepth, isEditorSpacer, isListBlock, moveBlockGroup, rootCache } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
-import { selectBlockContents } from './selection'
+import { clearBlockSelection, selectBlockContents } from './selection'
+import { isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { showBlockMenu } from './block-menu'
 
 type DropPosition = 'before' | 'inside' | 'after'
@@ -22,7 +23,12 @@ function dropPosition(event: DragEvent<HTMLDivElement>): DropPosition {
 export function RootBlock({ element, children }: { element: Element; children: ReactNode }) {
   const editor = useSlateStatic()
   const readOnly = useReadOnly()
-  const index = rootCache(editor).indices.get(element)
+  // A preceding block can change without Slate re-rendering this element.
+  const { index, gap } = useSlateSelector(useCallback((editor: Editor) => {
+    const index = rootCache(editor).indices.get(element)
+    return { index, gap: index === undefined || isEditorSpacer(element)
+      ? '0px' : blockGap(editor.children, index) }
+  }, [element]), (previous, next) => previous?.index === next.index && previous?.gap === next.gap)
   const depth = blockDepth(element)
   const [drop, setDrop] = useState<DropPosition | null>(null)
   const ref = useRef<HTMLDivElement>(null)
@@ -61,7 +67,17 @@ export function RootBlock({ element, children }: { element: Element; children: R
     data-block-depth={depth} data-subtitle={element.__subtitle || undefined}
     className={drop ? `wysimark-block drop-${drop}` : 'wysimark-block'}
     style={{ position: 'relative', marginLeft: isListBlock(element) ? undefined : `${depth * 2}em`,
-      marginTop: blockGap(editor.children, index) }}
+      marginTop: gap, '--blo-block-anchor': `--blo-${ReactEditor.findKey(editor, element).id}` } as CSSProperties}
+    onMouseDownCapture={event => {
+      if (!(event.target as HTMLElement).closest('.wysimark-block-handle')) clearBlockSelection(editor)
+    }}
+    onMouseDown={event => {
+      if (readOnly || event.button !== 0 || event.shiftKey || !isStructuredBlock(element)) return
+      const content = ref.current?.querySelector<HTMLElement>('table,[data-wysimark-code-block]')
+      if (!content || event.clientX < content.getBoundingClientRect().right) return
+      event.preventDefault(); event.stopPropagation()
+      if (selectStructuredBoundary(editor, index)) ReactEditor.focus(editor)
+    }}
     onMouseEnter={alignHandle} onFocusCapture={alignHandle}
     onDragOver={event => {
       if (!dragging.has(editor)) return

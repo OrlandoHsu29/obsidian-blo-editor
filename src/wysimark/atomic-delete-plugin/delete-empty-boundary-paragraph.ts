@@ -1,5 +1,7 @@
 import { Editor, Element, Node, Path, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
+import { isEditorSpacer } from '../../blocks/model'
+import { isStructuredBlock, selectStructuredBoundary } from '../../blocks/boundary'
 
 /** Delete the empty text block, never merge it into an adjacent structured block. */
 export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backward' | 'forward'): boolean {
@@ -8,6 +10,24 @@ export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backwar
   if(!entry)return false
   const [paragraph,path]=entry
   if(!Element.isElement(paragraph)||paragraph.type!=='paragraph'||paragraph.__collapsible||!paragraph.children.every(n=>Text.isText(n)&&n.text===''))return false
+  if(direction==='backward'&&path.length===1) {
+    let previous=path[0]-1
+    while(previous>=0&&isEditorSpacer(editor.children[previous]))previous--
+    if(previous>=0&&isStructuredBlock(editor.children[previous])) {
+      const remove=()=>Editor.withoutNormalizing(editor,()=>{
+        // Merge with the empty navigation paragraph so redo also restores
+        // the caret on that same Slate point, rather than the following text.
+        const boundary=editor.children[path[0]-1]
+        if(path[0]===previous+2&&isEditorSpacer(boundary)&&Element.isElement(boundary))editor.apply({
+          type:'merge_node',path,position:boundary.children.length,properties:Node.extractProps(paragraph),
+        })
+        else Transforms.removeNodes(editor,{at:path})
+        selectStructuredBoundary(editor,previous)
+      })
+      if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,remove);else remove()
+      return true
+    }
+  }
   const parent=Node.parent(editor,path),index=path[path.length-1],previous=parent.children[index-1],next=parent.children[index+1]
   const protectedBlock=(n:Node|undefined)=>!!n&&Element.isElement(n)&&editor.isMaster(n)
   if(!protectedBlock(previous)&&!protectedBlock(next))return false

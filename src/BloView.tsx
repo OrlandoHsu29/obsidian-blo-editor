@@ -8,6 +8,7 @@ import { Editable, useEditor, OnImageSaveHandler } from './wysimark/entry';
 import { wikiLinkTarget } from './wysimark/convert/obsidian-links';
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
+import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
 import { CacheProvider } from '@emotion/react';
@@ -348,7 +349,7 @@ function KnowledgeSpaceEditorComponent({
   }, [onChange]);
 
   return (
-    <div className="wysimark-editor-wrapper">
+    <div className="wysimark-editor-wrapper" onMouseDownCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}>
       <div className="wysimark-editor-container">
         <Editable
           editor={editor}

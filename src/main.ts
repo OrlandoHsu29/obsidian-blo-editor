@@ -20,7 +20,14 @@ export default class BloEditorPlugin extends Plugin {
   async onload(): Promise<void> {
     await super.onload();
     this.register(()=>this.styleCache.sheet.flush());
-    installOutlineFilter(this);
+    installOutlineFilter(this,file=>{
+      const active=this.app.workspace.getActiveViewOfType(BloView);
+      if(active?.currentFile===file)return active.editor??undefined;
+      for(const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_BLO)) {
+        const view=leaf.view;
+        if(view instanceof BloView&&view.currentFile===file)return view.editor??undefined;
+      }
+    });
     // Set native tooltip options before Obsidian's delegated hover handler runs.
     this.registerDomEvent(document,'mouseover',event=>{
       const control=(event.target as Element|null)?.closest<HTMLElement>('[aria-label]');
@@ -86,7 +93,7 @@ export default class BloEditorPlugin extends Plugin {
       if (!view) return;
       event.preventDefault(); event.stopImmediatePropagation();
       void this.app.workspace.revealLeaf(view.leaf);
-      view.navigateToHeading(heading.heading, heading.position.start.line);
+      view.navigateToHeading(heading.__bloSourceHeading??heading.heading, heading.position.start.line,heading.__bloHeadingIndex);
     }, { capture: true });
 
     // Add ribbon icon to show/toggle the view

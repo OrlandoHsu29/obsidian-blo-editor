@@ -9,6 +9,7 @@ import { wikiLinkTarget } from './wysimark/convert/obsidian-links';
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
+import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
 import { CacheProvider } from '@emotion/react';
@@ -546,13 +547,15 @@ export class BloView extends FileView {
     const heading = decodeURIComponent(state.subpath.slice(1)).trim();
     this.navigateToHeading(heading, state.line);
   }
-  navigateToHeading(heading: string, line?: number) {
+  navigateToHeading(heading: string, line?: number, headingIndex?: number) {
     const scroll = (attempt = 0) => {
       if (!this.editor) { if (attempt < 20) window.setTimeout(() => scroll(attempt + 1), 20); return; }
-      const headings = Array.from(Node.elements(this.editor)).filter(([node]) => node.type === 'heading');
+      const headings = rootCache(this.editor).headings;
       const cache = this.currentFile ? this.app.metadataCache.getFileCache(this.currentFile)?.headings : undefined;
       const index = typeof line === 'number' ? cache?.findIndex(entry => entry.position.start.line === line) ?? -1 : -1;
-      const match = index >= 0 ? headings[index] : headings.find(([node]) => Node.string(node).trim() === heading);
+      const sourceHeadings=cache?.length===headings.length?headings:headings.filter(entry=>entry.listIndex===undefined);
+      const target=typeof headingIndex==='number'?headings[headingIndex]:index>=0?sourceHeadings[index]:headings.find(entry=>Node.string(entry.node).trim()===heading);
+      const match=target?[target.node,ReactEditor.findPath(this.editor,target.node)] as const:undefined;
       if (match) {
         const target = ReactEditor.toDOMNode(this.editor, match[0]);
         const toolbar = this.containerEl.querySelector<HTMLElement>('[data-wysimark-toolbar]');

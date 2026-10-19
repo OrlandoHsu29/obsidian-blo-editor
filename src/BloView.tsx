@@ -9,6 +9,7 @@ import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
+import { selectDocumentEndFromPointer } from './blocks/document-end-pointer';
 import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
@@ -511,6 +512,13 @@ export class BloView extends FileView {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('wysimark-container');
+    let bottomClick = false;
+    this.registerDomEvent(contentEl, 'mousedown', event => {
+      bottomClick = !!this.editor && !this.readOnly && selectDocumentEndFromPointer(this.editor, event, contentEl);
+    }, true);
+    this.registerDomEvent(contentEl, 'click', event => {
+      if (bottomClick) { event.preventDefault(); event.stopPropagation(); bottomClick = false; }
+    }, true);
     this.findBar = new FindBar(contentEl, () => this.editor, () => this.readOnly);
 
     // Create a div for React to render into

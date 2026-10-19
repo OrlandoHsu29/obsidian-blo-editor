@@ -4,13 +4,13 @@ import { Editor, Element, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { ui } from '../../utils/translations'
-import { clearTableAxisSelection, tableCellSelection } from '../cell-selection'
+import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, tableCellSelection } from '../cell-selection'
 import type { TableColumnAlign, TableElement } from '../types'
 
 type Position = { left: number; top: number }
 type Insertion = Position & { axis: 'row' | 'column'; index: number }
 
-/** Native text selection stays intact inside a cell; crossing cells selects full cells. */
+/** Single clicks select cells; explicit editing restores native text selection. */
 export function TableInteractions({ element, readOnly, active }: { element: TableElement; readOnly: boolean; active: boolean }) {
   const editor = useSlateStatic()
   const [menu, setMenu] = useState<Position | null>(null)
@@ -83,8 +83,33 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if (table.contains(target)) {
         clearTableAxisSelection(editor)
         origin = cellAt(target)
+        if (!origin) return
+        if (event.detail >= 2) {
+          event.preventDefault()
+          beginTableCellEdit(editor,origin); ReactEditor.focus(editor)
+          origin = undefined
+        } else if (!isTableCellEditing(editor,origin)) {
+          event.preventDefault()
+          selectTableCell(editor,origin)
+          snapped = Editor.range(editor,origin)
+          ReactEditor.focus(editor)
+        }
       }
     }
+    const click = (event: MouseEvent) => {
+      const target=event.target as HTMLElement
+      if(target.closest('[contenteditable="false"],button'))return
+      const cell=cellAt(target)
+      if(!cell)return
+      if(event.detail>=2) {
+        event.preventDefault();event.stopPropagation()
+        beginTableCellEdit(editor,cell);ReactEditor.focus(editor)
+      } else if(tableCellSelection(editor)?.kind==='cell') {
+        event.preventDefault();event.stopPropagation()
+      }
+    }
+    // Chromium dispatches compositionstart on the editable root, not the td.
+    const composition = () => { if(tableCellSelection(editor)?.table===element)prepareTableCellComposition(editor) }
     const hover = (event: MouseEvent) => {
       if (event.buttons || !table.contains(event.target as globalThis.Node)) return
       const handle=event.target instanceof globalThis.Element?event.target.closest<HTMLElement>('[data-table-axis]'):null
@@ -134,6 +159,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         const right = Math.max(origin[origin.length - 1], cell[cell.length - 1])
         snapped = { anchor: Editor.start(editor, [...path, top, left]), focus: Editor.end(editor, [...path, bottom, right]) }
         event.preventDefault()
+        if(Path.equals(cell,origin))selectTableCell(editor,cell)
         synchronize()
       }
     }
@@ -145,6 +171,9 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const dismiss = hideInsertions
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss() }
     table.addEventListener('mousemove', hover)
+    table.addEventListener('click',click,true)
+    table.addEventListener('dblclick',click,true)
+    doc.addEventListener('compositionstart',composition,true)
     doc.addEventListener('mousedown', down, true)
     doc.addEventListener('mousemove', move, true)
     doc.addEventListener('mouseup', up)
@@ -155,6 +184,9 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     return () => {
       win.clearTimeout(hoverTimer); win.clearTimeout(leaveTimer)
       table.removeEventListener('mousemove', hover)
+      table.removeEventListener('click',click,true)
+      table.removeEventListener('dblclick',click,true)
+      doc.removeEventListener('compositionstart',composition,true)
       doc.removeEventListener('mousedown', down, true)
       doc.removeEventListener('mousemove', move, true)
       doc.removeEventListener('mouseup', up)

@@ -10,7 +10,7 @@ import {
 } from "../sink"
 
 import { deleteFragmentWithProtectedTypes } from "./delete-fragment"
-import { deleteSelectedTableAxis, installTableCellClipboard, replaceSelectedCells } from './cell-selection'
+import { beginTableCellEdit, deleteSelectedTableAxis, installTableCellClipboard, replaceSelectedCells } from './cell-selection'
 import { createTableMethods } from "./methods"
 import { normalizeTableIndexes } from "./normalize/normalize-table"
 import { normalizeTableCell } from "./normalize/normalize-table-cell"
@@ -65,6 +65,7 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
         insertText: text => replaceSelectedCells(editor, () => editor.insertText(text)),
         insertFragment: fragment => replaceSelectedCells(editor, () => editor.insertFragment(fragment as unknown as Parameters<typeof editor.insertFragment>[0])),
         insertBreak: () => {
+          if (beginTableCellEdit(editor)) return true
           /**
            * IF we're anywhere in a table cell, insert a soft break instead
            */

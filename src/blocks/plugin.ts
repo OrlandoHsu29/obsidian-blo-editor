@@ -6,6 +6,7 @@ import type { Descendant } from 'slate'
 import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isWholeBlockSelected, navigateBlockBoundary } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
 import { boundaryBlockIndex, insertBreakAtBoundary, normalizeStructuredBoundary } from './boundary'
+import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
 import { exitEmptyQuote } from './subtitle'
 type Types={Name:'block-structure';Editor:{}}
 export const BlockStructurePlugin=createPlugin<Types>(editor=>{
@@ -41,6 +42,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   deleteFragment:()=>deleteWholeBlockSelection(editor),
  },
  editableProps:{onKeyDown:event=>{
+  if(handleTableCellKey(editor,event)){event.preventDefault();event.stopPropagation();return true}
   if(navigateBlockBoundary(editor,event)){event.preventDefault();event.stopPropagation();return true}
   if(event.key!=='Tab'||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
   const delta=event.shiftKey?-1:1

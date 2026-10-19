@@ -27,7 +27,7 @@ export function Table({
     if(blockSelected)return undefined
     const cells=tableCellSelection(editor)
     return cells?.table===element?cells:undefined
-  },[element,blockSelected,axis]),(a,b)=>a?.table===b?.table&&a?.left===b?.left&&a?.right===b?.right&&a?.top===b?.top&&a?.bottom===b?.bottom&&a?.axis===b?.axis)
+  },[element,blockSelected,axis]),(a,b)=>a?.table===b?.table&&a?.left===b?.left&&a?.right===b?.right&&a?.top===b?.top&&a?.bottom===b?.bottom&&a?.axis===b?.axis&&a?.kind===b?.kind)
   /**
    * The first time we render a table, we make sure it is normalized.
    * When it comes out of an `initialValue` it's not guaranteed to include
@@ -47,7 +47,7 @@ export function Table({
   }, [])
   return (
     <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
-      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-axis-selection={cells?.axis} data-cell-selection={cells&&!readOnly?true:undefined} data-cell-mode={cells?.kind==='cell'&&!readOnly?'selected':undefined}>
+      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-axis-selection={cells?.axis} data-cell-selection={cells&&!readOnly?true:undefined} data-cell-mode={cells?.kind==='cell'&&!readOnly?(cells.left!==cells.right||cells.top!==cells.bottom?'range':'selected'):undefined}>
         <tbody>{children}</tbody>
       </$Table>
       <TableInteractions element={element} readOnly={readOnly} active={isSelected||blockSelected} />

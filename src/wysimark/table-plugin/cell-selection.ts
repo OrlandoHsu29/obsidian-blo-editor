@@ -10,6 +10,8 @@ export type TableCellSelection = {
   table: TableElement; path: Path; left: number; right: number; top: number; bottom: number
   axis?: 'row' | 'column'
   kind?: 'cell'
+  anchorCell?: { x: number; y: number }
+  focusCell?: { x: number; y: number }
 }
 
 const editingCells = new WeakMap<Editor, PathRef>()
@@ -35,7 +37,7 @@ export function selectTableCell(editor: Editor, cellPath: Path): void {
   const x = cellPath[cellPath.length - 1], y = cellPath[cellPath.length - 2]
   const range = Editor.range(editor, cellPath)
   withoutAutomaticCellSelection(editor,()=>Transforms.select(editor, range))
-  axisSelections.set(editor, { cells: { table, path, left:x, right:x, top:y, bottom:y, kind:'cell' }, range })
+  axisSelections.set(editor, { cells: { table, path, left:x, right:x, top:y, bottom:y, kind:'cell', anchorCell:{x,y}, focusCell:{x,y} }, range })
   notifyAxis(editor)
 }
 
@@ -92,9 +94,23 @@ export function handleTableCellKey(editor: Editor, event: {key:string;shiftKey?:
     return true
   }
   if (event.key === 'Escape' && isTableCellEditing(editor,cell[1])) { selectTableCell(editor,cell[1]); return true }
+  const delta=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]} as Record<string,number[]>)[event.key]
+  if (selected && event.shiftKey && delta) {
+    const anchorPath=Editor.above(editor,{at:editor.selection.anchor,match:n=>Element.isElement(n)&&n.type==='table-cell'})?.[1]
+    const anchor=selected.anchorCell ?? {x:anchorPath?.at(-1)??selected.left,y:anchorPath?.at(-2)??selected.top}
+    const focus=selected.focusCell ?? {x:cell[1].at(-1)!,y:cell[1].at(-2)!}
+    const next={x:Math.max(0,Math.min(selected.table.columns.length-1,focus.x+delta[0])),
+      y:Math.max(0,Math.min(selected.table.children.length-1,focus.y+delta[1]))}
+    const cells:TableCellSelection={table:selected.table,path:selected.path,kind:'cell',anchorCell:anchor,focusCell:next,
+      left:Math.min(anchor.x,next.x),right:Math.max(anchor.x,next.x),top:Math.min(anchor.y,next.y),bottom:Math.max(anchor.y,next.y)}
+    const range={anchor:Editor.start(editor,[...cells.path,cells.top,cells.left]),focus:Editor.end(editor,[...cells.path,cells.bottom,cells.right])}
+    clearEditingCell(editor);clearBlockSelection(editor)
+    withoutAutomaticCellSelection(editor,()=>Transforms.select(editor,range))
+    axisSelections.set(editor,{cells,range});notifyAxis(editor)
+    return true
+  }
   if (selected?.kind !== 'cell' || event.shiftKey) return false
   if (event.key === 'Enter' || event.key === ' ') return beginTableCellEdit(editor)
-  const delta=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]} as Record<string,number[]>)[event.key]
   if(!delta)return false
   const x=selected.left+delta[0],y=selected.top+delta[1]
   if(x<0||x>=selected.table.columns.length||y<0||y>=selected.table.children.length)return leaveSelectedTable(editor,selected,event.key)

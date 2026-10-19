@@ -270,7 +270,7 @@
 .wysimark-editor table[data-block-selected="true"] { caret-color: transparent; }
 .wysimark-editor [data-wysimark-code-block][data-block-selected="true"] { caret-color:transparent; }
 .wysimark-editor table[data-axis-selection] { caret-color: transparent; }
-.wysimark-editor table[data-cell-mode="selected"] { caret-color:transparent; }
+.wysimark-editor table:is([data-cell-mode="selected"],[data-cell-mode="range"]) { caret-color:transparent; }
 .wysimark-editor table[data-cell-mode="selected"] td.--selected { background:var(--text-selection); }
 .wysimark-editor table[data-cell-mode="selected"] ::selection { background:transparent; color:inherit; }
 .wysimark-editor table[data-axis-selection] td.--selected { background: var(--text-selection); }

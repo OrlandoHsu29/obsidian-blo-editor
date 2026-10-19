@@ -6,6 +6,7 @@ import styled from "@emotion/styled"
 
 const $BaseMenu = styled("div")`
   position: absolute;
+  cursor: pointer;
   /**
    * very slightly shaded
    */
@@ -31,7 +32,6 @@ const $BaseMenu = styled("div")`
 `
 
 export const $ColumnMenu = styled($BaseMenu)`
-  cursor: pointer;
   /**
    * hangs out on top
    */

@@ -1,6 +1,6 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
 import { deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from './model'
-import { boundaryBlockIndex, isStructuredBlock, selectStructuredBoundary } from './boundary'
+import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
 
@@ -57,28 +57,39 @@ export function selectBlockContents(editor:Editor,index:number):boolean {
  setBlockSelection(editor,{index,range})
  return true
 }
-/** Cross a structured block boundary in two steps: select the block, then enter it. */
+const isEditableStructure=(node:unknown)=>Element.isElement(node)&&(node.type==='table'||node.type==='code-block')
+/** Arrow keys enter editable blocks directly; drawings retain atomic navigation. */
 export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  const structured=(node:unknown)=>isStructuredBlock(node,editor)
  if(editor.wysimark.readOnly||!editor.selection||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return false
  const boundary=boundaryBlockIndex(editor)
  if(boundary!==undefined) {
-  if(event.key==='ArrowLeft'||event.key==='ArrowRight')return selectBlockContents(editor,boundary)
+  if(event.key==='ArrowLeft') {
+   if(!isEditableStructure(editor.children[boundary]))return selectBlockContents(editor,boundary)
+   clearBlockSelection(editor);Transforms.select(editor,Editor.end(editor,[boundary]));return true
+  }
   if(event.key==='ArrowUp'){clearBlockSelection(editor);Transforms.select(editor,Editor.end(editor,[boundary]));return true}
   let next=boundary+2;while(next<editor.children.length&&isEditorSpacer(editor.children[next]))next++
   if(next<editor.children.length){clearBlockSelection(editor);Transforms.select(editor,Editor.start(editor,[next]))}
+  else if(event.key==='ArrowRight')return insertBreakAtBoundary(editor)
   return true
  }
  const pending=staged.get(editor)
  if(pending&&Range.equals(editor.selection,pending.range)&&structured(editor.children[pending.index])) {
+  if(isEditableStructure(editor.children[pending.index])) {
+   const index=pending.index
+   clearBlockSelection(editor)
+   Transforms.select(editor,event.key==='ArrowLeft'||event.key==='ArrowUp'?Editor.start(editor,[index]):Editor.end(editor,[index]))
+   return true
+  }
   if(event.key==='ArrowLeft'||event.key==='ArrowRight') {
    if(event.key==='ArrowRight'){clearBlockSelection(editor);return selectStructuredBoundary(editor,pending.index)}
    Transforms.select(editor,Editor.end(editor,[pending.index]));clearBlockSelection(editor);return true
   }
   const next=pending.index+(event.key==='ArrowUp'?-1:1)
   if(next>=0&&next<editor.children.length) {
-   if(structured(editor.children[next]))selectBlockContents(editor,next)
+   if(structured(editor.children[next])&&!isEditableStructure(editor.children[next]))selectBlockContents(editor,next)
    else {Transforms.select(editor,event.key==='ArrowUp'?Editor.end(editor,[next]):Editor.start(editor,[next]));clearBlockSelection(editor)}
   }
   return true
@@ -90,6 +101,14 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  const backwards=event.key==='ArrowLeft'||event.key==='ArrowUp'
  if(!Point.equals(point,backwards?Editor.start(editor,[index]):Editor.end(editor,[index]))&&(!['ArrowUp','ArrowDown'].includes(event.key)||!atVerticalEdge(editor,index,backwards)))return false
  let adjacent=index+(backwards?-1:1);while(adjacent>=0&&adjacent<editor.children.length&&isEditorSpacer(editor.children[adjacent]))adjacent+=backwards?-1:1
- if(!structured(editor.children[adjacent]))return false
+ const target=editor.children[adjacent]
+ if(!structured(target))return false
+ if(isEditableStructure(target)) {
+  // Native vertical movement retains the caret's visual column, including
+  // proportional text, code indentation, wrapping and horizontal scrolling.
+  if(event.key==='ArrowDown'&&Element.isElement(target)&&target.type==='code-block')return false
+  Transforms.select(editor,backwards?Editor.end(editor,[adjacent]):Editor.start(editor,[adjacent]))
+  return true
+ }
  return backwards?selectStructuredBoundary(editor,adjacent):selectBlockContents(editor,adjacent)
 }

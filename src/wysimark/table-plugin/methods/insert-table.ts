@@ -1,6 +1,7 @@
-import { Editor, Element, Location, Path, Transforms } from "slate"
+import { Editor, Location } from "slate"
 
-import { findElementUp } from "../../sink"
+import { insertRootElement } from "../../sink"
+export { insertRootElement } from "../../sink"
 
 import { TableColumn, TableElement, TableRowElement } from "../types"
 import { createCell } from "./utils"
@@ -17,14 +18,14 @@ function createTable(columnCount: number, rowCount: number): TableElement {
   return {
     type: "table",
     columns: createColumns(columnCount),
-    children: createRange(rowCount).map(() => createRow(columnCount)),
+    children: createRange(rowCount).map(y => createRow(columnCount, y)),
   }
 }
 
-function createRow(columnCount: number): TableRowElement {
+function createRow(columnCount: number, y: number): TableRowElement {
   return {
     type: "table-row",
-    children: [...Array(columnCount).keys()].map((index) => createCell(index)),
+    children: [...Array(columnCount).keys()].map(x => ({ ...createCell(x), x, y })),
   }
 }
 
@@ -41,33 +42,4 @@ export function insertTable(
   const table = { ...createTable(columnCount, rowCount),
     ...(editor.wysimark.getTableDefaults?.() ?? { headerRow: true, headerColumn: false }) }
   return insertRootElement(editor, table, { at })
-}
-
-export function insertRootElement(
-  editor: Editor,
-  element: Element,
-  { at = editor.selection }: { at?: Location | null } = {}
-) {
-  if (at == null) return false
-  const entry = findElementUp(
-    editor,
-    (node) => Element.isElement(node) && editor.isMaster(node)
-  )
-  if (entry == null) {
-    const selection = editor.selection
-    Editor.withoutNormalizing(editor, () => {
-      Transforms.insertNodes(editor, element, { at })
-      if (selection) {
-        Transforms.select(editor, selection)
-        Transforms.move(editor)
-      }
-    })
-  } else {
-    const nextPath = Path.next(entry[1])
-    Editor.withoutNormalizing(editor, () => {
-      Transforms.insertNodes(editor, element, { at: nextPath })
-      Transforms.select(editor, Editor.start(editor, nextPath))
-    })
-  }
-  return true
 }

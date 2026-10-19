@@ -1,4 +1,5 @@
-import { Editor, Element, Location, Path, Transforms } from "slate"
+import { Editor, Element, Location, Path, Point, Range, Text, Transforms } from "slate"
+import { HistoryEditor } from "slate-history"
 
 import { findElementUp } from "../.."
 
@@ -23,13 +24,33 @@ export function insertRootElement(
    * If there's no `at` then insertion does not happen
    */
   if (at == null) return false
-  /**
-   * Look for a parent that `isMaster`
-   */
   const entry = findElementUp(
     editor,
     (node) => Element.isElement(node) && editor.isMaster(node)
   )
+  const point = Point.isPoint(at) ? at : Range.isRange(at) && Range.isCollapsed(at) ? at.anchor : null
+  const empty = point && Editor.above(editor, {
+    at: point,
+    match: node => Element.isElement(node) && node.type === 'paragraph' &&
+      node.children.every(child => Text.isText(child) && child.text === ''),
+  })
+  if (empty && !entry) {
+    const [paragraph, path] = empty
+    const replacement = element.__blockDepth === undefined && Element.isElement(paragraph) && paragraph.__blockDepth !== undefined
+      ? { ...element, __blockDepth: paragraph.__blockDepth } : element
+    const replace = () => Editor.withoutNormalizing(editor, () => {
+      Transforms.removeNodes(editor, { at: path })
+      Transforms.insertNodes(editor, replacement, { at: path })
+      Transforms.select(editor, Editor.start(editor, path))
+      editor.marks = null
+    })
+    if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, replace)
+    else replace()
+    return true
+  }
+  /**
+   * Look for a parent that `isMaster`
+   */
   if (entry == null) {
     /**
      * If not `isMaster` then do a regular insert, select the original

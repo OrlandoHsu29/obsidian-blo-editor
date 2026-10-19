@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.10 — 2026-10-19
+
+- Add optional Excalidraw integration with content-fitting inline previews,
+  proportional resizing, atomic selection, external caret navigation, and a
+  save-and-return action from full-size drawing tabs.
+- Store images and drawings in one configurable vault-relative attachment folder.
+  Save pasted/dropped images, audio, video, PDFs, and other files before inserting
+  their previews or links at the original position.
+- Add separate, disabled-by-default image/drawing attachment cleanup settings.
+  Protect shared references, move unused files to trash, and restore files and
+  previews on undo without requiring the image to be selected.
+- Separate table cell selection from editing: click to select, Enter/Space or
+  double-click to edit, type to replace, Tab to move, and Shift+arrows to extend
+  a complete rectangle with the same text highlighting as mouse selection.
+  Clear cell contents without removing cells; preserve row/column deletion controls.
+- Improve code indentation, searchable language selection, block boundary
+  navigation, image handles and spacing, and clicking below the document to
+  focus or create a trailing empty paragraph.
+- Continue same-level ordered numbering across intervening content, retaining
+  manual restarts and hierarchical heading numbers in the outline.
+- Update both READMEs with drawing/attachment workflows and a public drawing
+  example and screenshot. Excalidraw remains an optional dependency.
+
 ## 0.1.5 — 2026-10-18
 
 - Add hierarchical ordered headings with cached numbering in the native outline.

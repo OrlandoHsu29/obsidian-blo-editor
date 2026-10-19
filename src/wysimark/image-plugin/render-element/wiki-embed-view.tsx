@@ -12,6 +12,7 @@ import { ImageBlockElement, ImageInlineElement } from "../types"
 const $WikiEmbed = styled("span")`
   position: relative;
   display: inline-block;
+  &[data-wysimark-embed-block] { display: block; max-width: 100%; }
 `
 
 /**
@@ -77,7 +78,8 @@ export function WikiEmbedView({
     const hasSelection =
       editor.selection &&
       editor.selection.anchor.offset !== editor.selection.focus.offset
-    if (selected && !hasSelection) {
+    // Drawings provide their own edit control rather than a link popover.
+    if (selected && !hasSelection && !anchor.querySelector('[data-blo-drawing]')) {
       window.setTimeout(() => {
         dialog.open(() => (
           <AnchorDialog
@@ -97,7 +99,7 @@ export function WikiEmbedView({
   }, [selected, spec])
 
   return (
-    <$WikiEmbed ref={embedRef} contentEditable={false}>
+    <$WikiEmbed ref={embedRef} contentEditable={false} data-wysimark-embed-block={element.type === 'image-block' || undefined}>
       <span ref={startEdgeRef} style={{ display: "none" }} />
       {renderInternalEmbed?.(spec)}
     </$WikiEmbed>

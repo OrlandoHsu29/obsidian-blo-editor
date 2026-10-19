@@ -9,7 +9,7 @@ import { clearBlockSelection } from './selection'
 export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTMLElement>): boolean {
   if (editor.wysimark.readOnly || event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
   const target = event.target as HTMLElement
-  if (target.closest('button,input,textarea,select,[role="menu"],[data-wysimark-toolbar]')) return false
+  if (target.closest('button,input,textarea,select,[role="menu"],[data-wysimark-toolbar],[data-wysimark-image-resize]')) return false
   const direct = target.closest<HTMLElement>('[data-wysimark-block]')
   const candidates: HTMLElement[] = []
   if (direct) candidates.push(direct)
@@ -23,16 +23,16 @@ export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTML
     for (const chunk of chunks) {
       const bounds = chunk.getBoundingClientRect()
       if (event.clientY < bounds.top || event.clientY > bounds.bottom) continue
-      candidates.push(...chunk.querySelectorAll<HTMLElement>('[data-wysimark-block]:is([data-block-type="table"],[data-block-type="code-block"])'))
+      candidates.push(...chunk.querySelectorAll<HTMLElement>('[data-wysimark-block]:is([data-block-type="table"],[data-block-type="code-block"],[data-block-type="image-block"])'))
     }
   }
   for (const block of candidates) {
     if (!event.currentTarget.contains(block)) continue
-    const content = block.querySelector<HTMLElement>(':scope > table,:scope > [data-wysimark-code-block]')
+    const content = block.querySelector<HTMLElement>(':scope > table,:scope > [data-wysimark-code-block],[data-blo-drawing]')
     if (!content) continue
     const bounds = content.getBoundingClientRect()
     if (event.clientX < bounds.right - 1 || event.clientY < bounds.top || event.clientY > bounds.bottom) continue
-    const node = ReactEditor.toSlateNode(editor, content)
+    const node = ReactEditor.toSlateNode(editor, content.closest('[data-slate-node="element"]') || content)
     const index = rootCache(editor).indices.get(node)
     if (index === undefined) continue
     event.preventDefault(); event.stopPropagation()

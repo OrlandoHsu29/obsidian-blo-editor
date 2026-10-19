@@ -6,7 +6,6 @@ import { firstTextRect } from './first-line-alignment'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 const staged=new WeakMap<Editor,{index:number;range:Range}>()
-const structured=isStructuredBlock
 const listeners=new WeakMap<Editor,Set<()=>void>>()
 export function subscribeBlockSelection(editor:Editor,listener:()=>void) {
  let set=listeners.get(editor);if(!set){set=new Set();listeners.set(editor,set)}
@@ -60,6 +59,7 @@ export function selectBlockContents(editor:Editor,index:number):boolean {
 }
 /** Cross a structured block boundary in two steps: select the block, then enter it. */
 export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
+ const structured=(node:unknown)=>isStructuredBlock(node,editor)
  if(editor.wysimark.readOnly||!editor.selection||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return false
  const boundary=boundaryBlockIndex(editor)

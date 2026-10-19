@@ -37,6 +37,10 @@ export function isWikiEmbedUrl(url: string): boolean {
   return url.startsWith(WIKI_EMBED_PREFIX)
 }
 
+export function isDrawingEmbedUrl(url: string): boolean {
+  return isWikiEmbedUrl(url) && /\.excalidraw(?:\.md)?(?:#.*)?$/i.test(wikiLinkTarget(wikiEmbedSpecFromUrl(url)))
+}
+
 export function wikiLinkSpecFromHref(href: string): string {
   return decodeURIComponent(href.slice(WIKI_LINK_PREFIX.length))
 }
@@ -107,6 +111,11 @@ export function serializeWikiLinkHref(href: string, label: string): string {
   return `[[${target}]]`
 }
 
-export function serializeWikiEmbedUrl(url: string): string {
-  return `![[${wikiEmbedSpecFromUrl(url)}]]`
+export function serializeWikiEmbedUrl(url: string, width?: number, height?: number): string {
+  const spec = wikiEmbedSpecFromUrl(url)
+  if (width && height) {
+    const { target, display } = splitWikiSpec(spec)
+    if (!display || /^\d+(?:x\d+)?$/.test(display)) return `![[${target}|${Math.round(width)}x${Math.round(height)}]]`
+  }
+  return `![[${spec}]]`
 }

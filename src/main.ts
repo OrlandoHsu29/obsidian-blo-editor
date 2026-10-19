@@ -11,6 +11,7 @@ import { ReactEditor } from 'slate-react';
 import { canOpenSlashMenu } from './slash-menu';
 import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods/text-color';
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
+import { isDrawingFile, openDrawing } from './drawings';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
@@ -70,6 +71,12 @@ export default class BloEditorPlugin extends Plugin {
       if (!checking) { view.editor.insertText('/'); ReactEditor.focus(view.editor); }
       return true;
     }});
+    this.addCommand({ id: 'insert-drawing', name: ui('插入画板'), checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(BloView);
+      if (!view?.editor || !view.currentFile || view.readOnly) return false;
+      if (!checking) void view.editor.wysimark.insertDrawing?.();
+      return true;
+    }});
     this.addCommand({ id: 'text-color', name: ui("应用上次字体颜色"), hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'C' }], checkCallback: checking => {
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!(view instanceof BloView) || view.readOnly || !view.editor) return false;
@@ -120,6 +127,7 @@ export default class BloEditorPlugin extends Plugin {
       if (!leaf) return;
       if (leaf.view instanceof BloView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
       if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
+      if (isDrawingFile(this.app, leaf.view.file)) return;
       const file = leaf.view.file, mode = leaf.view.getMode(); await leaf.view.save();
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
     }});
@@ -148,13 +156,13 @@ export default class BloEditorPlugin extends Plugin {
     });
   }
   private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
-    if (!this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || (this.settings.richEditingFolder && !file.path.startsWith(this.settings.richEditingFolder + "/")) ||
+    if (isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || (this.settings.richEditingFolder && !file.path.startsWith(this.settings.richEditingFolder + "/")) ||
       !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
     const mode = leaf.view.getMode();
     this.openingLeaves.add(leaf);
     try {
       await leaf.view.save();
-      if (!(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+      if (isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode }, active: true });
     } finally { this.openingLeaves.delete(leaf); }
   }
@@ -181,6 +189,10 @@ export default class BloEditorPlugin extends Plugin {
   async activateBloView(): Promise<void> {
     const { workspace } = this.app;
     const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile && isDrawingFile(this.app, activeFile)) {
+      await openDrawing(this.app, activeFile);
+      return;
+    }
     let leaf: WorkspaceLeaf | null = null;
 
     const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_BLO);

@@ -10,6 +10,7 @@ import {
   wikiEmbedUrl,
   wikiLinkDisplayText,
   wikiLinkHref,
+  splitWikiSpec,
 } from "../../obsidian-links"
 import { unescapeMarkdown } from "../../utils"
 import { cleanInlineStyle } from '../../../../blocks/typography'
@@ -50,10 +51,12 @@ function parseObsidianLinks(value: string, marks: MarkProps): Segment[] {
 
     const rawSpec = unescapeMarkdown(restoreEscapedWikiLinks(match[2])).trim()
     if (match[1]) {
+      const dimensions = splitWikiSpec(rawSpec).display?.match(/^(\d+)(?:x(\d+))?$/)
       segments.push({
         type: "image-inline",
         url: wikiEmbedUrl(rawSpec),
         alt: rawSpec,
+        ...(dimensions ? { width: Number(dimensions[1]), ...(dimensions[2] ? { height: Number(dimensions[2]) } : {}) } : {}),
         children: [{ text: "" }],
       })
     } else {

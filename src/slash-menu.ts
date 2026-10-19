@@ -50,6 +50,7 @@ export const slashCommands: SlashCommand[] = [
   command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true), {}, ['yxlb']),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),
+  command('画板', 'pencil-ruler', editor => { void editor.wysimark.insertDrawing?.() }, {}, ['drawing', 'whiteboard', 'canvas', 'excalidraw', 'hb', 'ht']),
   command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线', 'fgx']),
   command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.(), {}, ['ztys', 'ys']),
 ]

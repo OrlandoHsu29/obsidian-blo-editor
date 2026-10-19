@@ -5,13 +5,14 @@ import { ReactEditor } from 'slate-react';
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { Editable, useEditor, OnImageSaveHandler } from './wysimark/entry';
-import { wikiLinkTarget } from './wysimark/convert/obsidian-links';
+import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark/convert/obsidian-links';
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
 import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
+import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -211,6 +212,9 @@ function InternalEmbedView({
     return <span className="wysimark-internal-embed-missing">Image not found: {target}</span>;
   }
 
+  if (targetFile instanceof TFile && isDrawingFile(app, targetFile)) {
+    return <DrawingEmbed app={app} file={targetFile} spec={spec} sourcePath={sourcePath} />;
+  }
   return <div ref={embedRef} className="wysimark-internal-embed" />;
 }
 
@@ -333,6 +337,13 @@ function KnowledgeSpaceEditorComponent({
     renderMermaidPreview,
   });
   editor.wysimark.readOnly = readOnly;
+  editor.wysimark.isDrawingEmbed = (url: string) => {
+    if (!isWikiEmbedUrl(url)) return false;
+    const target = wikiLinkTarget(wikiEmbedSpecFromUrl(url)).split('#')[0];
+    const exact = plugin.app.vault.getAbstractFileByPath(normalizePath(target));
+    const drawing = exact instanceof TFile ? exact : plugin.app.metadataCache.getFirstLinkpathDest(target, file.path);
+    return drawing instanceof TFile && isDrawingFile(plugin.app, drawing);
+  };
   editor.wysimark.documentTitle = <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
     if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) return url;
@@ -350,7 +361,11 @@ function KnowledgeSpaceEditorComponent({
   }, [onChange]);
 
   return (
-    <div className="wysimark-editor-wrapper" onMouseDownCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}>
+    <div className="wysimark-editor-wrapper"
+      onMouseDownCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}
+      // Slate's later click handler selects void image blocks even when the
+      // preceding mousedown was handled in the right gutter.
+      onClickCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}>
       <div className="wysimark-editor-container">
         <Editable
           editor={editor}
@@ -420,6 +435,7 @@ export class BloView extends FileView {
   private bodyContent: string = '';  // Store body content (without frontmatter)
   private lineEnding: LineEnding = '\n';
   private saveTimeout: number | null = null;
+  private drawingRedirect: number | null = null;
   private isDirty: boolean = false;
   private reactContainer: HTMLElement | null = null;
   private reloadKey: number = 0;  // Used to force React component remount on reload
@@ -439,6 +455,10 @@ export class BloView extends FileView {
     editor.wysimark.openSearch = replace => this.showSearch(replace);
     editor.wysimark.toggleReading = () => this.toggleReading();
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
+    editor.wysimark.insertDrawing = async () => {
+      const file = this.currentFile;
+      if (file) await insertDrawing(this.app, file, editor, () => this.editor === editor && this.currentFile === file);
+    };
     editor.wysimark.getTextColor = () => (this.plugin as any).settings.defaultTextColor;
     editor.wysimark.setTextColor = color => (this.plugin as any).setTextColor(editor, color);
     editor.wysimark.getTableDefaults = () => (this.plugin as any).settings.tableDefaults;
@@ -499,6 +519,10 @@ export class BloView extends FileView {
   }
 
   async onClose() {
+    if (this.drawingRedirect !== null) {
+      window.clearTimeout(this.drawingRedirect);
+      this.drawingRedirect = null;
+    }
     this.findBar?.destroy(); this.findBar = null;
     // Clear any pending save timeout
     if (this.saveTimeout) {
@@ -523,6 +547,24 @@ export class BloView extends FileView {
   async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path }, active: true }); }
   getMode() { return this.readOnly ? 'preview' : 'source'; }
   async setState(state: { file?: string; mode?: string }, result: { history: boolean }) {
+    if (this.drawingRedirect !== null) {
+      window.clearTimeout(this.drawingRedirect);
+      this.drawingRedirect = null;
+    }
+    // Obsidian reuses a FileView that accepts .md, bypassing the native
+    // Markdown-to-Blo handler when a drawing is opened in an existing Blo tab.
+    const file = state.file ? this.app.vault.getAbstractFileByPath(state.file) : null;
+    if (file instanceof TFile && isDrawingFile(this.app, file)) {
+      // Finish Obsidian's current view assignment first; a nested switch is
+      // otherwise overwritten when the outer setViewState call completes.
+      this.drawingRedirect = window.setTimeout(() => {
+        this.drawingRedirect = null;
+        if (this.leaf.view !== this) return;
+        void this.leaf.setViewState({ type: drawingViewType(this.app), state, active: this.leaf === this.app.workspace.activeLeaf })
+          .catch(error => console.error('Blo Editor: could not open drawing view', error));
+      }, 0);
+      return;
+    }
     this.readOnly = state.mode === 'preview';
     await super.setState(state, result);
     this.updateModeUI(); this.renderEditor();

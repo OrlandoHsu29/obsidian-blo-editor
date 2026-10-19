@@ -517,6 +517,15 @@ export const uiMessages = {
     "zh": "无法预览：{target}",
     "en": "Preview unavailable: {target}"
   },
+  "画板": { "zh": "画板", "en": "Drawing" },
+  "插入画板": { "zh": "插入画板", "en": "Insert drawing" },
+  "放大绘制": { "zh": "放大绘制", "en": "Open drawing editor" },
+  "安装 Excalidraw": { "zh": "安装 Excalidraw", "en": "Install Excalidraw" },
+  "请先安装并启用 Excalidraw": { "zh": "请先安装并启用 Excalidraw 插件", "en": "Install and enable the Excalidraw plugin first" },
+  "画板已创建：{path}": { "zh": "画板已创建：{path}", "en": "Drawing created: {path}" },
+  "无法创建画板": { "zh": "无法创建画板", "en": "Unable to create drawing" },
+  "无法打开画板": { "zh": "无法打开画板", "en": "Unable to open drawing" },
+  "无法预览画板，请使用右上角按钮打开": { "zh": "无法预览画板，请使用右上角按钮打开", "en": "Preview unavailable; use the button at the top right to open the drawing" },
   "搜索代码语言": {
     "zh": "搜索代码语言",
     "en": "Search code languages"

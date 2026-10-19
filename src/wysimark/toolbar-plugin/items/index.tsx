@@ -1,5 +1,6 @@
 import { MenuItemData } from '../../shared-overlays'
-import { t } from '../../utils/translations'
+import { t, ui } from '../../utils/translations'
+import { Drawing } from '../icons'
 import { compactBlockItems } from './block-items'
 import { dialogItems } from './dialogItems'
 import { expandedMarkItems } from './mark-items'
@@ -25,6 +26,7 @@ export const items:MenuItemData[]=[
   'divider',
   pick(dialogItems,t('insertTable')),
   pick(dialogItems,t('insertLink')),pick(dialogItems,t('insertImageFromUrl')),
+  { title: ui('插入画板'), icon: Drawing, action: editor => { void editor.wysimark.insertDrawing?.() } },
   'divider',
   ...utilityItems,
 ]

@@ -84,6 +84,10 @@ Ctrl+B 加粗，Ctrl+I 斜体，Ctrl+U 下划线，Ctrl+Alt+C 切换字体颜色
 Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
 更多快捷键在 Obsidian 设置中搜索 **Blo Editor**。
 
+画板功能需安装并启用 [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin)。
+通过 `/画板`、工具栏画板按钮或“插入画板”命令创建附件并内嵌预览；点击预览选中并调整大小，通过右上角“放大绘制”按钮在完整的 Excalidraw 标签页中编辑，
+保存后自动刷新预览。删除嵌入块不会删除画板文件。
+
 图片查看器 Obsidian Image Toolkit 是可选插件。
 底层编辑器是 Slate，依赖原生 CodeMirror 接口的第三方编辑插件需要单独适配。
 

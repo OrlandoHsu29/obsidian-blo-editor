@@ -13,7 +13,7 @@ export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backwar
   if(direction==='backward'&&path.length===1) {
     let previous=path[0]-1
     while(previous>=0&&isEditorSpacer(editor.children[previous]))previous--
-    if(previous>=0&&isStructuredBlock(editor.children[previous])) {
+    if(previous>=0&&isStructuredBlock(editor.children[previous],editor)) {
       const remove=()=>Editor.withoutNormalizing(editor,()=>{
         // Merge with the empty navigation paragraph so redo also restores
         // the caret on that same Slate point, rather than the following text.

@@ -6,6 +6,7 @@ export const Undo = () => <TablerIcon><path d="M3 7v6h6M3 13l4.5-4.5a7 7 0 1 1 1
 export const Redo = () => <TablerIcon><path d="M21 7v6h-6M21 13l-4.5-4.5a7 7 0 1 0-1 10" /></TablerIcon>
 export const ClearFormatting = () => <TablerIcon><path d="m16 3 5 5-11 11H5l-3-3L16 3zM9 10l8 8M10 19h11" /></TablerIcon>
 export const FindReplace = () => <TablerIcon><circle cx="9" cy="8" r="5" /><path d="m13 12 5 5M3 20h12m-3-3 3 3-3 3" /></TablerIcon>
+export const Drawing = () => <TablerIcon><rect x="3" y="3" width="18" height="18" rx="2" /><path d="m7 16 1-4 7-7 3 3-7 7-4 1zM13 7l3 3" /></TablerIcon>
 
 export const TextColor = () => {
   const editor = useSlate()

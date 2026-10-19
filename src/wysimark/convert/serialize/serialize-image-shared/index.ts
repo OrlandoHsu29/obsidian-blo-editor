@@ -21,7 +21,7 @@ export function serializeImageShared(
   options: InternalLinkOptions = {}
 ): string {
   if (options.enableInternalLinks && isWikiEmbedUrl(image.url)) {
-    return serializeWikiEmbedUrl(image.url)
+    return serializeWikiEmbedUrl(image.url, image.width, image.height)
   }
 
   for (const urlSerializer of urlSerializers) {

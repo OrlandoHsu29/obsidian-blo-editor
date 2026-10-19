@@ -105,6 +105,12 @@ Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
+For embedded drawings, install and enable [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin).
+Use `/drawing`, the drawing toolbar button, or **Insert drawing** to create an attachment
+and embed its preview. Click the preview to select and resize it; use its top-right
+**Open drawing editor** button to draw in a full-size Excalidraw tab;
+saved changes refresh the preview. Deleting the embed leaves its drawing file intact.
+
 Obsidian Image Toolkit is an optional image viewer. The editor uses Slate; third-party editing extensions
 that require CodeMirror do not automatically apply to this view.
 

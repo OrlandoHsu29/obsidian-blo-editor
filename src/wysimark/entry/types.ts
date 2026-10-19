@@ -37,6 +37,7 @@ export type WysimarkEditor = {
     toggleReading?: () => Promise<void>
     readOnly?: boolean
     openTextColor?: () => void
+    insertDrawing?: () => void | Promise<void>
     getTextColor?: () => string | null
     setTextColor?: (color: string | null) => void
     getTableDefaults?: () => { headerRow: boolean; headerColumn: boolean }
@@ -85,6 +86,8 @@ export type WysimarkEditor = {
      * Render inline content for an internal embed (`![[spec]]`).
      */
     renderInternalEmbed?: RenderInternalEmbed
+    /** Host recognition also covers renamed Excalidraw Markdown files. */
+    isDrawingEmbed?: (url: string) => boolean
 
     /**
      * Render a Mermaid code block using the host environment.

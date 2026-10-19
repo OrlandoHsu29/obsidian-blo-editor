@@ -1,17 +1,19 @@
 import { Editor, Element, Node, NodeEntry, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { blockDepth, isEditorSpacer } from './model'
+import { isDrawingEmbedUrl } from '../wysimark/convert/obsidian-links'
 
-export const isStructuredBlock = (node: unknown): node is Element =>
-  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block')
+export const isStructuredBlock = (node: unknown, editor?: Editor): node is Element =>
+  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block' ||
+    (node.type === 'image-block' && (isDrawingEmbedUrl(node.url) || !!editor?.wysimark.isDrawingEmbed?.(node.url))))
 
 /** Navigation paragraphs are real Slate points, omitted from Markdown. */
 export function normalizeStructuredBoundary(editor: Editor, [node, path]: NodeEntry<Node>): boolean {
   if (path.length !== 1) return false
   const index = path[0]
   const previous = editor.children[index - 1]
-  const before = isStructuredBlock(previous) && !isEditorSpacer(node)
-  if (!before && !isStructuredBlock(node)) return false
+  const before = isStructuredBlock(previous, editor) && !isEditorSpacer(node)
+  if (!before && !isStructuredBlock(node, editor)) return false
   const next = editor.children[index + 1]
   if (!before && next && isEditorSpacer(next)) return false
   Transforms.insertNodes(editor, {
@@ -24,12 +26,12 @@ export function boundaryBlockIndex(editor: Editor): number | undefined {
   const selection = editor.selection
   if (!selection || !Range.isCollapsed(selection)) return
   const index = selection.anchor.path[0]
-  if (index > 0 && isEditorSpacer(editor.children[index]) && isStructuredBlock(editor.children[index - 1])) return index - 1
+  if (index > 0 && isEditorSpacer(editor.children[index]) && isStructuredBlock(editor.children[index - 1], editor)) return index - 1
 }
 
 export function selectStructuredBoundary(editor: Editor, index: number): boolean {
   const node = editor.children[index]
-  if (editor.wysimark.readOnly || !isStructuredBlock(node)) return false
+  if (editor.wysimark.readOnly || !isStructuredBlock(node, editor)) return false
   Editor.withoutNormalizing(editor, () => {
     normalizeStructuredBoundary(editor, [node, [index]])
     Transforms.select(editor, Editor.start(editor, [index + 1]))

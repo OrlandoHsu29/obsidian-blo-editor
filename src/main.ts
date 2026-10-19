@@ -12,6 +12,7 @@ import { canOpenSlashMenu } from './slash-menu';
 import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods/text-color';
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
+import { installDrawingNavigation } from './drawing-navigation';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
@@ -38,6 +39,7 @@ export default class BloEditorPlugin extends Plugin {
     },true);
     this.settings = Object.assign(this.settings, await this.loadData());
     this.addSettingTab(new BloSettingsTab(this));
+    installDrawingNavigation(this);
     installImageViewerIntegration(this);
 
     // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.

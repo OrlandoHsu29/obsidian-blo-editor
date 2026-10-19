@@ -504,3 +504,10 @@
 .blo-drawing-open { position:absolute; z-index:2; top:6px; right:6px; display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:5px; border:1px solid var(--background-modifier-border); border-radius:6px; background:var(--background-primary); color:var(--text-muted); cursor:pointer; }
 .blo-drawing-open:hover { color:var(--text-normal); background:var(--interactive-hover); }
 .blo-drawing-unavailable { padding:24px 12px; color:var(--text-muted); font-size:var(--font-ui-small); }
+.view-content.blo-drawing-return-layout { display:flex; flex-direction:column; }
+.blo-drawing-return-layout > .excalidraw-wrapper { flex:1 1 auto; min-height:0; height:0 !important; }
+.blo-drawing-return-bar { display:flex; flex:0 0 auto; align-items:center; padding:6px 12px; border-bottom:1px solid var(--background-modifier-border); background:var(--background-primary); }
+.blo-drawing-return-bar button { display:inline-flex; align-items:center; gap:6px; height:28px; padding:4px 8px; color:var(--text-normal); background:var(--interactive-normal); border:1px solid var(--background-modifier-border); border-radius:6px; box-shadow:none; font-family:var(--font-interface); font-size:var(--font-ui-small); cursor:pointer; }
+.blo-drawing-return-bar button:hover { background:var(--interactive-hover); }
+.blo-drawing-return-bar button:disabled { cursor:wait; opacity:.6; }
+.blo-drawing-return-bar button svg { display:block; width:16px; height:16px; }

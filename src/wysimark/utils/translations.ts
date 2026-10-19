@@ -520,6 +520,8 @@ export const uiMessages = {
   "画板": { "zh": "画板", "en": "Drawing" },
   "插入画板": { "zh": "插入画板", "en": "Insert drawing" },
   "放大绘制": { "zh": "放大绘制", "en": "Open drawing editor" },
+  "返回笔记": { "zh": "返回笔记", "en": "Back to note" },
+  "无法返回笔记，画板仍保留打开": { "zh": "无法返回笔记，画板仍保留打开", "en": "Unable to return to the note; the drawing remains open" },
   "安装 Excalidraw": { "zh": "安装 Excalidraw", "en": "Install Excalidraw" },
   "请先安装并启用 Excalidraw": { "zh": "请先安装并启用 Excalidraw 插件", "en": "Install and enable the Excalidraw plugin first" },
   "画板已创建：{path}": { "zh": "画板已创建：{path}", "en": "Drawing created: {path}" },

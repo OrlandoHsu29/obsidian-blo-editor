@@ -9,6 +9,7 @@ import { ImageResizeControl } from './wysimark/image-plugin/render-element/image
 import type { ImageBlockElement, ImageInlineElement, ImageSize } from './wysimark/image-plugin/types'
 import { splitWikiSpec, wikiEmbedUrl } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
+import { openEmbeddedDrawing } from './drawing-navigation'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
 type DrawingPlugin = {
@@ -28,8 +29,14 @@ export function isDrawingFile(app: App, file: TFile): boolean {
 export function drawingViewType(app: App): 'excalidraw' | 'markdown' {
   return drawingPlugin(app) ? 'excalidraw' : 'markdown'
 }
-export async function openDrawing(app: App, file: TFile): Promise<void> {
+export async function openDrawing(app: App, file: TFile, origin?: { sourcePath: string; editor: Editor }): Promise<void> {
   if (!drawingPlugin(app)) { new Notice(ui('请先安装并启用 Excalidraw')); return }
+  if (origin) {
+    const source = app.vault.getAbstractFileByPath(origin.sourcePath)
+    const leaf = app.workspace.getLeavesOfType('blo-view').find(leaf =>
+      (leaf.view as typeof leaf.view & { editor?: Editor }).editor === origin.editor)
+    if (source instanceof TFile && leaf && await openEmbeddedDrawing(app, file, leaf, source)) return
+  }
   const existing = app.workspace.getLeavesOfType('excalidraw').find(leaf =>
     (leaf.view as typeof leaf.view & { file?: TFile }).file === file)
   const leaf = existing || app.workspace.getLeaf('tab')
@@ -78,7 +85,7 @@ export async function insertDrawing(app: App, source: TFile, editor: Editor, cur
     if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
     else insert()
     await editor.wysimark.save?.()
-    if (app.workspace.getActiveFile() === source) await openDrawing(app, drawing)
+    if (app.workspace.getActiveFile() === source) await openDrawing(app, drawing, { sourcePath: source.path, editor })
   } catch (error) {
     console.error('Blo Editor: drawing operation failed', error)
     new Notice(drawing ? ui('画板已创建：{path}', { path: drawing.path }) : ui('无法创建画板'))
@@ -138,7 +145,7 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
     measure()
     return () => { cancelled = true; observer.disconnect(); target.removeEventListener('load', measure, true); owner.unload(); target.remove() }
   }, [app, available, revision, sourcePath, previewSpec])
-  const open = () => { void openDrawing(app, file).catch(() => new Notice(ui('无法打开画板'))) }
+  const open = () => { void openDrawing(app, file, { sourcePath, editor }).catch(() => new Notice(ui('无法打开画板'))) }
   return <div className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
     style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
     {available && <button className="blo-drawing-open" type="button" aria-label={ui('放大绘制')}

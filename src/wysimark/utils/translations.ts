@@ -131,6 +131,9 @@ export const translations = {
 export const uiMessages = {
   "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。": { zh: "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。", en: "Open Markdown notes in the rich editor by default; reading views are unaffected." },
   "默认编辑范围": { zh: "默认编辑范围", en: "Default editing scope" },
+  "附件保存路径": { zh: "附件保存路径", en: "Attachment folder" },
+  "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。": { zh: "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。", en: "Save images and drawings here, relative to the vault root. Leave empty to use the vault root." },
+  "请填写知识库内的相对路径": { zh: "请填写知识库内的相对路径", en: "Enter a relative path within the vault" },
   "留空应用于整个库；填写文件夹路径可限制范围。": { zh: "留空应用于整个库；填写文件夹路径可限制范围。", en: "Leave blank for the whole vault, or enter a folder path to limit the scope." },
   "右侧插入列":{zh:"右侧插入列",en:"Insert column right"},
   "左侧插入列":{zh:"左侧插入列",en:"Insert column left"},

@@ -10,6 +10,7 @@ import type { ImageBlockElement, ImageInlineElement, ImageSize } from './wysimar
 import { splitWikiSpec, wikiEmbedUrl } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
 import { openEmbeddedDrawing } from './drawing-navigation'
+import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
 type DrawingPlugin = {
@@ -47,7 +48,7 @@ export async function openDrawing(app: App, file: TFile, origin?: { sourcePath: 
 
 const creating = new WeakSet<Editor>()
 /** Keep the scene as an ordinary attachment and only embed its wiki reference. */
-export async function insertDrawing(app: App, source: TFile, editor: Editor, current: () => boolean): Promise<void> {
+export async function insertDrawing(app: App, source: TFile, editor: Editor, current: () => boolean, folder = DEFAULT_ATTACHMENT_FOLDER): Promise<void> {
   if (editor.wysimark.readOnly || creating.has(editor)) return
   const plugin = drawingPlugin(app)
   if (!plugin?.getBlankDrawing) { new Notice(ui('请先安装并启用 Excalidraw')); return }
@@ -58,7 +59,7 @@ export async function insertDrawing(app: App, source: TFile, editor: Editor, cur
     const content = await plugin.getBlankDrawing()
     if (!current() || editor.wysimark.readOnly) return
     const extension = plugin.settings?.compatibilityMode ? '.excalidraw' : '.excalidraw.md'
-    const path = await app.fileManager.getAvailablePathForAttachment(`${source.basename} - ${ui('画板')}${extension}`, source.path)
+    const path = await attachmentPath(app, folder, `${source.basename} - ${ui('画板')}${extension}`)
     if (!current() || editor.wysimark.readOnly) return
     drawing = await app.vault.create(path, content)
     if (!current() || editor.wysimark.readOnly) { new Notice(ui('画板已创建：{path}', { path })); return }

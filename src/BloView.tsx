@@ -13,6 +13,8 @@ import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
+import { attachmentPath } from './attachments';
+import type { EditorSettings } from './settings';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -457,7 +459,8 @@ export class BloView extends FileView {
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
     editor.wysimark.insertDrawing = async () => {
       const file = this.currentFile;
-      if (file) await insertDrawing(this.app, file, editor, () => this.editor === editor && this.currentFile === file);
+      if (file) await insertDrawing(this.app, file, editor, () => this.editor === editor && this.currentFile === file,
+        (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder);
     };
     editor.wysimark.getTextColor = () => (this.plugin as any).settings.defaultTextColor;
     editor.wysimark.setTextColor = color => (this.plugin as any).setTextColor(editor, color);
@@ -717,18 +720,9 @@ export class BloView extends FileView {
     const arrayBuffer = await file.arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
     const hash = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('');
-    const normalizedPath = normalizePath(await this.app.fileManager.getAvailablePathForAttachment(
-      hash.slice(0, 20) + '-' + file.name, this.currentFile?.path
-    ));
-
-    // Create parent directories if they don't exist
-    const parentDir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
-    if (parentDir) {
-      const existingFolder = this.app.vault.getAbstractFileByPath(parentDir);
-      if (!existingFolder) {
-        await this.app.vault.createFolder(parentDir);
-      }
-    }
+    const normalizedPath = await attachmentPath(this.app,
+      (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder,
+      hash.slice(0, 20) + '-' + file.name);
 
     // Convert File to ArrayBuffer
 

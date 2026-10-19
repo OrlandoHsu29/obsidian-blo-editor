@@ -43,7 +43,7 @@ export function Paragraph({
     const position = () => {
       const parent = paragraph.offsetParent as HTMLElement | null
       if (!parent) return
-      const target = (block.querySelector('[data-blo-drawing]') || block).getBoundingClientRect(), origin = parent.getBoundingClientRect()
+      const target = (block.querySelector('[data-blo-drawing],[data-blo-image]') || block).getBoundingClientRect(), origin = parent.getBoundingClientRect()
       const scale = parent.offsetWidth ? origin.width / parent.offsetWidth : 1
       const line = parseFloat(getComputedStyle(paragraph).lineHeight)
       paragraph.style.left = `${(target.right - origin.left) / scale + parent.scrollLeft - parent.clientLeft + 4}px`

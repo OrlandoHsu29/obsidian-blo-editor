@@ -28,7 +28,7 @@ export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTML
   }
   for (const block of candidates) {
     if (!event.currentTarget.contains(block)) continue
-    const content = block.querySelector<HTMLElement>(':scope > table,:scope > [data-wysimark-code-block],[data-blo-drawing]')
+    const content = block.querySelector<HTMLElement>(':scope > table,:scope > [data-wysimark-code-block],[data-blo-drawing],[data-blo-image]')
     if (!content) continue
     const bounds = content.getBoundingClientRect()
     if (event.clientX < bounds.right - 1 || event.clientY < bounds.top || event.clientY > bounds.bottom) continue

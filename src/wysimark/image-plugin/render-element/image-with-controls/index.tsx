@@ -98,7 +98,7 @@ export function ImageWithControls({
    * of `<p>` tags.
    */
   return (
-    <$ImageContainer className={className}>
+    <$ImageContainer className={className} data-blo-image>
       <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
         if (image.naturalWidth && image.naturalHeight) setNaturalSize({width: image.naturalWidth, height: image.naturalHeight})

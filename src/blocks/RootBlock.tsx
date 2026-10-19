@@ -154,7 +154,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
     }}
     onMouseDown={event => {
       if (readOnly || event.button !== 0 || event.shiftKey || !isStructuredBlock(element, editor)) return
-      const content = ref.current?.querySelector<HTMLElement>('table,[data-wysimark-code-block],[data-blo-drawing]')
+      const content = ref.current?.querySelector<HTMLElement>('table,[data-wysimark-code-block],[data-blo-drawing],[data-blo-image]')
       if (!content || event.clientX < content.getBoundingClientRect().right) return
       event.preventDefault(); event.stopPropagation()
       if (selectStructuredBoundary(editor, index)) ReactEditor.focus(editor)

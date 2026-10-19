@@ -208,6 +208,7 @@ function InternalEmbedView({
         src={app.vault.getResourcePath(imageFile)}
         alt={imageFile.basename}
         className="wysimark-internal-embed-image"
+        data-blo-image
         style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
       />
     );

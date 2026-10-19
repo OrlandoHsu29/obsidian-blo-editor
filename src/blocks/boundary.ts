@@ -1,11 +1,9 @@
 import { Editor, Element, Node, NodeEntry, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { blockDepth, isEditorSpacer } from './model'
-import { isDrawingEmbedUrl } from '../wysimark/convert/obsidian-links'
 
 export const isStructuredBlock = (node: unknown, editor?: Editor): node is Element =>
-  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block' ||
-    (node.type === 'image-block' && (isDrawingEmbedUrl(node.url) || !!editor?.wysimark.isDrawingEmbed?.(node.url))))
+  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block' || node.type === 'image-block')
 
 /** Navigation paragraphs are real Slate points, omitted from Markdown. */
 export function normalizeStructuredBoundary(editor: Editor, [node, path]: NodeEntry<Node>): boolean {

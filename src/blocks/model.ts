@@ -70,6 +70,8 @@ export function listHeadingLevel(node: Node): number | undefined {
 export function orderedNumbers(nodes: Node[]) {
   return resolveOrderedNumbers(nodes).numbers
 }
+/** Manual restart clears source starts; legacy automatic conversions retained them. */
+const restartsNumbering = (node: Block) => node.__numbering === 'restart' && node.start === undefined
 /** Display paths include numbered heading ancestors only; Markdown keeps local integers. */
 export function resolveOrderedNumbers(nodes: Node[]) {
   const counters=new Map<number,Map<number,number>>(), numbers=new Map<Node,number>(),numberLabels=new Map<Node,string>()
@@ -88,10 +90,10 @@ export function resolveOrderedNumbers(nodes: Node[]) {
     let counts=counters.get(style)
     if(!counts){counts=new Map();counters.set(style,counts)}
     // A same-style parent ends child series, even when the parent has no number.
-    for(const level of counts.keys())if(level>depth)counts.delete(level)
+    if(isListBlock(node)||headingLevel!==undefined)for(const level of counts.keys())if(level>depth)counts.delete(level)
     if(Element.isElement(node)&&node.type==='ordered-list-item') {
       const block=node as Block
-      const number=block.__numbering==='restart'||(headingLevel===undefined&&!block.__numbering&&block.__firstAtDepth)?1:(counts.get(depth)||0)+1
+      const number=restartsNumbering(block)?1:(counts.get(depth)||0)+1
       counts.set(depth,number);numbers.set(node,number)
       if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
       else {
@@ -104,13 +106,9 @@ export function resolveOrderedNumbers(nodes: Node[]) {
   }
   return {numbers,numberLabels}
 }
-/** A new list restarts unless the preceding meaningful sibling is also numbered. */
+/** Intervening content does not opt a newly created list out of continuation. */
 export function defaultOrderedNumbering(editor: Editor, path: Path, converting?: ReadonlySet<Node>): 'continue'|'restart' {
-  const parent=Node.parent(editor,path)
-  let previous=path[path.length-1]-1
-  while(previous>=0&&isEditorSpacer(parent.children[previous]))previous--
-  const node=parent.children[previous]
-  return node&&(Element.isElement(node)&&node.type==='ordered-list-item'||converting?.has(node))?'continue':'restart'
+  return 'continue'
 }
 function batch(editor: Editor, run: ()=>void) {
   const apply=()=>Editor.withoutNormalizing(editor,run)
@@ -231,7 +229,7 @@ export function reflowFollowingLists(editor: Editor, path: Path, depth = blockDe
     if(blockDepth(node)<depth)break
     if(blockDepth(node)!==depth)continue
     if(!Element.isElement(node)||node.type!=='ordered-list-item')continue
-    if(node.__numbering==='restart')break
+    if(restartsNumbering(node as Block))break
     const at=[...parentPath,i]
     Transforms.unsetNodes(editor,'start',{at})
   }

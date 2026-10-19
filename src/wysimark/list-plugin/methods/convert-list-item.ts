@@ -20,7 +20,7 @@ export function convertOrderedList(editor: Editor, allowToggle: boolean) {
       return {
         type: "ordered-list-item",
         depth: blockDepth(element),
-        __numbering: modes.get(element) || 'restart',
+        __numbering: modes.get(element) || 'continue',
       }
     },
     allowToggle

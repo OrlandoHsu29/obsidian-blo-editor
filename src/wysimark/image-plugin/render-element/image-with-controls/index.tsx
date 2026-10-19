@@ -14,6 +14,7 @@ import {
 import { ImageResizeControl } from "./image-resize-controls/image-resize-control"
 import { ImageSizeStatus } from "./image-size-status/image-size-status"
 import { ImageToolbar } from "./image-toolbar/image-toolbar"
+import { useAttachmentRevision } from '../../attachment-revision'
 
 /**
  * The `Image` Component is responsible for:
@@ -36,6 +37,7 @@ export function ImageWithControls({
   presets: ImageSizePreset[]
 }) {
   const editor = useSlateStatic()
+  const revision = useAttachmentRevision(editor, element.url)
   const url = editor.wysimark.resolveImageUrl?.(element.url) ?? element.url
   const selected = useSelected()
   const readOnly = useReadOnly()
@@ -97,7 +99,7 @@ export function ImageWithControls({
    */
   return (
     <$ImageContainer className={className}>
-      <$Image src={url} alt={element.alt} width={size?.width} height={size?.height} decoding="async" onLoad={event => {
+      <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
         if (image.naturalWidth && image.naturalHeight) setNaturalSize({width: image.naturalWidth, height: image.naturalHeight})
       }} />

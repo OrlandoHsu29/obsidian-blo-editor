@@ -4,6 +4,7 @@ import { isDrawingFile } from './drawings'
 import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
 import type { EditorSettings } from './settings'
+import { attachmentRestored } from './wysimark/image-plugin/attachment-revision'
 
 const IMAGE_EXTENSIONS = new Set(['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'])
 
@@ -51,6 +52,7 @@ export function watchAttachments(app: App, source: TFile, editor: Editor, settin
           if (app.vault.getAbstractFileByPath(record.file.path)) return
           record.file = await app.vault.createBinary(record.file.path, record.content)
           record.deleted = false; record.content = undefined
+          attachmentRestored(editor, record.urls)
         }
         return
       }

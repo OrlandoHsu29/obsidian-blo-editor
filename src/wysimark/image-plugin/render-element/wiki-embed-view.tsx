@@ -1,5 +1,5 @@
 import styled from "@emotion/styled"
-import { useCallback, useEffect, useRef } from "react"
+import { Fragment, useCallback, useEffect, useRef } from "react"
 import { Transforms } from "slate"
 import { ReactEditor, useSelected, useSlate } from "slate-react"
 
@@ -8,6 +8,7 @@ import { AnchorDialog } from "../../anchor-plugin/render-element/AnchorDialog"
 import { AnchorEditDialog } from "../../anchor-plugin/render-element/AnchorEditDialog"
 import { useLayer } from "../../use-layer"
 import { ImageBlockElement, ImageInlineElement } from "../types"
+import { useAttachmentRevision } from '../attachment-revision'
 
 const $WikiEmbed = styled("span")`
   position: relative;
@@ -26,6 +27,7 @@ export function WikiEmbedView({
   element: ImageInlineElement | ImageBlockElement
 }) {
   const editor = useSlate()
+  const revision = useAttachmentRevision(editor, element.url)
   const selected = useSelected()
   const dialog = useLayer("dialog")
   const embedRef = useRef<HTMLSpanElement>(null)
@@ -101,7 +103,7 @@ export function WikiEmbedView({
   return (
     <$WikiEmbed ref={embedRef} contentEditable={false} data-wysimark-embed-block={element.type === 'image-block' || undefined}>
       <span ref={startEdgeRef} style={{ display: "none" }} />
-      {renderInternalEmbed?.(spec)}
+      <Fragment key={revision}>{renderInternalEmbed?.(spec)}</Fragment>
     </$WikiEmbed>
   )
 }

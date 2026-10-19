@@ -17,6 +17,7 @@ import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './d
 import { attachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
+import { handleMediaTransfer } from './media-paste';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -516,6 +517,21 @@ export class BloView extends FileView {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('wysimark-container');
+    const transfer = (event: ClipboardEvent | DragEvent) => {
+      const editor = this.editor, file = this.currentFile;
+      if (!editor || !file || this.readOnly || !(event.target as HTMLElement).closest('[data-slate-editor="true"]')) return;
+      handleMediaTransfer(editor, event, this.handleImageSave,
+        () => this.editor === editor && this.currentFile === file && !this.readOnly);
+    };
+    this.registerDomEvent(contentEl, 'paste', transfer, true);
+    this.registerDomEvent(contentEl, 'drop', transfer, true);
+    this.registerDomEvent(contentEl, 'dragover', event => {
+      if (!this.readOnly && event.dataTransfer?.types.includes('Files') &&
+        (event.target as HTMLElement).closest('[data-slate-editor="true"]')) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      }
+    }, true);
     let bottomClick = false;
     this.registerDomEvent(contentEl, 'mousedown', event => {
       bottomClick = !!this.editor && !this.readOnly && selectDocumentEndFromPointer(this.editor, event, contentEl);
@@ -728,13 +744,12 @@ export class BloView extends FileView {
    * @returns The URL to use for displaying the image in the editor
    */
   handleImageSave: OnImageSaveHandler = async (file: File, path: string) => {
-    // Normalize the path
+    const sourcePath = this.currentFile?.path;
+    const folder = (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder;
     const arrayBuffer = await file.arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
     const hash = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('');
-    const normalizedPath = await attachmentPath(this.app,
-      (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder,
-      hash.slice(0, 20) + '-' + file.name);
+    const normalizedPath = await attachmentPath(this.app, folder, hash.slice(0, 20) + '-' + file.name);
 
     // Convert File to ArrayBuffer
 
@@ -750,7 +765,7 @@ export class BloView extends FileView {
 
     // Return the Obsidian resource URL for displaying in the editor
     // This URL format works within Obsidian's app environment
-    const sourceDir = this.currentFile?.path.split('/').slice(0, -1) ?? [];
+    const sourceDir = sourcePath?.split('/').slice(0, -1) ?? [];
     const targetParts = savedFile.path.split('/');
     while (sourceDir.length && targetParts.length && sourceDir[0] === targetParts[0]) {
       sourceDir.shift(); targetParts.shift();

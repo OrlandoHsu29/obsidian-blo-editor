@@ -16,6 +16,7 @@ import { DocumentTitle } from './DocumentTitle';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
 import { attachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
+import { watchAttachments } from './attachment-cleanup';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -451,6 +452,8 @@ export class BloView extends FileView {
 
   private connectEditor = (editor: Editor) => {
     this.editor = editor;
+    const stopWatchingAttachments = this.currentFile ? watchAttachments(this.app, this.currentFile, editor,
+      () => (this.plugin as Plugin & { settings: EditorSettings }).settings) : () => {};
     this.findBar?.attach();
     this.findBar?.refresh();
     this.lastEditorMarkdown = editor.getMarkdown();
@@ -471,6 +474,7 @@ export class BloView extends FileView {
       void this.plugin.saveData((this.plugin as any).settings);
     };
     return () => {
+      stopWatchingAttachments();
       if (this.editor === editor) this.editor = null;
     };
   };

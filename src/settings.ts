@@ -9,6 +9,8 @@ export type EditorSettings = {
   defaultTextColor: string | null
   richEditingFolder: string
   attachmentFolder: string
+  deleteImageAttachments: boolean
+  deleteDrawingAttachments: boolean
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
 }
 
@@ -17,6 +19,8 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   defaultTextColor: DEFAULT_TEXT_COLOR,
   richEditingFolder: '',
   attachmentFolder: DEFAULT_ATTACHMENT_FOLDER,
+  deleteImageAttachments: false,
+  deleteDrawingAttachments: false,
   tableDefaults: { headerRow: true, headerColumn: false },
 }
 
@@ -45,6 +49,18 @@ export class BloSettingsTab extends PluginSettingTab {
             text.inputEl.reportValidity()
           }
         }))
+    for (const [key, label] of [
+      ['deleteImageAttachments', '删除图片时删除附件'],
+      ['deleteDrawingAttachments', '删除画板时删除附件'],
+    ] as const) {
+      new Setting(this.containerEl)
+        .setName(ui(label))
+        .setDesc(ui('将不再被引用的附件移入回收站，支持撤销恢复。'))
+        .addToggle(toggle => toggle.setValue(plugin.settings[key]).onChange(async value => {
+          plugin.settings[key] = value
+          await plugin.saveData(plugin.settings)
+        }))
+    }
     new Setting(this.containerEl)
       .setName(ui('默认使用富文本编辑器'))
       .setDesc(ui('Markdown 笔记默认使用富文本编辑；阅读视图不受影响。'))

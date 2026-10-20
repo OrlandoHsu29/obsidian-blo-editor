@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.15 — 2026-10-20
+
+- Export rendered notes directly to PDF with paper size, landscape orientation,
+  margins, title, and page numbers. Keep code highlighting, tables, images, and
+  drawing previews. Export from the header, command palette, or file explorer
+  context menu; temporary read-only previews return to the original tab.
+  Large documents no longer fail with ERR_INVALID_URL.
+- Download imported Markdown and Yuque HTML images into the configured attachment
+  folder. Preserve image widths, reuse downloads, keep failed links, and leave
+  code examples literal. Bind async saves to the original note and folder.
+- Configure toolbar visibility with shared icons and checkboxes. Keep paragraph
+  style, clear formatting, undo, redo, text color, and find/replace always visible;
+  fixed settings stay checked, gray, and disabled. Changes apply across open tabs.
+- Add slash commands for 3×3 tables, checkboxes, links, and images. Reuse the
+  toolbar insertion dialogs even when their buttons are hidden, with bilingual,
+  alias, and pinyin-initial search.
+- Improve editing-folder scope, restored-tab behavior, and grouped settings.
+- Recover block metadata mixed with ordinary Markdown, isolate invalid metadata,
+  and preserve literal code and existing table metadata.
+- Refresh the bilingual README header and document PDF export and image imports.
+
 ## 0.1.10 — 2026-10-19
 
 - Add optional Excalidraw integration with content-fitting inline previews,

@@ -1,28 +1,24 @@
-# Blo Editor
-
 <p align="center">
-  <img src="assets/logo.png" alt="Blo Editor logo" width="128" height="128">
+  <img src="assets/logo.png" alt="Blo Editor logo" width="160" height="160">
 </p>
 
-A Yuque-inspired block editor for Obsidian, built on Wysimark Editor and Slate.
-Blo comes from block. Maintained by **OrlandoHsu29**.
-Based on [Wysimark Editor](https://github.com/takeshy/obsidian-wysimark) 1.3.2
-by Takeshi Morita. Upstream copyright and the MIT license are retained.
-See [UPSTREAM.json](UPSTREAM.json) and [the original README](https://github.com/takeshy/obsidian-wysimark#readme).
+<h1 align="center">Blo Editor</h1>
 
-[中文说明](README.zh-CN.md)
+<p align="center">A Yuque-inspired block editor for Obsidian. Write, organize, and keep tables, images, and drawings together.</p>
 
-## Preview
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-Light mode — headings, lists, tables, code, and the native outline:
+<p align="center">
+  <img src="assets/preview-light.png" alt="Blo Editor light mode with headings, lists, tables, code, and the native outline using a public sample note" width="1200">
+</p>
 
-![Light mode overview using a synthetic knowledge-base note](assets/preview-light.png)
+Edit content directly and organize ideas by dragging and indenting blocks.
+Notes stay in Markdown, with automatic saving, rich copy/paste, and inline drawings.
 
-Dark mode — the same note follows the current theme:
-
-![Dark mode overview of the same synthetic note](assets/preview-dark.png)
-
-Open any image to view the original high-resolution PNG.
+Export the rendered note through the file explorer context menu, tab menu, or **Blo Editor: Export PDF** command,
+without another export plugin. Choose A4, A3, or Letter, orientation, margins, title,
+and page numbers. PDFs use a light background and preserve code highlighting,
+tables, images, and drawing previews.
 
 ## A block editing workflow
 
@@ -69,6 +65,9 @@ contents; select row/column handles to remove rows/columns. Set default header s
 underline, lists, and inline code, or paste web HTML. Copy out as standard rich
 HTML and plain text. Imported colors map to the toolbar palette; near-black/white
 text and neutral backgrounds follow the current theme.
+Imported or pasted Markdown images, including Yuque `<img>` tags, are downloaded
+to the attachment folder and displayed locally. Failed downloads keep the original
+link, and tags inside code remain literal.
 
 <details>
 <summary>View imported formatting and theme-aware colors</summary>
@@ -116,6 +115,12 @@ immediately. Removing an image or drawing keeps its attachment by default.
 Separate settings can move unreferenced image/drawing attachments to trash on
 deletion. Undo restores the attachment and refreshes the preview automatically.
 
+Slash commands include 3×3 tables, checkboxes, links, and images; link/image
+commands reuse the toolbar insertion dialogs. In **Toolbar configuration**, shared
+icons and checkboxes control visibility immediately. Paragraph style, clear
+formatting, undo, redo, text color, and find/replace stay visible; their settings
+remain checked, gray, and disabled.
+
 Images and drawings share the vault-root `附件` folder by default. **Attachment
 folder** accepts a vault-relative path such as `Attachments/Media`; leave empty
 for the vault root. Changing this setting does not move existing files.
@@ -125,7 +130,8 @@ the language menu supports typing to search.
 Headings 1–4 appear in the outline. Subheadings use H5 styling with extra spacing
 and stay out of the outline. Headings can be combined with ordered lists.
 The default editor can cover the whole vault or a folder configured in settings.
-Leave **Default editing scope** empty to include new notes created anywhere in the vault.
+Leave **Editing scope** empty to include new notes created anywhere in the vault.
+**Keep Blo Editor notes in Blo Editor** is enabled by default: existing and restored Blo tabs can open notes outside this scope. Turn it off to switch those notes to the native editor instead.
 
 Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
@@ -156,6 +162,11 @@ Packaging uses PowerShell on Windows and `zip` on macOS/Linux.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout and development rules.
 
 ## License
+
+Blo comes from block. Maintained by **OrlandoHsu29**, built on Slate and
+[Wysimark Editor](https://github.com/takeshy/obsidian-wysimark) 1.3.2 by Takeshi Morita.
+Upstream copyright and the MIT license are retained. See [UPSTREAM.json](UPSTREAM.json)
+and [the original README](https://github.com/takeshy/obsidian-wysimark#readme).
 
 MIT. Copyright belongs to the respective upstream authors and OrlandoHsu29 for
 Blo Editor modifications. Preserve [LICENSE](LICENSE) and the upstream attribution.

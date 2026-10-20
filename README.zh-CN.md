@@ -1,25 +1,18 @@
-# Blo Editor
-
 <p align="center">
-  <img src="assets/logo.png" alt="Blo Editor logo" width="128" height="128">
+  <img src="assets/logo.png" alt="Blo Editor logo" width="160" height="160">
 </p>
 
-Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使用 Slate。
+<h1 align="center">Blo Editor</h1>
 
-作者：OrlandoHsu29。基于 Takeshi Morita 的 Wysimark Editor 1.3.2 二次开发，
-保留原作者版权、MIT 许可证和上游来源记录。
+<p align="center">语雀风格的 Obsidian 块编辑器。写笔记、整理结构，把表格、图片和画板放在同一页。</p>
 
-## 整体预览
+<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-浅色模式：标题、列表、表格、代码与原生大纲的整体效果。
+<p align="center">
+  <img src="assets/preview-light.png" alt="Blo Editor 浅色模式：标题、列表、表格、代码与原生大纲，使用公开示例" width="1200">
+</p>
 
-![浅色模式整体预览，使用专门编写的知识库示例](assets/preview-light.png)
-
-深色模式：同一篇示例笔记随主题切换。
-
-![同一篇公开示例笔记的深色模式整体预览](assets/preview-dark.png)
-
-点击图片可查看高分辨率 PNG 原图。
+直接编辑内容，用块拖动与缩进整理思路。笔记仍保存为 Markdown，自动保存，支持带样式复制粘贴与内嵌画板。
 
 ## 与原生 Markdown 编辑入口不同的体验
 
@@ -55,6 +48,7 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 
 **带样式复制粘贴**：兼容语雀 Markdown 的颜色标签与加粗、下划线、列表、行内代码组合，也支持网页 HTML 粘贴。
 向外复制同时提供标准富文本 HTML 和纯文本。外来字色映射到固定色板，近黑／近白字色与中性底色跟随主题。
+导入或粘贴 Markdown 时，网络图片（含语雀的 `<img>` 标签）会下载到附件目录并改用本地预览；下载失败保留原链接，代码里的标签保持原样。
 
 <details>
 <summary>展开查看导入样式与主题颜色截图</summary>
@@ -85,7 +79,10 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 重启 Obsidian 后在第三方插件中启用 **Blo Editor**。需要桌面版 Obsidian 1.8.7 或更新版本。
 
 输入 `/` 打开命令菜单，点击块柄进行块操作，悬浮工具栏调整格式。
+斜杠菜单支持默认 3×3 表格、复选框、链接和图片；后两项复用工具栏插入菜单。
+设置中的「工具栏配置」以同款图标和复选框控制按钮显示，即时生效。段落样式、清除格式、撤销、重做、字体颜色和查找／替换固定显示，对应选项保持勾选、置灰且不可修改。
 支持查找替换、阅读模式、代码高亮及图片插入和缩放。正文自动保存，关闭标签页前也会保存，Ctrl+S 可立即保存。
+通过文件浏览器右键菜单、标签页菜单或命令面板中的「Blo Editor：导出 PDF」直接导出渲染后的笔记，无需额外导出插件。支持 A4、A3、Letter、横向、页边距、标题和页码；保留代码高亮、表格、图片及画板预览，PDF 使用浅色背景。
 删除块及其子块支持撤销。图片和画板默认只删除引用；设置中可分别开启同步删除附件，未被其他位置引用的附件会移入回收站，撤销时一并恢复并自动刷新预览。
 
 图片和画板默认保存在库根目录的 `附件` 文件夹。设置中的「附件保存路径」支持库内相对路径，如 `附件/素材`；留空保存到库根目录。更改设置不会迁移已有文件。
@@ -93,7 +90,8 @@ Blo 取自 block。遵循语雀编辑习惯的 Obsidian 块编辑器，底层使
 
 标题 1～4 显示在大纲，子标题保留 H5 样式和较大间距但不进入大纲。
 标题可以搭配有序列表。可在插件设置中关闭默认富文本入口，或限定自动打开的文件夹范围。
-将“默认编辑范围”留空，整个库中任意位置新建的笔记都可默认使用插件。
+将“编辑范围”留空，整个库中任意位置新建的笔记都可默认使用插件。
+“已有 Blo Editor 格式的笔记仍用 Blo Editor 打开”默认开启：已有或恢复的 Blo 标签页可继续打开范围外的笔记；关闭后，这些笔记会切回原生编辑器。
 
 Ctrl+B 加粗，Ctrl+I 斜体，Ctrl+U 下划线，Ctrl+Alt+C 切换字体颜色，
 Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
@@ -114,5 +112,7 @@ Windows 使用 PowerShell 打包，macOS/Linux 需要 `zip` 命令。产物不�
 项目结构和维护约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 开源协议
+
+Blo 取自 block。作者：OrlandoHsu29。基于 Takeshi Morita 的 Wysimark Editor 1.3.2 二次开发，底层为 Slate；保留原作者版权、MIT 许可证及 [上游来源记录](UPSTREAM.json)。
 
 本项目采用 [MIT License](LICENSE)。Blo Editor 的修改部分版权归 OrlandoHsu29 所有；保留 Takeshi Morita 的上游版权声明和许可证。

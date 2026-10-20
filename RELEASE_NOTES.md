@@ -1,27 +1,25 @@
-# Blo Editor 0.1.5 — 多级编号、表格编辑与语雀导入改进
+# Blo Editor 0.1.15 — PDF 导出、图片本地化与工具栏配置
 
 ## 中文
 
-- **层级与编号**：标题有序列表支持 `1.2.3`，结合标题级别与块缩进计算，编号同步显示在原生大纲；改进继续编号的作用范围。
-- **块编辑**：拖动参考线显示缩进刻度，父子块一起移动；改进段落样式重复切换、分割线选中及表格／代码块边界处的光标和删除行为。
-- **表格交互**：支持单元格区域、整行和整列选择；悬浮工具栏提供对齐、标题行和标题列，改进新增行列、删除提示与默认标题样式。
-- **复制粘贴**：保留网页富文本格式，向其他编辑器复制时提供 HTML 与纯文本；修复语雀颜色标签与加粗、下划线、列表、行内代码组合的解析及保存重开问题。
-- **主题适配**：导入颜色映射到固定色板，近黑／近白文字与中性底色跟随深浅主题。
-- **使用体验**：改进斜杠菜单的中英文、拼音首字母检索与定位，统一代码字体；README 增加深浅色整体预览及四项独立折叠功能截图。
+- **独立 PDF 导出**：从笔记右上角、命令面板或文件浏览器右键菜单导出，支持纸张、横向、页边距、标题和页码，保留表格、代码高亮、图片与画板预览。未打开的笔记使用临时只读预览，结束后返回原标签页；修复大文档的 ERR_INVALID_URL 错误。
+- **网络图片本地化**：导入 Markdown 或语雀 `<img>` 图片后，下载到设置的附件目录并改用本地预览，保留图片宽度；下载失败保留原链接，代码中的标签保持原样。
+- **工具栏配置**：一行图标配合复选框控制按钮显示，并即时同步到打开的标签页。段落样式、清除格式、撤销、重做、字体颜色和查找／替换固定显示，对应配置保持勾选、置灰且不可修改；图标与实际工具栏统一。
+- **斜杠菜单**：新增默认 3×3 表格、复选框、链接和图片；链接与图片打开工具栏同款插入菜单，隐藏工具栏按钮不影响使用，支持中英文、别名及拼音首字母。
+- **解析与设置**：修复普通 Markdown 与块元数据混排时元数据被显示成 HTML 的情况，保留代码和表格元数据兼容；改进编辑范围与已有标签页设置，更新中英文 README 排版。
 
-安装包：`blo-editor-0.1.5.zip`。解压后将 `blo-editor` 目录放入笔记库的 `.obsidian/plugins/`，更新时保留已有 `data.json`，然后重新加载插件或重启 Obsidian。
+安装：下载 `blo-editor-0.1.15.zip`，将解压后的 `blo-editor` 文件夹放入笔记库的 `.obsidian/plugins/`。更新时保留已有 `data.json`，然后重新加载插件或重启 Obsidian。
 
-要求桌面版 Obsidian **1.8.7 或更新版本**。已被旧版保存成转义星号的内容，需要从原始来源重新粘贴；本版本不会批量改写已有笔记。
+要求桌面版 Obsidian **1.8.7 或更新版本**；画板功能需另行启用 Excalidraw。也提供单独的 `main.js`、`styles.css` 和 `manifest.json`。
 
 ## English
 
-- **Structure and numbering:** hierarchical ordered headings display `1.2.3` using heading levels and indentation, with cached numbers in the native outline and improved continuation boundaries.
-- **Block editing:** indentation guides show numbered levels while dragging parent/child blocks. Improve paragraph-style toggles, divider selection, and cursor/deletion behavior at table and code-block boundaries.
-- **Tables:** select cell ranges, rows, or columns; use floating alignment/header controls, improved insertion/deletion feedback, and configurable default headers.
-- **Clipboard:** preserve web HTML on paste and provide portable HTML plus plain text on copy. Fix Yuque font tags combined with bold, underline, lists, and inline code, including save/reopen formatting.
-- **Themes:** map imported colors to the fixed palette; near-black/white text and neutral backgrounds follow the theme.
-- **Usability:** improve Chinese, English, and pinyin-initial slash search, menu placement, and code typography. Refresh both READMEs with light/dark previews and four separate feature screenshots.
+- **Independent PDF export:** export from the note header, command palette, or file explorer context menu. Choose paper size, landscape orientation, margins, title, and page numbers while preserving tables, syntax highlighting, images, and drawing previews. Temporary read-only previews return to the original tab. Fix ERR_INVALID_URL on large documents.
+- **Local image imports:** download Markdown and Yuque HTML images to the configured attachment folder and preserve their widths. Failed downloads retain the original link; code examples stay literal.
+- **Toolbar preferences:** use shared icons and checkboxes to control visibility across open tabs. Paragraph style, clear formatting, undo, redo, text color, and find/replace stay visible, with checked, gray, disabled settings.
+- **Slash commands:** add 3×3 tables, checkboxes, links, and images. Link/image commands reuse the toolbar dialogs, including when toolbar buttons are hidden. Support bilingual names, aliases, and pinyin initials.
+- **Parsing and settings:** recover block metadata mixed with ordinary Markdown while preserving code and table metadata. Improve editing scope, restored-tab settings, and the bilingual README layout.
 
-Install `blo-editor-0.1.5.zip` by extracting its `blo-editor` directory into your vault's `.obsidian/plugins/`. Preserve an existing `data.json` when upgrading, then reload the plugin or restart Obsidian.
+Install `blo-editor-0.1.15.zip` by placing the extracted `blo-editor` directory in your vault's `.obsidian/plugins/`. Preserve an existing `data.json`, then reload the plugin or restart Obsidian.
 
-Requires desktop Obsidian **1.8.7 or later**. Content already saved as escaped asterisks by an older version needs to be pasted again from its original source; existing notes are not rewritten in bulk.
+Requires desktop Obsidian **1.8.7 or later**. Drawing features require the optional Excalidraw plugin. Standalone `main.js`, `styles.css`, and `manifest.json` assets are also included.

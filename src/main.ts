@@ -3,7 +3,7 @@ import { installImageViewerIntegration } from './image-viewer-integration';
 import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
-import { Plugin, WorkspaceLeaf, TFile, MarkdownView, setIcon, setTooltip } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Notice, setIcon, setTooltip } from 'obsidian';
 import { DEFAULT_SETTINGS, BloSettingsTab } from './settings';
 import type { EditorSettings } from './settings';
 import { BloView, VIEW_TYPE_BLO } from "./BloView";
@@ -14,6 +14,7 @@ import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
+import { PdfExportModal } from './pdf-export';
 import { ToolbarPreferences } from './toolbar-preferences';
 
 export default class BloEditorPlugin extends Plugin {
@@ -22,6 +23,7 @@ export default class BloEditorPlugin extends Plugin {
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
+  private pdfExportLeaves = new WeakSet<WorkspaceLeaf>();
   async onload(): Promise<void> {
     await super.onload();
     this.register(()=>this.styleCache.sheet.flush());
@@ -59,6 +61,18 @@ export default class BloEditorPlugin extends Plugin {
 
     // Register the Wysimark view
     this.registerView(VIEW_TYPE_BLO, (leaf) => new BloView(leaf, this));
+    this.registerEvent(this.app.workspace.on('file-menu', (menu, file, source) => {
+      if (!source.includes('file-explorer') || !(file instanceof TFile) || file.extension !== 'md' || isDrawingFile(this.app, file)) return;
+      menu.addItem(item => item.setTitle(ui('导出 PDF')).setIcon('file-down').setSection('action').onClick(() => {
+        void this.exportFileToPdf(file).catch(error => new Notice(ui('PDF 导出失败：') + String(error).slice(0, 300)));
+      }));
+    }));
+    this.addCommand({ id: 'export-pdf', name: ui('导出 PDF'), checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(BloView);
+      if (!view?.editor || !view.currentFile) return false;
+      if (!checking) new PdfExportModal(view).open();
+      return true;
+    }});
     this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
       const view=this.app.workspace.getActiveViewOfType(BloView);if(!view?.editor||view.readOnly)return false;
       if(!checking)clearFormatting(view.editor);return true;
@@ -173,11 +187,47 @@ export default class BloEditorPlugin extends Plugin {
   isFileInEditingScope(file: TFile): boolean {
     return file.extension === 'md' && isPathInEditingScope(file.path, this.settings.richEditingFolder);
   }
+  isPdfExportLeaf(leaf: WorkspaceLeaf) { return this.pdfExportLeaves.has(leaf); }
+  private async exportFileToPdf(file: TFile) {
+    const workspace = this.app.workspace;
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_BLO).map(leaf => leaf.view)
+      .find((view): view is BloView => view instanceof BloView && view.currentFile === file && !!view.editor);
+    if (existing) {
+      await workspace.revealLeaf(existing.leaf);
+      new PdfExportModal(existing).open();
+      return;
+    }
+    for (const leaf of workspace.getLeavesOfType('markdown')) {
+      if (leaf.view instanceof MarkdownView && leaf.view.file === file) await leaf.view.save();
+    }
+    // Explicit export also works outside the automatic editing folder. The
+    // exception belongs only to this temporary read-only preview.
+    const original = workspace.activeLeaf;
+    const leaf = workspace.getLeaf('tab');
+    this.pdfExportLeaves.add(leaf);
+    const cleanup = () => {
+      const restore = workspace.activeLeaf === leaf;
+      this.pdfExportLeaves.delete(leaf);
+      leaf.detach();
+      if (restore && original && original.parent) void workspace.revealLeaf(original);
+    };
+    try {
+      await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: 'preview' }, active: true });
+      await workspace.revealLeaf(leaf);
+      const deadline = Date.now() + 10000;
+      while (leaf.view instanceof BloView && !leaf.view.editor && Date.now() < deadline) {
+        await new Promise(resolve => window.setTimeout(resolve, 25));
+      }
+      const view = leaf.view;
+      if (!(view instanceof BloView) || view.currentFile !== file || !view.editor) throw new Error(ui('编辑器尚未就绪，请稍后重试'));
+      new PdfExportModal(view, cleanup).open();
+    } catch (error) { cleanup(); throw error; }
+  }
   async enforceEditingScope(onlyLeaf?: WorkspaceLeaf): Promise<void> {
     if (!this.settings.restrictExistingBloTabs) return;
     for (const leaf of onlyLeaf ? [onlyLeaf] : this.app.workspace.getLeavesOfType(VIEW_TYPE_BLO)) {
       const view = leaf.view;
-      if (!(view instanceof BloView) || !view.currentFile || this.isFileInEditingScope(view.currentFile) || isDrawingFile(this.app, view.currentFile) || this.openingLeaves.has(leaf)) continue;
+      if (!(view instanceof BloView) || !view.currentFile || this.isFileInEditingScope(view.currentFile) || isDrawingFile(this.app, view.currentFile) || this.openingLeaves.has(leaf) || this.pdfExportLeaves.has(leaf)) continue;
       const file = view.currentFile, mode = view.getMode();
       this.openingLeaves.add(leaf);
       try {

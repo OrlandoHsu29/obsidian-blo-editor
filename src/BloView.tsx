@@ -20,6 +20,8 @@ import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
 import { handleMediaTransfer } from './media-paste';
 import { watchRemoteImages } from './remote-images';
+import { PdfExportModal } from './pdf-export';
+import type { Menu } from 'obsidian';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -496,6 +498,10 @@ export class BloView extends FileView {
     this.plugin = plugin;
     this.modeAction = this.addAction('book-open', ui("切换到阅读模式（Ctrl+Alt+P）"), () => { void this.toggleReading(); });
     this.addAction('refresh-cw', ui("从文件重新载入"), () => { void this.reloadFile(); });
+    const pdfAction = this.addAction('file-down', ui('导出 PDF'), () => {
+      if (this.currentFile && this.editor) new PdfExportModal(this).open();
+    });
+    this.modeAction.after(pdfAction);
     this.scope = new Scope(this.app.scope);
     this.scope.register(null, null, (event) => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && ['f','h'].includes(event.key.toLowerCase())) {
@@ -585,6 +591,10 @@ export class BloView extends FileView {
   async onLoadFile(file: TFile) { await this.loadContent(file); }
   async onUnloadFile(_file: TFile) { await this.saveFile(); this.currentFile = null; this.renderEditor(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
+  onPaneMenu(menu: Menu, source: string) {
+    super.onPaneMenu(menu, source);
+    if (this.currentFile) menu.addItem(item => item.setTitle(ui('导出 PDF')).setIcon('file-down').onClick(() => new PdfExportModal(this).open()));
+  }
   async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path }, active: true }); }
   getMode() { return this.readOnly ? 'preview' : 'source'; }
   async setState(state: { file?: string; mode?: string }, result: { history: boolean }) {
@@ -595,7 +605,7 @@ export class BloView extends FileView {
     // Obsidian reuses a FileView that accepts .md, bypassing the native
     // Markdown-to-Blo handler for drawings and files outside the editing scope.
     const file = state.file ? this.app.vault.getAbstractFileByPath(state.file) : null;
-    if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file)))) {
+    if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file) && !this.plugin.isPdfExportLeaf(this.leaf)))) {
       // Finish Obsidian's current view assignment first; a nested switch is
       // otherwise overwritten when the outer setViewState call completes.
       this.viewRedirect = window.setTimeout(() => {

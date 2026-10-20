@@ -1,5 +1,5 @@
 import { App, Notice, TFile } from 'obsidian'
-import { Descendant, Editor, Element } from 'slate'
+import { Descendant, Editor, Element, Node } from 'slate'
 import { isDrawingFile } from './drawings'
 import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
@@ -78,7 +78,8 @@ export function watchAttachments(app: App, source: TFile, editor: Editor, settin
     const affected = new Set<RemovedAttachment>()
     if (!editor.wysimark.readOnly && (records.size || settings().deleteDrawingAttachments || settings().deleteImageAttachments) &&
       (operation.type === 'remove_node' || operation.type === 'insert_node') && Element.isElement(operation.node)) {
-      for (const url of imageUrls([operation.node])) {
+      const affectedNode = operation.type === 'remove_node' && Node.has(editor, operation.path) ? Node.get(editor, operation.path) : operation.node
+      for (const url of imageUrls([affectedNode as Descendant])) {
         let record = Array.from(records.values()).find(record => record.urls.has(url))
         if (!record && operation.type === 'remove_node') {
           const file = resolve(url)

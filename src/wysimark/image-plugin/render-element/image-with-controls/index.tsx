@@ -64,7 +64,8 @@ export function ImageWithControls({
     if (element.width && element.height) setSize({width: element.width, height: element.height})
     else setSize(null)
   }, [element.width, element.height])
-  const displaySize = size ?? naturalSize
+  const displaySize = size ?? (naturalSize && element.width
+    ? { width: element.width, height: naturalSize.height * element.width / naturalSize.width } : naturalSize)
 
   /**
    * Show resize controls if the element is selected, it has a `size` and
@@ -99,7 +100,7 @@ export function ImageWithControls({
    */
   return (
     <$ImageContainer className={className} data-blo-image>
-      <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width} height={size?.height} decoding="async" onLoad={event => {
+      <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width ?? element.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
         if (image.naturalWidth && image.naturalHeight) setNaturalSize({width: image.naturalWidth, height: image.naturalHeight})
       }} />

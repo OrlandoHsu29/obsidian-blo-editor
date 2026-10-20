@@ -139,6 +139,7 @@ export const uiMessages = {
   "已有 Blo Editor 格式的笔记仍用 Blo Editor 打开": { zh: "已有 Blo Editor 格式的笔记仍用 Blo Editor 打开", en: "Keep Blo Editor notes in Blo Editor" },
   "默认开启：已有或恢复的 Blo Editor 标签页仍使用 Blo Editor，不受编辑范围限制。关闭后，范围外的笔记会保存并切回原生编辑器。": { zh: "默认开启：已有或恢复的 Blo Editor 标签页仍使用 Blo Editor，不受编辑范围限制。关闭后，范围外的笔记会保存并切回原生编辑器。", en: "On by default: existing or restored Blo Editor tabs keep using Blo Editor outside the editing scope. When off, out-of-scope notes are saved and switched to the native editor." },
   "附件保存路径": { zh: "附件保存路径", en: "Attachment folder" },
+  "网络图片下载失败，已保留原链接": { zh: "网络图片下载失败，已保留原链接", en: "Unable to download a remote image; the original link was kept" },
   "无法插入附件：{name}": { zh: "无法插入附件：{name}", en: "Unable to insert attachment: {name}" },
   "附件已保存，原插入位置已失效": { zh: "附件已保存，原插入位置已失效", en: "Attachments saved, but the original insertion point is no longer available" },
   "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。": { zh: "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。", en: "Save images and drawings here, relative to the vault root. Leave empty to use the vault root." },

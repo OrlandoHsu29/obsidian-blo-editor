@@ -23,6 +23,12 @@ export function serializeImageShared(
   if (options.enableInternalLinks && isWikiEmbedUrl(image.url)) {
     return serializeWikiEmbedUrl(image.url, image.width, image.height)
   }
+  // Imported HTML may specify only a width (including fractions). Keep it on
+  // save instead of dropping it or inventing intrinsic dimensions.
+  if (image.width && Number.isFinite(image.width) && (!image.srcWidth || !image.srcHeight || !image.height)) {
+    const attribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return `<img src="${attribute(image.url)}" alt="${attribute(image.alt || '')}" width="${image.width}"${image.height && Number.isFinite(image.height) ? ` height="${image.height}"` : ''}${image.title ? ` title="${attribute(image.title)}"` : ''}>`
+  }
 
   for (const urlSerializer of urlSerializers) {
     const url = urlSerializer(image)

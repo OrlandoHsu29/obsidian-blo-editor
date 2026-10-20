@@ -19,6 +19,7 @@ import { attachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
 import { handleMediaTransfer } from './media-paste';
+import { watchRemoteImages } from './remote-images';
 import { CacheProvider } from '@emotion/react';
 import type { EmotionCache } from '@emotion/cache';
 
@@ -477,7 +478,13 @@ export class BloView extends FileView {
       (this.plugin as any).settings.tableDefaults = defaults;
       void this.plugin.saveData((this.plugin as any).settings);
     };
+    const source = this.currentFile;
+    const stopRemoteImages = source ? watchRemoteImages(this.app, source.path, editor, () => {
+      const folder = this.plugin.settings.attachmentFolder;
+      return file => this.saveAttachmentFile(file, source.path, folder);
+    }, () => this.editor === editor && this.currentFile === source && !this.readOnly && this.app.workspace.activeLeaf === this.leaf) : () => {};
     return () => {
+      stopRemoteImages();
       stopWatchingAttachments();
       if (this.editor === editor) this.editor = null;
     };
@@ -747,9 +754,10 @@ export class BloView extends FileView {
    * @param path - The path within the vault to save the file
    * @returns The URL to use for displaying the image in the editor
    */
-  handleImageSave: OnImageSaveHandler = async (file: File, path: string) => {
-    const sourcePath = this.currentFile?.path;
-    const folder = (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder;
+  handleImageSave: OnImageSaveHandler = (file: File, path: string) =>
+    this.saveAttachmentFile(file, this.currentFile?.path, this.plugin.settings.attachmentFolder);
+
+  private saveAttachmentFile = async (file: File, sourcePath: string | undefined, folder: string): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
     const hash = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('');

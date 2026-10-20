@@ -14,12 +14,15 @@ import {
 } from "../../obsidian-links"
 import { unescapeMarkdown } from "../../utils"
 import { cleanInlineStyle } from '../../../../blocks/typography'
+import { htmlImages } from '../html-image'
 
 /**
  * Parse inline HTML content, with special handling for <mark> tags
  */
 function parseInlineHtml(htmlValue: string, marks: MarkProps): Segment[] {
   htmlValue = restoreEscapedWikiLinks(htmlValue, true)
+  const images = htmlImages(htmlValue)
+  if (images) return images.map(image => ({ type: 'image-inline', ...image, children: [{ text: '' }] }))
   // Check for <br> / <br/> / <br /> tags — treat as soft line break
   if (/^<br\s*\/?>$/i.test(htmlValue)) {
     return [{ text: "\n", ...marks }]

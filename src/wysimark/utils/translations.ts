@@ -131,8 +131,10 @@ export const translations = {
 export const uiMessages = {
   "编辑器尚未就绪，请稍后重试": { zh: "编辑器尚未就绪，请稍后重试", en: "The editor is not ready. Please try again shortly" },
   "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。", en: "Check to show buttons; gray checked items are always visible. Hover for names. Changes apply immediately." },
+  "复选框": { zh: "复选框", en: "Checkbox" },
   "工具栏配置": { zh: "工具栏配置", en: "Toolbar configuration" },
   "勾选显示对应按钮；悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；悬停查看功能名称，修改立即生效。", en: "Check to show each button. Hover for its name; changes apply immediately." },
+  "表格": { zh: "表格", en: "Table" },
   "导出 PDF": { zh: "导出 PDF", en: "Export PDF" },
   "纸张": { zh: "纸张", en: "Paper size" },
   "横向": { zh: "横向", en: "Landscape" },

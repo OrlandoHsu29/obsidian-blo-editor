@@ -4,9 +4,14 @@ import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
 import { ReactEditor, useFocused, useSlate } from 'slate-react'
 import { getSlashContext, filterSlashCommands } from './slash-menu'
+import { AnchorDialog } from './wysimark/toolbar-plugin/components/dialog/anchor-dialog'
+import { ImageUrlDialog } from './wysimark/toolbar-plugin/components/dialog/image-url-dialog'
 
 export function SlashPopover() {
-  const editor = useSlate(), focused = useFocused(), context = focused ? getSlashContext(editor) : null
+  const editor = useSlate(), focused = useFocused()
+  const [dialog, setDialog] = useState<{kind: 'link' | 'image'; left: number; top: number; height: number} | null>(null)
+  const [dialogAnchor, setDialogAnchor] = useState<HTMLSpanElement | null>(null)
+  const context = focused && !dialog ? getSlashContext(editor) : null
   const [dismissed, setDismissed] = useState('')
   const [choice, setChoice] = useState({key: '', index: 0})
   const popup = useRef<HTMLDivElement>(null)
@@ -16,13 +21,27 @@ export function SlashPopover() {
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
   const choose = (index: number) => {
     if (!context || !matches[index]) return
+    const command = matches[index]
+    const rect = command.dialog ? ReactEditor.toDOMRange(editor, editor.selection!).getBoundingClientRect() : null
     Editor.withoutNormalizing(editor, () => {
       Transforms.select(editor, context.range)
       Transforms.delete(editor)
-      matches[index].run(editor)
+      command.run?.(editor)
     })
-    ReactEditor.focus(editor)
+    if (command.dialog && rect) setDialog({kind: command.dialog, left: rect.left, top: rect.top, height: rect.height})
+    else ReactEditor.focus(editor)
   }
+  const closeDialog = () => { setDialog(null); ReactEditor.focus(editor) }
+  useEffect(() => {
+    if (!dialog) return
+    const doc = ReactEditor.toDOMNode(editor, editor).ownerDocument
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing) return
+      event.preventDefault(); event.stopImmediatePropagation(); closeDialog()
+    }
+    doc.addEventListener('keydown', closeOnEscape, true)
+    return () => doc.removeEventListener('keydown', closeOnEscape, true)
+  }, [dialog, editor])
   useLayoutEffect(() => {
     if (!visible || !editor.selection) return
     const update = () => {
@@ -62,6 +81,13 @@ export function SlashPopover() {
     document.addEventListener('keydown', onKey, true)
     return () => document.removeEventListener('keydown', onKey, true)
   }, [visible, context?.key, selected])
+  if (dialog) {
+    const Dialog = dialog.kind === 'link' ? AnchorDialog : ImageUrlDialog
+    return createPortal(<div className="wysimark-overlay">
+      <span ref={setDialogAnchor} aria-hidden="true" style={{position:'fixed',left:dialog.left,top:dialog.top,width:0,height:dialog.height,pointerEvents:'none'}} />
+      {dialogAnchor && <Dialog dest={dialogAnchor} close={closeDialog} />}
+    </div>, ReactEditor.toDOMNode(editor, editor).ownerDocument.body)
+  }
   if (!visible) return null
   return createPortal(<div ref={popup} className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', boxSizing:'border-box', maxWidth:'calc(100vw - 16px)', ...position}} onMouseDown={event => event.preventDefault()}>
     {matches.map((command, index) => <div key={command.title} role="option" aria-selected={index === selected} className={index === selected ? 'is-selected' : ''} onMouseEnter={() => setChoice({key:context!.key,index})} onClick={() => choose(index)}>{command.title}</div>)}

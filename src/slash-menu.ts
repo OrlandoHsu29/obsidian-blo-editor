@@ -22,17 +22,19 @@ type SlashCommand = {
   title: string
   searchTerms: string[]
   icon: string
-  run: (editor: Editor) => void
+  run?: (editor: Editor) => void
+  dialog?: 'link' | 'image'
 }
 
 const normalizeSearch = (text: string) => text.normalize('NFKC').toLowerCase().replace(/[\s_-]+/g, '')
 
-function command(label: Parameters<typeof ui>[0], icon: string, run: SlashCommand['run'], params: Record<string, string | number> = {}, aliases: string[] = []): SlashCommand {
+function command(label: Parameters<typeof ui>[0], icon: string, run: SlashCommand['run'], params: Record<string, string | number> = {}, aliases: string[] = [], dialog?: SlashCommand['dialog']): SlashCommand {
   return {
     title: ui(label, params),
     searchTerms: [ui(label, params, 'zh'), ui(label, params, 'en'), ...aliases].map(normalizeSearch),
     icon,
     run,
+    dialog,
   }
 }
 
@@ -48,7 +50,11 @@ export const slashCommands: SlashCommand[] = [
   ...([1, 2, 3] as const).map(level => command('标题 {level}', `heading-${level}`, editor => editor.heading.convertHeading(level, false), {level}, [`bt${level}`])),
   command('无序列表', 'list', editor => editor.list.convertUnorderedList(true), {}, ['wxlb']),
   command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true), {}, ['yxlb']),
+  command('复选框', 'list-checks', editor => editor.list.convertTaskList(true), {}, ['任务列表', '待办', 'task', 'todo', 'checklist', 'fxk', 'rwlb', 'db']),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
+  command('表格', 'table', editor => { editor.tablePlugin.insertTable(3, 3) }, {}, ['bg', 'grid', 'spreadsheet']),
+  command('链接', 'link', undefined, {}, ['lj', 'url', 'hyperlink'], 'link'),
+  command('图片', 'image', undefined, {}, ['照片', 'photo', 'picture', 'tp', 'zp'], 'image'),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),
   command('画板', 'pencil-ruler', editor => { void editor.wysimark.insertDrawing?.() }, {}, ['drawing', 'whiteboard', 'canvas', 'excalidraw', 'hb', 'ht']),
   command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线', 'fgx']),

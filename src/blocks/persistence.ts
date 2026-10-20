@@ -15,19 +15,33 @@ export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Elem
   }).join('').trimEnd()+'\n'
 }
 export function parseBlockDocument(source: string, parseOne:(text:string)=>Element[]): Element[]|null {
-  if(!source.trimStart().startsWith(prefix))return null
-  const chunks:{metadata:any;lines:string[]}[]=[],lines=source.replace(/\r\n/g,'\n').split('\n');let fence=''
+  if(!source.includes(prefix))return null
+  // A pasted block, a newly added paragraph, or a missing first marker must not
+  // turn all subsequent metadata into visible HTML or discard the plain prefix.
+  const chunks:{metadata?:any;lines:string[]}[]=[{lines:[]}],lines=source.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').split('\n');let fence='',found=false
   for(const line of lines) {
-    const code=line.match(/^\s*(`{3,}|~{3,})/)
-    if(code){if(!fence)fence=code[1];else if(code[1][0]===fence[0]&&code[1].length>=fence.length)fence=''}
+    const code=line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
+    if(code){if(!fence){if(code[1][0]!=='`'||!code[2].includes('`'))fence=code[1]}else if(code[1][0]===fence[0]&&code[1].length>=fence.length&&!code[2].trim())fence=''}
     if(!fence&&line.startsWith(prefix)&&line.endsWith(' -->')) {
-      try{chunks.push({metadata:JSON.parse(decodeURIComponent(line.slice(prefix.length,-4))),lines:[]})}catch{return null}
-    }else if(chunks.length)chunks[chunks.length-1].lines.push(line)
+      try{
+        const metadata=JSON.parse(decodeURIComponent(line.slice(prefix.length,-4)))
+        if(metadata&&typeof metadata==='object'&&!Array.isArray(metadata)){
+          chunks.push({metadata,lines:[]});found=true;continue
+        }
+      }catch{/* Keep invalid source literal without breaking other blocks. */}
+    }
+    chunks[chunks.length-1].lines.push(line)
   }
+  if(!found)return null
   const result:Element[]=[]
   for(const chunk of chunks) {
+    if(!chunk.metadata){
+      const plain=chunk.lines.join('\n').trim()
+      if(plain)result.push(...parseOne(plain))
+      continue
+    }
     const parsed=parseOne(chunk.lines.join('\n').trim());const node=parsed[0]
-    if(!node)return null
+    if(!node)continue
     const depth=Math.max(0,Math.min(32,Number(chunk.metadata.depth)||0))
     const recoveredList=isListBlock(node)&&node.__blockDepth!==undefined
     // A chunk can recover several list items. Keep their relative indentation

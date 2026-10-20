@@ -1,3 +1,4 @@
+import { isPathInEditingScope } from './editing-scope';
 import { installImageViewerIntegration } from './image-viewer-integration';
 import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
@@ -13,9 +14,11 @@ import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
+import { ToolbarPreferences } from './toolbar-preferences';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
+  readonly toolbarPreferences = new ToolbarPreferences();
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
@@ -38,6 +41,7 @@ export default class BloEditorPlugin extends Plugin {
       setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
     },true);
     this.settings = Object.assign(this.settings, await this.loadData());
+    this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
     installDrawingNavigation(this);
     installImageViewerIntegration(this);
@@ -131,6 +135,10 @@ export default class BloEditorPlugin extends Plugin {
       if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
       if (isDrawingFile(this.app, leaf.view.file)) return;
       const file = leaf.view.file, mode = leaf.view.getMode(); await leaf.view.save();
+      if (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) {
+        await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
+        return;
+      }
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
     }});
 
@@ -139,6 +147,7 @@ export default class BloEditorPlugin extends Plugin {
       this.app.workspace.on('active-leaf-change', (leaf) => {
         if (leaf) {
           const view = leaf.view;
+          if (view instanceof BloView) void this.enforceEditingScope(leaf);
           if (view instanceof MarkdownView) {
             const file = view.file;
             if (file && file.extension === 'md') {
@@ -150,21 +159,42 @@ export default class BloEditorPlugin extends Plugin {
     );
     this.registerEvent(this.app.workspace.on('file-open', file => {
       const leaf = this.app.workspace.activeLeaf;
-      if (leaf && file) void this.openRichByDefault(leaf, file);
+      if (leaf && file) {
+        if (leaf.view instanceof BloView) void this.enforceEditingScope(leaf);
+        else void this.openRichByDefault(leaf, file);
+      }
     }));
     this.app.workspace.onLayoutReady(() => {
+      void this.enforceEditingScope();
       const leaf = this.app.workspace.activeLeaf;
       if (leaf?.view instanceof MarkdownView && leaf.view.file) void this.openRichByDefault(leaf, leaf.view.file);
     });
   }
+  isFileInEditingScope(file: TFile): boolean {
+    return file.extension === 'md' && isPathInEditingScope(file.path, this.settings.richEditingFolder);
+  }
+  async enforceEditingScope(onlyLeaf?: WorkspaceLeaf): Promise<void> {
+    if (!this.settings.restrictExistingBloTabs) return;
+    for (const leaf of onlyLeaf ? [onlyLeaf] : this.app.workspace.getLeavesOfType(VIEW_TYPE_BLO)) {
+      const view = leaf.view;
+      if (!(view instanceof BloView) || !view.currentFile || this.isFileInEditingScope(view.currentFile) || isDrawingFile(this.app, view.currentFile) || this.openingLeaves.has(leaf)) continue;
+      const file = view.currentFile, mode = view.getMode();
+      this.openingLeaves.add(leaf);
+      try {
+        await view.saveFile();
+        if (!this.settings.restrictExistingBloTabs || leaf.view !== view || view.currentFile !== file || this.isFileInEditingScope(file)) continue;
+        await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode }, active: leaf === this.app.workspace.activeLeaf });
+      } finally { this.openingLeaves.delete(leaf); }
+    }
+  }
   private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
-    if (isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || (this.settings.richEditingFolder && !file.path.startsWith(this.settings.richEditingFolder + "/")) ||
+    if (isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || !this.isFileInEditingScope(file) ||
       !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
     const mode = leaf.view.getMode();
     this.openingLeaves.add(leaf);
     try {
       await leaf.view.save();
-      if (isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+      if (!this.settings.preferRichEditing || !this.isFileInEditingScope(file) || isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode }, active: true });
     } finally { this.openingLeaves.delete(leaf); }
   }
@@ -193,6 +223,10 @@ export default class BloEditorPlugin extends Plugin {
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && isDrawingFile(this.app, activeFile)) {
       await openDrawing(this.app, activeFile);
+      return;
+    }
+    if (activeFile && this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(activeFile)) {
+      await this.enforceEditingScope(workspace.activeLeaf ?? undefined);
       return;
     }
     let leaf: WorkspaceLeaf | null = null;

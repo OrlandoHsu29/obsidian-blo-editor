@@ -129,14 +129,21 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。", en: "Check to show buttons; gray checked items are always visible. Hover for names. Changes apply immediately." },
+  "工具栏配置": { zh: "工具栏配置", en: "Toolbar configuration" },
+  "勾选显示对应按钮；悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；悬停查看功能名称，修改立即生效。", en: "Check to show each button. Hover for its name; changes apply immediately." },
+  "编辑器": { zh: "编辑器", en: "Editor" },
+  "附件": { zh: "附件", en: "Attachments" },
   "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。": { zh: "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。", en: "Open Markdown notes in the rich editor by default; reading views are unaffected." },
-  "默认编辑范围": { zh: "默认编辑范围", en: "Default editing scope" },
+  "编辑范围": { zh: "编辑范围", en: "Editing scope" },
+  "已有 Blo Editor 格式的笔记仍用 Blo Editor 打开": { zh: "已有 Blo Editor 格式的笔记仍用 Blo Editor 打开", en: "Keep Blo Editor notes in Blo Editor" },
+  "默认开启：已有或恢复的 Blo Editor 标签页仍使用 Blo Editor，不受编辑范围限制。关闭后，范围外的笔记会保存并切回原生编辑器。": { zh: "默认开启：已有或恢复的 Blo Editor 标签页仍使用 Blo Editor，不受编辑范围限制。关闭后，范围外的笔记会保存并切回原生编辑器。", en: "On by default: existing or restored Blo Editor tabs keep using Blo Editor outside the editing scope. When off, out-of-scope notes are saved and switched to the native editor." },
   "附件保存路径": { zh: "附件保存路径", en: "Attachment folder" },
   "无法插入附件：{name}": { zh: "无法插入附件：{name}", en: "Unable to insert attachment: {name}" },
   "附件已保存，原插入位置已失效": { zh: "附件已保存，原插入位置已失效", en: "Attachments saved, but the original insertion point is no longer available" },
   "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。": { zh: "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。", en: "Save images and drawings here, relative to the vault root. Leave empty to use the vault root." },
   "请填写知识库内的相对路径": { zh: "请填写知识库内的相对路径", en: "Enter a relative path within the vault" },
-  "留空应用于整个库；填写文件夹路径可限制范围。": { zh: "留空应用于整个库；填写文件夹路径可限制范围。", en: "Leave blank for the whole vault, or enter a folder path to limit the scope." },
+  "控制哪些笔记自动使用 Blo；留空应用于整个库。": { zh: "控制哪些笔记自动使用 Blo；留空应用于整个库。", en: "Choose which notes open in Blo automatically. Leave blank for the whole vault." },
   "右侧插入列":{zh:"右侧插入列",en:"Insert column right"},
   "左侧插入列":{zh:"左侧插入列",en:"Insert column left"},
   "删除列":{zh:"删除列",en:"Delete column"},

@@ -1,3 +1,4 @@
+import type BloEditorPlugin from './main';
 import { ui } from "./wysimark/utils/translations"
 import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon } from 'obsidian';
 import { Editor, Node, Transforms } from 'slate';
@@ -283,7 +284,7 @@ function KnowledgeSpaceEditorComponent({
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
-  plugin: Plugin;
+  plugin: BloEditorPlugin;
   file: TFile;
   fileName: string;
   onReload: () => void;
@@ -343,6 +344,7 @@ function KnowledgeSpaceEditorComponent({
     renderMermaidPreview,
   });
   editor.wysimark.readOnly = readOnly;
+  editor.wysimark.toolbarPreferences = plugin.toolbarPreferences;
   editor.wysimark.isDrawingEmbed = (url: string) => {
     if (!isWikiEmbedUrl(url)) return false;
     const target = wikiLinkTarget(wikiEmbedSpecFromUrl(url)).split('#')[0];
@@ -408,7 +410,7 @@ function KnowledgeSpaceContainer({
   onReload: () => void;
   onImageSave?: OnImageSaveHandler;
   reloadKey: number;
-  plugin: Plugin;
+  plugin: BloEditorPlugin;
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
 }) {
@@ -433,7 +435,7 @@ function KnowledgeSpaceContainer({
 }
 
 export class BloView extends FileView {
-  plugin: Plugin;
+  plugin: BloEditorPlugin;
   root: Root | null = null;
   currentFile: TFile | null = null;
   fileContent: string = '';
@@ -441,7 +443,7 @@ export class BloView extends FileView {
   private bodyContent: string = '';  // Store body content (without frontmatter)
   private lineEnding: LineEnding = '\n';
   private saveTimeout: number | null = null;
-  private drawingRedirect: number | null = null;
+  private viewRedirect: number | null = null;
   private isDirty: boolean = false;
   private reactContainer: HTMLElement | null = null;
   private reloadKey: number = 0;  // Used to force React component remount on reload
@@ -481,7 +483,7 @@ export class BloView extends FileView {
     };
   };
 
-  constructor(leaf: WorkspaceLeaf, plugin: Plugin) {
+  constructor(leaf: WorkspaceLeaf, plugin: BloEditorPlugin) {
     super(leaf);
     this.allowNoFile = true;
     this.plugin = plugin;
@@ -551,9 +553,9 @@ export class BloView extends FileView {
   }
 
   async onClose() {
-    if (this.drawingRedirect !== null) {
-      window.clearTimeout(this.drawingRedirect);
-      this.drawingRedirect = null;
+    if (this.viewRedirect !== null) {
+      window.clearTimeout(this.viewRedirect);
+      this.viewRedirect = null;
     }
     this.findBar?.destroy(); this.findBar = null;
     // Clear any pending save timeout
@@ -579,21 +581,22 @@ export class BloView extends FileView {
   async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path }, active: true }); }
   getMode() { return this.readOnly ? 'preview' : 'source'; }
   async setState(state: { file?: string; mode?: string }, result: { history: boolean }) {
-    if (this.drawingRedirect !== null) {
-      window.clearTimeout(this.drawingRedirect);
-      this.drawingRedirect = null;
+    if (this.viewRedirect !== null) {
+      window.clearTimeout(this.viewRedirect);
+      this.viewRedirect = null;
     }
     // Obsidian reuses a FileView that accepts .md, bypassing the native
-    // Markdown-to-Blo handler when a drawing is opened in an existing Blo tab.
+    // Markdown-to-Blo handler for drawings and files outside the editing scope.
     const file = state.file ? this.app.vault.getAbstractFileByPath(state.file) : null;
-    if (file instanceof TFile && isDrawingFile(this.app, file)) {
+    if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file)))) {
       // Finish Obsidian's current view assignment first; a nested switch is
       // otherwise overwritten when the outer setViewState call completes.
-      this.drawingRedirect = window.setTimeout(() => {
-        this.drawingRedirect = null;
+      this.viewRedirect = window.setTimeout(() => {
+        this.viewRedirect = null;
         if (this.leaf.view !== this) return;
-        void this.leaf.setViewState({ type: drawingViewType(this.app), state, active: this.leaf === this.app.workspace.activeLeaf })
-          .catch(error => console.error('Blo Editor: could not open drawing view', error));
+        const type = isDrawingFile(this.app, file) ? drawingViewType(this.app) : 'markdown';
+        void this.leaf.setViewState({ type, state, active: this.leaf === this.app.workspace.activeLeaf })
+          .catch(error => console.error('Blo Editor: could not open scoped file view', error));
       }, 0);
       return;
     }

@@ -11,11 +11,13 @@ export const Drawing = () => <TablerIcon><rect x="3" y="3" width="18" height="18
 export const TextColor = () => {
   const editor = useSlate()
   const color=editor.wysimark.getTextColor ? editor.wysimark.getTextColor() : DEFAULT_TEXT_COLOR
-  return <TablerIcon data-wysimark-text-color-icon>
+  return <TextColorGlyph color={color} />
+}
+const TextColorGlyph = ({color}: {color: string | null}) => <TablerIcon data-wysimark-text-color-icon>
     <path d="M6 17L12 4l6 13M8.3 12h7.4" />
     <path d="M5 21h14" style={{stroke: color || 'var(--text-normal)', strokeWidth: 3}} />
   </TablerIcon>
-}
+export const TextColorPreview = () => <TextColorGlyph color={null} />
 
 export const H = () => (
   <TablerIcon>

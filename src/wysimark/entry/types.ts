@@ -1,5 +1,6 @@
 import { Descendant } from "slate"
 import type { ReactNode } from "react"
+import type { ToolbarPreferences } from '../../toolbar-preferences'
 
 /**
  * Handler for saving image files to vault
@@ -32,6 +33,7 @@ export type WysimarkEditor = {
   wysimark: {
     documentTitle?: ReactNode
     openSearch?: (replace?: boolean) => void
+    toolbarPreferences?: ToolbarPreferences
     resolveImageUrl?: (url: string) => string
     save?: () => Promise<void>
     toggleReading?: () => Promise<void>

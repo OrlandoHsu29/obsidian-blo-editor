@@ -10,6 +10,7 @@ import type { ImageBlockElement, ImageInlineElement, ImageSize } from './wysimar
 import { splitWikiSpec, wikiEmbedUrl } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
 import { openEmbeddedDrawing } from './drawing-navigation'
+import { DrawingSaveAsModal } from './drawing-save-as'
 import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
@@ -149,6 +150,11 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
   const open = () => { void openDrawing(app, file, { sourcePath, editor }).catch(() => new Notice(ui('无法打开画板'))) }
   return <div className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
     style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
+    <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
+      onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}
+      onClick={event => { event.stopPropagation(); new DrawingSaveAsModal(app, file).open() }}>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M19 11V5l-2-2H5v18h7M8 3v6h8V3M8 21v-8h5m4 1v8m-4-4h8" /></svg>
+    </button>
     {available && <button className="blo-drawing-open" type="button" aria-label={ui('放大绘制')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={event => { event.stopPropagation(); open() }}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" /></svg>

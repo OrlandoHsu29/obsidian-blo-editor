@@ -129,8 +129,17 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "保存路径": { zh: "保存路径", en: "Save path" },
+  "取消": { zh: "取消", en: "Cancel" },
   "删除内嵌文件时删除附件": { zh: "删除内嵌文件时删除附件", en: "Delete attachment when removing an embedded file" },
   "包含图片、音视频、PDF 和画板。仅将附件目录及子目录内、无其他引用的文件移入回收站，可撤销；其他目录保留源文件。路径留空时仅限库根目录文件。": { zh: "包含图片、音视频、PDF 和画板。仅将附件目录及子目录内、无其他引用的文件移入回收站，可撤销；其他目录保留源文件。路径留空时仅限库根目录文件。", en: "Includes images, audio, video, PDFs and drawings. Only unreferenced files in the attachment folder and its subfolders go to trash; undo restores them. Other folders keep originals. An empty path covers root-level files only." },
+  "画板另存为": { zh: "画板另存为", en: "Save drawing as" },
+  "副本": { zh: "副本", en: "Copy" },
+  "相对于知识库根目录；保存副本，不替换当前引用。": { zh: "相对于知识库根目录；保存副本，不替换当前引用。", en: "Relative to the vault root. Saves a copy without replacing the current embed." },
+  "请填写有效的画板相对路径，并保留原扩展名": { zh: "请填写有效的画板相对路径，并保留原扩展名", en: "Enter a valid vault-relative drawing path and keep the original extension" },
+  "另存为": { zh: "另存为", en: "Save as" },
+  "画板已另存为：{path}": { zh: "画板已另存为：{path}", en: "Drawing saved as: {path}" },
+  "无法另存为画板": { zh: "无法另存为画板", en: "Unable to save drawing copy" },
   "编辑器尚未就绪，请稍后重试": { zh: "编辑器尚未就绪，请稍后重试", en: "The editor is not ready. Please try again shortly" },
   "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。", en: "Check to show buttons; gray checked items are always visible. Hover for names. Changes apply immediately." },
   "复选框": { zh: "复选框", en: "Checkbox" },

@@ -148,7 +148,9 @@ Use `/drawing`, the drawing toolbar button, or **Insert drawing** to create an a
 and embed its preview. Click the preview to select and resize it; use its top-right
 **Open drawing editor** button to draw in a full-size Excalidraw tab;
 saved changes refresh the preview. **Back to note** saves and returns to the source
-note. Attachment deletion follows the settings described above.
+note. **Save drawing as** is available at the top right of both the preview and
+the full drawing view; save a vault-relative copy without replacing the current
+embed. Attachment deletion follows the settings described above.
 
 Obsidian Image Toolkit is an optional image viewer. The editor uses Slate; third-party editing extensions
 that require CodeMirror do not automatically apply to this view.

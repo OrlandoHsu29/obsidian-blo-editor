@@ -1,7 +1,8 @@
-import { App, Component, Notice, Plugin, TFile, View, WorkspaceLeaf, setIcon } from 'obsidian'
+import { App, Component, Notice, Plugin, TFile, ItemView, WorkspaceLeaf, setIcon } from 'obsidian'
 import { ui } from './wysimark/utils/translations'
+import { DrawingSaveAsModal } from './drawing-save-as'
 
-type DrawingView = View & { contentEl: HTMLElement; file?: TFile; forceSave?: () => Promise<void> }
+type DrawingView = ItemView & { file?: TFile; forceSave?: () => Promise<void> }
 type ReturnSession = {
   leaf: WorkspaceLeaf; view: DrawingView; file: TFile
   source: WorkspaceLeaf; sourceFile: TFile; sourceType: string; sourceState: Record<string, unknown>
@@ -59,6 +60,7 @@ class DrawingNavigation extends Component {
     setIcon(button.createSpan(), 'arrow-left')
     button.createSpan({ text: ui('返回笔记') })
     const click = () => { void this.returnToSource(session) }
+    const saveAs = view.addAction('save', ui('画板另存为'), () => new DrawingSaveAsModal(this.app, file).open())
     // Excalidraw rebuilds its content after the view first opens.
     const observer = new MutationObserver(() => {
       if (this.disposed || leaf.view !== view || view.file !== file) return
@@ -66,7 +68,7 @@ class DrawingNavigation extends Component {
       if (!view.contentEl.contains(bar)) view.contentEl.prepend(bar)
     })
     const session: ReturnSession = { leaf, view, file, source, sourceFile, sourceType, sourceState, bar, button, returning: false,
-      dispose: () => { observer.disconnect(); button.removeEventListener('click', click); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
+      dispose: () => { observer.disconnect(); button.removeEventListener('click', click); saveAs.remove(); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
     button.addEventListener('click', click)
     view.contentEl.addClass('blo-drawing-return-layout')
     view.contentEl.prepend(bar)

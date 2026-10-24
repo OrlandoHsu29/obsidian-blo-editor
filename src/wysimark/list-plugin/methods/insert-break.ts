@@ -1,4 +1,4 @@
-import { Editor, Transforms } from "slate"
+import { Editor, Element, Path, Transforms } from "slate"
 
 import { findElementUp, rewrapElement } from "../../sink"
 
@@ -9,14 +9,21 @@ export function insertBreak(editor: Editor): boolean {
   const entry = findElementUp<ListItemElement>(editor, isListItem)
   if (!entry) return false
   const [element, path] = entry
-  // Rich list items contain independently editable blocks. Let Slate split
-  // the current paragraph rather than splitting the surrounding list item.
-  if (element.blockChildren) return false
+  let empty = Editor.isEmpty(editor, element)
+  // Paragraphs split the surrounding item; nested structures such as code,
+  // tables and quotes retain their own Enter behavior.
+  if (element.blockChildren) {
+    const block = Editor.above(editor, {
+      match: node => Element.isElement(node) && Editor.isBlock(editor, node), mode: "lowest",
+    })
+    if (!block || block[0].type !== "paragraph" || !Path.equals(Path.parent(block[1]), path)) return false
+    empty = element.children.length === 1 && Editor.isEmpty(editor, block[0])
+  }
 
   /**
    * If we're in an empty list
    */
-  if (Editor.isEmpty(editor, element)) {
+  if (empty) {
     if (element.depth > 0) {
       /**
        * If it's indented, then unindent it
@@ -27,29 +34,29 @@ export function insertBreak(editor: Editor): boolean {
       /**
        * If it's fully unindented, turn it into a paragraph
        */
-      rewrapElement(editor, { type: "paragraph" }, path)
+      if (element.blockChildren) Transforms.unwrapNodes(editor, { at: path })
+      else rewrapElement(editor, { type: "paragraph" }, path)
       return true
     }
   }
-  /**
-   * Otherwise perform default insertBreak transform
-   */
-  Transforms.splitNodes(editor, { always: true })
-  /**
-   * Then find the list item we are now in
-   */
-  const nextEntry = findElementUp<ListItemElement>(editor, isListItem)
-  if (!nextEntry) return true
-  if (nextEntry[0].type === 'ordered-list-item') Transforms.setNodes(editor,{__numbering:'continue'},{at:nextEntry[1]})
-  if (nextEntry[0].type === "ordered-list-item" && nextEntry[0].start != null) {
-    Transforms.unsetNodes(editor, "start", { at: nextEntry[1] })
-  }
-  /**
-   * And if it's a checked task list that is checked, we want to uncheck it.
-   * New list items are by default always unchecked.
-   */
-  if (nextEntry[0].type === "task-list-item" && nextEntry[0].checked === true) {
-    Transforms.setNodes(editor, { checked: false }, { at: nextEntry[1] })
-  }
+  return splitListItem(editor)
+}
+
+/** Split through the list container, retaining content and continuing numbering. */
+export function splitListItem(editor: Editor): boolean {
+  Editor.withoutNormalizing(editor, () => {
+    Transforms.splitNodes(editor, { always: true, match: isListItem, mode: "lowest" })
+    const nextEntry = findElementUp<ListItemElement>(editor, isListItem)
+    if (!nextEntry) return
+    const [next, path] = nextEntry
+    if (next.type === "ordered-list-item") {
+      Transforms.setNodes(editor, { __numbering: "continue" }, { at: path })
+      if (next.start != null) Transforms.unsetNodes(editor, "start", { at: path })
+    }
+    // A newly created task is always unchecked.
+    if (next.type === "task-list-item" && next.checked) {
+      Transforms.setNodes(editor, { checked: false }, { at: path })
+    }
+  })
   return true
 }

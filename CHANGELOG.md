@@ -7,7 +7,9 @@
 - Use cell background highlights for tables selected together with other blocks,
   without text-selection backgrounds or highlighted borders.
 - Preserve explicitly typed ordered-list numbers and create a separate paragraph
-  when pressing Enter at the end of a numbered heading.
+  when pressing Enter at the end of a numbered heading. Split numbered headings
+  and body text into separate list items on Enter within text, preserving formatting,
+  indentation and undo/redo; unify list spacing and refine quote indentation.
 - Fix moving the caret outside trailing inline code with arrow keys or deletion.
 - Show the opening note's name while loading.
 

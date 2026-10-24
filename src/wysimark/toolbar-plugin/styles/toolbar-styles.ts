@@ -15,7 +15,8 @@ export const $ToolbarContainer = styled("div")`
    */
   position: sticky;
   top: 10px;
-  z-index: 2;
+  /* Above block controls; menus and dialogs use the higher overlay layer. */
+  z-index: 20;
   background: var(--background-secondary);
   /* font-size: 0.875em; */
   font-size: 0.9375em;

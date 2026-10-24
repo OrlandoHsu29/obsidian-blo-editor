@@ -14,7 +14,7 @@
 .blo-toolbar-setting input[type="checkbox"]:disabled { filter:grayscale(1); opacity:.65; cursor:default; }
 .blo-toolbar-setting:has(input:not(:checked)) .blo-toolbar-setting-icon { color:var(--text-faint); }
 .blo-toolbar-settings-divider { flex:0 0 1px; margin:8px 3px; background:var(--background-modifier-border); }
-.wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:3; height:0; flex:0 0 0; overflow:visible; }
+.wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:30; height:0; flex:0 0 0; overflow:visible; }
 .wysimark-reading .wysimark-find-slot { top:8px; }
 .wysimark-find-panel { position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--font-ui-small) var(--font-interface); }
 .wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 clamp(16px,4vw,48px); }
@@ -350,7 +350,7 @@
 .wysimark-editor [data-table-header="true"] { background:var(--background-secondary); font-weight:var(--font-bold,700); }
 .wysimark-table-settings { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--background-modifier-border); }
 .wysimark-table-settings label { display:flex; align-items:center; gap:8px; cursor:pointer; }
-.wysimark-table-actions { display:flex; gap:2px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-m,8px); background:var(--background-primary); box-shadow:var(--shadow-s); z-index:var(--layer-menu,65); }
+.wysimark-table-actions { display:flex; gap:2px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-m,8px); background:var(--background-primary); box-shadow:var(--shadow-s); z-index:12; }
 .wysimark-table-actions[data-table-action-axis="row"] { flex-direction:column; }
 .wysimark-overlay.wysimark-table-actions button { display:flex; align-items:center; justify-content:center; width:26px; height:24px; min-height:0; padding:0; border:0; box-shadow:none; color:var(--text-muted); background:transparent; cursor:pointer; }
 .wysimark-overlay.wysimark-table-actions button:hover { color:var(--text-normal); background:var(--background-modifier-hover); }

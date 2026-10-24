@@ -4,7 +4,7 @@
 
 - **可选插件集成**：设置中新增图片查看器和画板开关，开启后自动安装并启用 Image Toolkit 或 Excalidraw，已有安装直接复用。关闭只停用 Blo 集成，保留依赖插件、附件及已有预览。
 - **画板另存与引用替换**：新增“另存后替换当前引用”，默认关闭；勾选后仅更新对应的画板引用，保留尺寸和原文件，支持撤销与重做。内嵌预览和画板窗口均可使用。
-- **媒体交互修复**：来源弹窗跟随对象滚动及缩放，打开画板窗口或另存为时自动隐藏；改进悬浮返回按钮和图片工具条的显示，修复查看器工具条背景未覆盖全部按钮的问题。
+- **媒体交互修复**：来源弹窗跟随对象滚动及缩放，打开画板窗口或另存为时自动隐藏；改进悬浮返回按钮和图片工具条的显示，修复查看器工具条背景及浮动按钮层级问题。
 - **表格选区**：多格选择改为单元格背景高亮，避免跨行选择时误高亮未选中格内的链接，并在多格选择时关闭链接信息框。
 - **笔记编辑细节**：文件名标题更醒目、与正文间距更宽；正文首行空行现在可用 Backspace 删除并撤销。
 
@@ -16,7 +16,7 @@
 
 - **Optional integrations:** enable the image viewer or drawings in settings to install and activate Image Toolkit or Excalidraw, reusing existing installations. Disabling a Blo integration keeps its dependency plugin, attachments and existing previews.
 - **Save drawing copies and replace references:** optionally replace only the originating embed after saving a copy. The option defaults off, preserves dimensions and the original file, and supports undo/redo from both embedded previews and drawing windows.
-- **Media interaction fixes:** source cards follow scrolling and image/drawing resizing, and close when opening the drawing window or Save As. Improve floating return controls and media toolbars, including the viewer background that previously failed to contain every button.
+- **Media interaction fixes:** source cards follow scrolling and image/drawing resizing, and close when opening the drawing window or Save As. Improve floating return controls and media toolbars, including viewer toolbar backgrounds and floating button stacking.
 - **Table selection:** highlight selected cell backgrounds, prevent links in other cells from appearing selected across rows, and close link cards during multi-cell selection.
 - **Note editing:** enlarge the file title and its spacing above the body; allow Backspace to remove an empty first body line with undo support.
 

@@ -20,7 +20,7 @@ const $BaseMenu = styled("div")`
      * needs to pop up so that it doesn't jump back and forth with neighbor
      * below
      */
-    z-index: var(--layer-menu,65);
+    z-index: 8;
     /**
      * Makes the visible tile get darker on hover over any part of the
      * menu including the invisible part

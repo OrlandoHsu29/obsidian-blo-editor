@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.16 — 2026-10-24
+
+- Embed existing vault media without copying files; resolve vault paths and links,
+  and open internal links with Ctrl/Cmd-click in editing mode or a click in reading mode.
+- Add resizable video blocks with native controls, atomic selection, proportional
+  dimensions, presets, persistence and undo/redo.
+- Save drawing copies from embedded previews and full drawing views, using a
+  distinct save-plus icon, vault-relative paths and collision-safe filenames.
+  Place the full-view action directly left of Save.
+- Unify optional embedded attachment cleanup. Protect files outside the attachment
+  folder and shared references; retain trash recovery and undo preview refresh.
+  The new setting defaults off, including when migrating old per-type toggles.
+- Insert a leading body paragraph on Enter at the end of the title; restore
+  existing Blo-formatted notes outside the automatic editing scope while
+  preserving an explicit choice to use the native editor.
+
 ## 0.1.15 — 2026-10-20
 
 - Export rendered notes directly to PDF with paper size, landscape orientation,

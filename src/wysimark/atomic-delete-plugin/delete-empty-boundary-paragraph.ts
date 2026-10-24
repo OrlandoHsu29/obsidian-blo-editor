@@ -10,6 +10,16 @@ export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backwar
   if(!entry)return false
   const [paragraph,path]=entry
   if(!Element.isElement(paragraph)||paragraph.type!=='paragraph'||paragraph.__collapsible||!paragraph.children.every(n=>Text.isText(n)&&n.text===''))return false
+  if(direction==='backward'&&path.length===1&&path[0]===0) {
+    const next=editor.children.findIndex((node,index)=>index>0&&!isEditorSpacer(node))
+    if(next<0)return false
+    const remove=()=>Editor.withoutNormalizing(editor,()=>{
+      Transforms.removeNodes(editor,{at:path})
+      Transforms.select(editor,Editor.start(editor,[next-1]))
+    })
+    if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,remove);else remove()
+    return true
+  }
   if(direction==='backward'&&path.length===1) {
     let previous=path[0]-1
     while(previous>=0&&isEditorSpacer(editor.children[previous]))previous--

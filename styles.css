@@ -17,10 +17,10 @@
 .wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:3; height:0; flex:0 0 0; overflow:visible; }
 .wysimark-reading .wysimark-find-slot { top:8px; }
 .wysimark-find-panel { position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--font-ui-small) var(--font-interface); }
-.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 0; padding:0 clamp(16px,4vw,48px); }
+.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 clamp(16px,4vw,48px); }
 .wysimark-accessible-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-.wysimark-container .wysimark-document-title input { display:block; width:100%; height:auto; min-height:1.4em; padding:0; margin:0; text-align:left; font-family:var(--font-text); font-size:32px; font-weight:700; line-height:1.35; letter-spacing:normal; color:var(--text-normal); background:transparent; border:0; border-radius:0; box-shadow:none; }
-.wysimark-container .wysimark-document-title input:focus { outline:none; box-shadow:0 1px 0 var(--background-modifier-border-focus); }
+.wysimark-container .wysimark-document-title input { display:block; width:100%; height:auto; min-height:1.4em; padding:0; margin:0; text-align:left; font-family:var(--font-text); font-size:36px; font-weight:700; line-height:1.35; letter-spacing:normal; color:var(--text-normal); background:transparent; border:0; border-radius:0; box-shadow:none; }
+.wysimark-container .wysimark-document-title input:focus { outline:none; box-shadow:none; }
 .wysimark-find-panel[hidden],.wysimark-find-row[hidden] { display:none; }
 .wysimark-find-row { display:flex; align-items:center; gap:4px; }
 .wysimark-find-row + .wysimark-find-row { margin-top:6px; }

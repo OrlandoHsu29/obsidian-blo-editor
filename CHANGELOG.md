@@ -9,6 +9,7 @@
 - Keep source cards aligned during resizing and dismiss them before drawing actions.
 - Improve floating return controls and media toolbar theme styling and sizing.
 - Refine table cell selection and link-card behavior across rows.
+- Enlarge the document title spacing and allow deleting an empty first paragraph.
 
 ## 0.1.16 — 2026-10-24
 

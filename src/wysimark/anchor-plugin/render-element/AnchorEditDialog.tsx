@@ -151,7 +151,7 @@ export function AnchorEditDialog({
   const handleTargetChange = useCallback<
     React.ChangeEventHandler<HTMLInputElement>
   >((e) => {
-    const parsed = normalizeWikiLinkInput(e.target.value)
+    const parsed = editor.wysimark.normalizeInternalLink?.(e.target.value) ?? normalizeWikiLinkInput(e.target.value)
     setTarget(parsed.target)
     if (parsed.display !== undefined) {
       setText(parsed.display)

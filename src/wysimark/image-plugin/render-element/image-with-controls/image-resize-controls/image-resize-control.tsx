@@ -30,7 +30,7 @@ function getImageBoundsFromSlateElement(
   element: ImageBlockElement | ImageInlineElement
 ): DOMRect {
   const imageContainerDOMNode = ReactEditor.toDOMNode(editor, element)
-  const imgDOMNode = imageContainerDOMNode.querySelector("[data-blo-drawing],img")
+  const imgDOMNode = imageContainerDOMNode.querySelector("[data-blo-drawing],video,img")
   if (!imgDOMNode)
     throw new Error(`Image Element could not be found but should exist`)
   return imgDOMNode.getBoundingClientRect()

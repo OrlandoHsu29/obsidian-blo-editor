@@ -16,6 +16,7 @@ import {
   normalizeWikiLinkInput,
   wikiLinkDisplayText,
   wikiLinkHref,
+  wikiEmbedUrl,
 } from "../../../convert/obsidian-links"
 import { positionInside, useAbsoluteReposition } from "../../../use-reposition"
 
@@ -84,6 +85,7 @@ export function AnchorDialog({
   const [text, setText] = useState(initialText)
   const [title, setTitle] = useState(initialText)
   const [mode, setMode] = useState<LinkMode>("external")
+  const [embed, setEmbed] = useState(false)
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false)
   const vaultFilePaths = editor.wysimark.getVaultFilePaths?.() ?? []
 
@@ -96,6 +98,12 @@ export function AnchorDialog({
         trimmedText && trimmedText !== wikiLinkDisplayText(trimmedTarget)
           ? `${trimmedTarget}|${trimmedText}`
           : trimmedTarget
+      if (embed) {
+        editor.image.insertImageFromUrl(editor.wysimark.resolveInternalMedia?.(trimmedTarget) || wikiEmbedUrl(spec), trimmedText || wikiLinkDisplayText(trimmedTarget))
+        ReactEditor.focus(editor)
+        close()
+        return
+      }
       editor.anchor.insertLink(
         wikiLinkHref(spec),
         trimmedText || wikiLinkDisplayText(trimmedTarget),
@@ -119,13 +127,15 @@ export function AnchorDialog({
 
   const onChangeTarget = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      const parsed = normalizeWikiLinkInput(e.currentTarget.value)
+      const value = e.currentTarget.value
+      const parsed = editor.wysimark.normalizeInternalLink?.(value) ?? normalizeWikiLinkInput(value)
       setTarget(parsed.target)
+      setEmbed(!!editor.wysimark.resolveInternalMedia?.(parsed.target) || /^\s*!\[\[/.test(value))
       if (parsed.display !== undefined) {
         setText(parsed.display)
       }
     },
-    [setTarget, setText]
+    [editor, setTarget, setText]
   )
 
   const onChangeText = useCallback(
@@ -217,7 +227,10 @@ export function AnchorDialog({
                 onKeyDown={onKeyDown}
               />
             ) : (
-              <span style={{ flex: "1 1 auto" }} />
+              <label style={{display:'flex',alignItems:'center',gap:8,flex:'1 1 auto',minWidth:0,paddingLeft:3,cursor:'pointer'}}>
+                <input type="checkbox" checked={embed} onChange={event => setEmbed(event.target.checked)} style={{margin:0,flexShrink:0}} />
+                {t('internalLinkEmbed')}
+              </label>
             )}
             <$DialogButton onClick={insertLink}>
               <Icon.Link />

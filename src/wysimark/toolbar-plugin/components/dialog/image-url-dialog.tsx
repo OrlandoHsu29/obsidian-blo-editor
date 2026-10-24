@@ -73,7 +73,7 @@ export function ImageUrlDialog({ dest, close }: { dest: HTMLElement; close: () =
     if (source === "vault") {
       const path = vaultImagePath.trim()
       if (!path) return
-      editor.image.insertImageFromUrl(wikiEmbedUrl(path), path)
+      editor.image.insertImageFromUrl(editor.wysimark.resolveInternalMedia?.(path) || wikiEmbedUrl(path), path)
       finish()
       return
     }

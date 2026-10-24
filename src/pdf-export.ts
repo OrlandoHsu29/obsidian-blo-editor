@@ -98,7 +98,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   });
   // Image toolbar / resize controls are siblings of the actual image.
   clone.querySelectorAll('[data-blo-image]').forEach(el => {
-    Array.from(el.children).forEach(child => { if (child.tagName !== 'IMG') child.remove(); });
+    Array.from(el.children).forEach(child => { if (!['IMG', 'VIDEO'].includes(child.tagName)) child.remove(); });
   });
   for (const element of [clone, ...Array.from(clone.querySelectorAll('*'))]) {
     element.classList.remove('--selected', '--focused', '--dragging', 'is-selected');

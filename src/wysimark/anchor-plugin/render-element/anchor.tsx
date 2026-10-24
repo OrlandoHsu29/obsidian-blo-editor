@@ -5,7 +5,7 @@ import { useSelected, useSlate } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
-import { isWikiLinkHref } from "../../convert/obsidian-links"
+import { isWikiLinkHref, wikiLinkSpecFromHref, wikiLinkTarget } from "../../convert/obsidian-links"
 import { useLayer } from "../../use-layer"
 import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
@@ -22,6 +22,7 @@ export function Anchor({
   const editor = useSlate()
   const dialog = useLayer("dialog")
   const isInternalLink = isWikiLinkHref(element.href)
+  const readOnly = !!editor.wysimark.readOnly
 
   /**
    * TODO:
@@ -36,6 +37,7 @@ export function Anchor({
     const anchor = anchorRef.current
     const startEdge = startEdgeRef.current
     if (!anchor || !startEdge) return
+    if (readOnly) { dialog.close(); return }
     /**
      * NOTE: Do not use `focused && selected` here because when we click or
      * focus on the pop up dialogs themselves, this will cause the dialogs to
@@ -61,7 +63,7 @@ export function Anchor({
        * and when switching from one link to another. Without it, the dialog
        * will not open.
        */
-      window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         dialog.open(() => (
           <AnchorDialog
             destAnchor={anchor}
@@ -70,10 +72,11 @@ export function Anchor({
           />
         ))
       })
+      return () => window.clearTimeout(timer)
     } else {
       dialog.close()
     }
-  }, [selected, element])
+  }, [selected, element, readOnly])
 
   return (
     <$Anchor
@@ -84,7 +87,17 @@ export function Anchor({
       href={isInternalLink ? undefined : element.href}
       target={isInternalLink ? undefined : element.target}
       data-internal-link={isInternalLink ? "true" : undefined}
-      onClick={isInternalLink ? (event) => event.preventDefault() : undefined}
+      onMouseDown={isInternalLink ? event => {
+        if (readOnly || event.ctrlKey || event.metaKey) { event.preventDefault(); event.stopPropagation() }
+      } : undefined}
+      onClick={isInternalLink ? (event) => {
+        event.preventDefault()
+        if (readOnly || event.ctrlKey || event.metaKey) {
+          event.stopPropagation()
+          dialog.close()
+          void editor.wysimark.openInternalLink?.(wikiLinkTarget(wikiLinkSpecFromHref(element.href)), event.ctrlKey || event.metaKey)
+        }
+      } : undefined}
       {...attributes}
       ref={anchorRef}
     >

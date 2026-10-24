@@ -1,13 +1,46 @@
-import { Notice } from 'obsidian'
-import { Descendant, Editor, Transforms } from 'slate'
+import { App, Notice } from 'obsidian'
+import { Descendant, Editor, Element, Node, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor } from 'slate-react'
 import type { OnImageSaveHandler } from './wysimark/entry'
-import { wikiEmbedUrl } from './wysimark/convert/obsidian-links'
+import { wikiEmbedUrl, wikiLinkHref } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
+import { IMAGE_FILE_PATTERN as IMAGES, MEDIA_FILE_PATTERN as MEDIA, vaultMediaUrl, vaultTransferReferences } from './vault-media'
 
-const IMAGES = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i
-const MEDIA = /\.(?:mp3|wav|m4a|ogg|oga|opus|flac|aac|mp4|webm|ogv|mov|mkv|3gp|pdf|excalidraw(?:\.md)?)$/i
+/** Reference existing vault files directly; never copy them into attachments. */
+export function handleVaultMediaTransfer(app: App, sourcePath: string, editor: Editor,
+  event: ClipboardEvent | DragEvent, current: () => boolean): boolean {
+  if (!current() || editor.wysimark.readOnly) return false
+  const data = 'clipboardData' in event ? event.clipboardData : event.dataTransfer
+  if (!data) return false
+  const drop = 'dataTransfer' in event
+  let location = editor.selection
+  if (drop) {
+    try { location = ReactEditor.findEventRange(editor, event) }
+    catch { location = Editor.range(editor, Editor.end(editor, [])) }
+  }
+  if (location && (Node.leaf(editor, location.anchor.path).code ||
+    Editor.above(editor, { at: location, match: node => Element.isElement(node) && node.type === 'code-block' }))) return false
+  if (!drop && Editor.marks(editor)?.code) return false
+  const references = vaultTransferReferences(app, sourcePath, data, drop)
+  if (!references.length) return false
+  event.preventDefault(); event.stopPropagation()
+  if (drop && location) Transforms.select(editor, location)
+  const fragment: Descendant[] = references.map(reference => {
+    const url = vaultMediaUrl(app, sourcePath, reference), label = reference.display || reference.file.name
+    return url ? { type: 'image-block', url, alt: label, children: [{ text: '' }] } :
+      { type: 'paragraph', children: [{ type: 'anchor', href: wikiLinkHref(reference.target), children: [{ text: label }] }] }
+  })
+  const insert = () => Editor.withoutNormalizing(editor, () => {
+    if (!editor.selection) Transforms.select(editor, Editor.end(editor, []))
+    editor.insertFragment(fragment)
+    editor.marks = null
+  })
+  if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
+  else insert()
+  ReactEditor.focus(editor)
+  return true
+}
 
 /** File transfers take precedence over HTML/text fallbacks; internal Slate copies keep their metadata. */
 export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | DragEvent,

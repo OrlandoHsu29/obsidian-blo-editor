@@ -21,7 +21,7 @@ export function convertToEmbed(
       editor,
       {
         type: "image-inline",
-        url: wikiEmbedUrl(spec),
+        url: editor.wysimark.resolveInternalMedia?.(spec) || wikiEmbedUrl(spec),
         alt: spec,
         children: [{ text: "" }],
       },

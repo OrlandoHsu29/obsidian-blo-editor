@@ -81,7 +81,7 @@ export function WikiEmbedView({
       editor.selection &&
       editor.selection.anchor.offset !== editor.selection.focus.offset
     // Drawings provide their own edit control rather than a link popover.
-    if (selected && !hasSelection && !anchor.querySelector('[data-blo-drawing]')) {
+    if (selected && !hasSelection && !anchor.querySelector('[data-blo-drawing],[data-blo-video]')) {
       window.setTimeout(() => {
         dialog.open(() => (
           <AnchorDialog

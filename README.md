@@ -82,6 +82,9 @@ press Left to select the drawing. The top-right editor button opens Excalidraw;
 **Back to note** saves, closes that drawing tab, and returns to the original note.
 Pasted or dropped images, audio, video, PDFs, and other files are saved as
 attachments before their previews or links are inserted at the original cursor.
+Drag existing vault media from the file explorer to embed it without copying files,
+or enable embedding in the vault link dialog. Ctrl/Cmd-click internal links while
+editing; click them directly in reading mode.
 
 <details>
 <summary>View inline drawings and attachments</summary>
@@ -121,9 +124,10 @@ icons and checkboxes control visibility immediately. Paragraph style, clear
 formatting, undo, redo, text color, and find/replace stay visible; their settings
 remain checked, gray, and disabled.
 
-Images and drawings share the vault-root `附件` folder by default. **Attachment
+Pasted/imported media and new drawings share the vault-root `附件` folder by default. **Attachment
 folder** accepts a vault-relative path such as `Attachments/Media`; leave empty
 for the vault root. Changing this setting does not move existing files.
+Videos support playback, atomic block selection and the same proportional resizing as images.
 Tab / Shift+Tab indent code text unless the entire code block is selected;
 the language menu supports typing to search.
 

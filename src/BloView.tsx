@@ -16,10 +16,12 @@ import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
+import { VideoEmbed, VIDEO_FILE_PATTERN } from './VideoEmbed';
 import { attachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
-import { handleMediaTransfer } from './media-paste';
+import { handleMediaTransfer, handleVaultMediaTransfer } from './media-paste';
+import { normalizeVaultLinkInput, resolveVaultReference, vaultMediaUrl, vaultTransferReferences } from './vault-media';
 import { watchRemoteImages } from './remote-images';
 import { PdfExportModal } from './pdf-export';
 import type { Menu } from 'obsidian';
@@ -176,7 +178,7 @@ function InternalEmbedView({
   const embedRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (imageFile || targetsImage) return;
+    if (imageFile || targetsImage || targetFile instanceof TFile && (isDrawingFile(app, targetFile) || VIDEO_FILE_PATTERN.test(targetFile.path))) return;
     let cancelled = false;
     const embedEl = embedRef.current;
     if (!embedEl) return;
@@ -205,7 +207,7 @@ function InternalEmbedView({
       component.unload();
       embedEl.empty();
     };
-  }, [app, imageFile, sourcePath, spec, targetsImage]);
+  }, [app, imageFile, targetFile, sourcePath, spec, targetsImage]);
 
   if (imageFile) {
     return (
@@ -225,6 +227,9 @@ function InternalEmbedView({
 
   if (targetFile instanceof TFile && isDrawingFile(app, targetFile)) {
     return <DrawingEmbed app={app} file={targetFile} spec={spec} sourcePath={sourcePath} />;
+  }
+  if (targetFile instanceof TFile && VIDEO_FILE_PATTERN.test(targetFile.path)) {
+    return <VideoEmbed app={app} file={targetFile} />;
   }
   return <div ref={embedRef} className="wysimark-internal-embed" />;
 }
@@ -296,8 +301,10 @@ function KnowledgeSpaceEditorComponent({
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
 }) {
-  const openInternalLink = React.useCallback(async (target: string) => {
-    await plugin.app.workspace.openLinkText(target, file.path, false, {
+  const openInternalLink = React.useCallback(async (target: string, newLeaf = false) => {
+    const normalized = normalizeVaultLinkInput(plugin.app, target).target;
+    if (/^obsidian:\/\//i.test(normalized)) { window.open(normalized); return; }
+    await plugin.app.workspace.openLinkText(normalized, file.path, newLeaf, {
       active: true,
     });
   }, [file.path, plugin.app.workspace]);
@@ -349,6 +356,11 @@ function KnowledgeSpaceEditorComponent({
   });
   editor.wysimark.readOnly = readOnly;
   editor.wysimark.toolbarPreferences = plugin.toolbarPreferences;
+  editor.wysimark.normalizeInternalLink = value => normalizeVaultLinkInput(plugin.app, value);
+  editor.wysimark.resolveInternalMedia = target => {
+    const reference = resolveVaultReference(plugin.app, file.path, target);
+    return reference ? vaultMediaUrl(plugin.app, file.path, reference) : undefined;
+  };
   editor.wysimark.isDrawingEmbed = (url: string) => {
     if (!isWikiEmbedUrl(url)) return false;
     const target = wikiLinkTarget(wikiEmbedSpecFromUrl(url)).split('#')[0];
@@ -538,13 +550,16 @@ export class BloView extends FileView {
     const transfer = (event: ClipboardEvent | DragEvent) => {
       const editor = this.editor, file = this.currentFile;
       if (!editor || !file || this.readOnly || !(event.target as HTMLElement).closest('[data-slate-editor="true"]')) return;
+      if (handleVaultMediaTransfer(this.app, file.path, editor, event,
+        () => this.editor === editor && this.currentFile === file && !this.readOnly)) return;
       handleMediaTransfer(editor, event, this.handleImageSave,
         () => this.editor === editor && this.currentFile === file && !this.readOnly);
     };
     this.registerDomEvent(contentEl, 'paste', transfer, true);
     this.registerDomEvent(contentEl, 'drop', transfer, true);
     this.registerDomEvent(contentEl, 'dragover', event => {
-      if (!this.readOnly && event.dataTransfer?.types.includes('Files') &&
+      if (!this.readOnly && event.dataTransfer && (event.dataTransfer.types.includes('Files') ||
+        this.currentFile && vaultTransferReferences(this.app, this.currentFile.path, event.dataTransfer, true).length > 0) &&
         (event.target as HTMLElement).closest('[data-slate-editor="true"]')) {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';

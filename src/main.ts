@@ -17,10 +17,14 @@ import { installDrawingNavigation } from './drawing-navigation';
 import { PdfExportModal } from './pdf-export';
 import { ToolbarPreferences } from './toolbar-preferences';
 import { parseBlockDocument } from './blocks/persistence';
+import { IntegrationPreferences, IntegrationFlags } from './integration-preferences';
+import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from './optional-integrations';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
   readonly toolbarPreferences = new ToolbarPreferences();
+  readonly integrationPreferences = new IntegrationPreferences();
+  private disposed = false;
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
@@ -50,6 +54,11 @@ export default class BloEditorPlugin extends Plugin {
     if (typeof savedSettings?.deleteEmbeddedAttachments !== 'boolean') this.settings.deleteEmbeddedAttachments = false;
     delete (this.settings as any).deleteImageAttachments;
     delete (this.settings as any).deleteDrawingAttachments;
+    // Keep integrations already in use; a fresh setup without dependencies is opt-in.
+    const manager = optionalPluginManager(this.app), dependencies = manager.plugins;
+    if (typeof savedSettings?.enableImageViewer !== 'boolean') this.settings.enableImageViewer = !!dependencies[OPTIONAL_PLUGINS.imageViewer] || manager.enabledPlugins.has(OPTIONAL_PLUGINS.imageViewer);
+    if (typeof savedSettings?.enableDrawings !== 'boolean') this.settings.enableDrawings = !!dependencies[OPTIONAL_PLUGINS.drawings] || manager.enabledPlugins.has(OPTIONAL_PLUGINS.drawings);
+    this.syncIntegrations();
     this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
     installDrawingNavigation(this);
@@ -57,6 +66,7 @@ export default class BloEditorPlugin extends Plugin {
 
     // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.
     const previewImage = (event: MouseEvent) => {
+      if (!this.settings.enableImageViewer) return;
       const image = event.target;
       if (!(image instanceof HTMLImageElement) || !image.closest('.wysimark-container')) return;
       if (event.type === 'click' && !image.closest('.wysimark-reading')) return;
@@ -99,6 +109,7 @@ export default class BloEditorPlugin extends Plugin {
       return true;
     }});
     this.addCommand({ id: 'insert-drawing', name: ui('插入画板'), checkCallback: checking => {
+      if (!this.settings.enableDrawings) return false;
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!view?.editor || !view.currentFile || view.readOnly) return false;
       if (!checking) void view.editor.wysimark.insertDrawing?.();
@@ -194,6 +205,25 @@ export default class BloEditorPlugin extends Plugin {
   isFileInEditingScope(file: TFile): boolean {
     return file.extension === 'md' && isPathInEditingScope(file.path, this.settings.richEditingFolder);
   }
+  private syncIntegrations() {
+    this.integrationPreferences.set({ imageViewer: this.settings.enableImageViewer, drawings: this.settings.enableDrawings });
+  }
+  async setOptionalIntegration(feature: keyof IntegrationFlags, enabled: boolean): Promise<boolean> {
+    const key = feature === 'imageViewer' ? 'enableImageViewer' : 'enableDrawings';
+    const previous = this.settings[key];
+    try {
+      if (enabled) await ensureOptionalPlugin(this.app, feature);
+      if (this.disposed) return previous;
+      this.settings[key] = enabled;
+      this.syncIntegrations();
+      await this.saveData(this.settings);
+    } catch (error) {
+      this.settings[key] = previous; this.syncIntegrations();
+      console.error('Blo Editor: optional integration failed', error);
+      new Notice(ui('无法启用 {name}，请检查网络或在第三方插件中手动安装并启用。', { name: feature === 'imageViewer' ? 'Image Toolkit' : 'Excalidraw' }));
+    }
+    return this.settings[key];
+  }
   isPdfExportLeaf(leaf: WorkspaceLeaf) { return this.pdfExportLeaves.has(leaf); }
   private async exportFileToPdf(file: TFile) {
     const workspace = this.app.workspace;
@@ -271,6 +301,7 @@ export default class BloEditorPlugin extends Plugin {
   }
 
   onunload(): void {
+    this.disposed = true;
     // Views, events, and commands registered via registerView/registerEvent/addCommand
     // are automatically cleaned up by Obsidian's plugin system.
     // Do NOT call detachLeavesOfType here to preserve user's layout during plugin updates.

@@ -103,7 +103,6 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if(!cell)return
       if(event.detail>=2) {
         event.preventDefault();event.stopPropagation()
-        beginTableCellEdit(editor,cell);ReactEditor.focus(editor)
       } else if(tableCellSelection(editor)?.kind==='cell') {
         event.preventDefault();event.stopPropagation()
       }
@@ -172,7 +171,6 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss() }
     table.addEventListener('mousemove', hover)
     table.addEventListener('click',click,true)
-    table.addEventListener('dblclick',click,true)
     doc.addEventListener('compositionstart',composition,true)
     doc.addEventListener('mousedown', down, true)
     doc.addEventListener('mousemove', move, true)
@@ -185,7 +183,6 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       win.clearTimeout(hoverTimer); win.clearTimeout(leaveTimer)
       table.removeEventListener('mousemove', hover)
       table.removeEventListener('click',click,true)
-      table.removeEventListener('dblclick',click,true)
       doc.removeEventListener('compositionstart',composition,true)
       doc.removeEventListener('mousedown', down, true)
       doc.removeEventListener('mousemove', move, true)

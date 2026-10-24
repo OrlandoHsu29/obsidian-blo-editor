@@ -1,5 +1,6 @@
 import { App, Component, MarkdownRenderer, Notice, TFile, setIcon } from 'obsidian'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { getDefaultIntegrations, subscribeDefaultIntegrations } from './integration-preferences'
 import { Editor, Element, Node, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useElement, useReadOnly, useSelected, useSlateStatic } from 'slate-react'
@@ -10,8 +11,9 @@ import type { ImageBlockElement, ImageInlineElement, ImageSize } from './wysimar
 import { splitWikiSpec, wikiEmbedUrl } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
 import { openEmbeddedDrawing } from './drawing-navigation'
-import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON } from './drawing-save-as'
+import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DrawingReference, trackDrawingReference } from './drawing-save-as'
 import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
+import { useLayer } from './wysimark/use-layer'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
 type DrawingPlugin = {
@@ -31,13 +33,13 @@ export function isDrawingFile(app: App, file: TFile): boolean {
 export function drawingViewType(app: App): 'excalidraw' | 'markdown' {
   return drawingPlugin(app) ? 'excalidraw' : 'markdown'
 }
-export async function openDrawing(app: App, file: TFile, origin?: { sourcePath: string; editor: Editor }): Promise<void> {
+export async function openDrawing(app: App, file: TFile, origin?: { sourcePath: string; editor: Editor; reference?: DrawingReference }): Promise<void> {
   if (!drawingPlugin(app)) { new Notice(ui('请先安装并启用 Excalidraw')); return }
   if (origin) {
     const source = app.vault.getAbstractFileByPath(origin.sourcePath)
     const leaf = app.workspace.getLeavesOfType('blo-view').find(leaf =>
       (leaf.view as typeof leaf.view & { editor?: Editor }).editor === origin.editor)
-    if (source instanceof TFile && leaf && await openEmbeddedDrawing(app, file, leaf, source)) return
+    if (source instanceof TFile && leaf && await openEmbeddedDrawing(app, file, leaf, source, origin.reference)) return
   }
   const existing = app.workspace.getLeavesOfType('excalidraw').find(leaf =>
     (leaf.view as typeof leaf.view & { file?: TFile }).file === file)
@@ -56,6 +58,7 @@ export async function insertDrawing(app: App, source: TFile, editor: Editor, cur
   creating.add(editor)
   const saved = editor.selection ? Editor.rangeRef(editor, editor.selection, { affinity: 'forward' }) : null
   let drawing: TFile | undefined
+  let insertedReference: DrawingReference | undefined
   try {
     const content = await plugin.getBlankDrawing()
     if (!current() || editor.wysimark.readOnly) return
@@ -77,6 +80,7 @@ export async function insertDrawing(app: App, source: TFile, editor: Editor, cur
         Transforms.removeNodes(editor, { at: [index] })
         Transforms.insertNodes(editor, block, { at: [index], select: true })
       } else Transforms.insertNodes(editor, block, { at: [groupEnd(editor.children, index)], select: true })
+      insertedReference = { editor, source, url: block.url, path: Editor.pathRef(editor, [editor.selection!.anchor.path[0]]) }
       const after = Path.next([editor.selection!.anchor.path[0]])
       if (!Node.has(editor, after)) Transforms.insertNodes(editor, {
         type: 'paragraph', ...(depth ? { __blockDepth: depth } : {}), children: [{ text: '' }],
@@ -87,19 +91,22 @@ export async function insertDrawing(app: App, source: TFile, editor: Editor, cur
     if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
     else insert()
     await editor.wysimark.save?.()
-    if (app.workspace.getActiveFile() === source) await openDrawing(app, drawing, { sourcePath: source.path, editor })
+    if (app.workspace.getActiveFile() === source) await openDrawing(app, drawing, { sourcePath: source.path, editor, reference: insertedReference })
   } catch (error) {
     console.error('Blo Editor: drawing operation failed', error)
     new Notice(drawing ? ui('画板已创建：{path}', { path: drawing.path }) : ui('无法创建画板'))
-  } finally { saved?.unref(); creating.delete(editor) }
+  } finally { saved?.unref(); insertedReference?.path.unref(); creating.delete(editor) }
 }
 
 export function DrawingEmbed({ app, file, spec, sourcePath }: {
   app: App; file: TFile; spec: string; sourcePath: string
 }) {
   const editor = useSlateStatic()
+  const dialog = useLayer('dialog')
   const element = useElement() as ImageBlockElement | ImageInlineElement
   const selected = useSelected(), readOnly = useReadOnly()
+  const preferences = editor.wysimark.integrationPreferences
+  const enabled = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations).drawings
   const ref = useRef<HTMLDivElement>(null)
   const [revision, setRevision] = useState(0), [failed, setFailed] = useState(false)
   const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null)
@@ -147,17 +154,27 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
     measure()
     return () => { cancelled = true; observer.disconnect(); target.removeEventListener('load', measure, true); owner.unload(); target.remove() }
   }, [app, available, revision, sourcePath, previewSpec])
-  const open = () => { void openDrawing(app, file, { sourcePath, editor }).catch(() => new Notice(ui('无法打开画板'))) }
+  const open = () => {
+    dialog.close()
+    const reference = trackDrawingReference(app, sourcePath, editor, element)
+    void openDrawing(app, file, { sourcePath, editor, reference }).catch(() => new Notice(ui('无法打开画板'))).finally(() => reference?.path.unref())
+  }
   return <div className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
     style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
-    <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
+    {enabled && <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}
-      onClick={event => { event.stopPropagation(); new DrawingSaveAsModal(app, file).open() }}>
+      onClick={event => {
+        event.stopPropagation()
+        dialog.close()
+        const reference = trackDrawingReference(app, sourcePath, editor, element)
+        new DrawingSaveAsModal(app, file, reference).open()
+        reference?.path.unref()
+      }}>
       <span aria-hidden="true" ref={node => { if (node) setIcon(node, DRAWING_SAVE_AS_ICON) }} />
-    </button>
-    {available && <button className="blo-drawing-open" type="button" aria-label={ui('放大绘制')}
+    </button>}
+    {available && enabled && <button className="blo-drawing-open" type="button" aria-label={ui('编辑画板')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={event => { event.stopPropagation(); open() }}>
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" /></svg>
+      <span aria-hidden="true" ref={node => { if (node) setIcon(node, 'pencil') }} />
     </button>}
     {available ? <div className="blo-drawing-preview" style={naturalSize ? { position: 'absolute', inset: 0 } : undefined}
       onMouseDown={event => {
@@ -168,11 +185,11 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
         else Transforms.select(editor, path)
         ReactEditor.focus(editor)
       }} onClickCapture={event => { event.preventDefault(); event.stopPropagation() }}
-      onDoubleClickCapture={event => { event.preventDefault(); event.stopPropagation() }}>
+      onDoubleClickCapture={event => { event.preventDefault(); event.stopPropagation(); if (enabled) open() }}>
       <div ref={ref} className="blo-drawing-content" />
       {failed && <span>{ui('无法预览画板，请使用右上角按钮打开')}</span>}
     </div> : <div className="blo-drawing-unavailable"><a href={`obsidian://show-plugin?id=${PLUGIN_ID}`}>{ui('安装 Excalidraw')}</a></div>}
-    {!readOnly && selected && displaySize && naturalSize && <ImageResizeControl
+    {!readOnly && enabled && selected && displaySize && naturalSize && <ImageResizeControl
       element={element} srcSize={naturalSize} size={displaySize} setSize={setSize}
       isDragging={isDragging} setIsDragging={setIsDragging} />}
   </div>

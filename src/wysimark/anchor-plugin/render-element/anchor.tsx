@@ -1,7 +1,7 @@
 import { clsx } from "clsx"
-import React from "react"
-import { useEffect, useRef } from "react"
-import { useSelected, useSlate } from "slate-react"
+import React, { useEffect, useRef } from "react"
+import { Editor, Element, Path, Range } from "slate"
+import { useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -11,6 +11,17 @@ import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
 import { AnchorDialog } from "./AnchorDialog"
 
+function isPreciseLinkSelection(editor: Editor): boolean {
+  const selection = editor.selection
+  if (!selection) return false
+  if (Range.isCollapsed(selection)) return true
+  const anchorCell = Editor.above(editor, {
+    at: selection.anchor, match: node => Element.isElement(node) && node.type === 'table-cell',
+  })?.[1]
+  return !!anchorCell && Path.isAncestor(anchorCell, selection.focus.path) &&
+    Range.equals(selection, Editor.range(editor, anchorCell))
+}
+
 export function Anchor({
   element,
   attributes,
@@ -19,64 +30,37 @@ export function Anchor({
   const startEdgeRef = useRef<HTMLSpanElement>(null)
   const anchorRef = useRef<HTMLAnchorElement>(null)
   const selected = useSelected()
-  const editor = useSlate()
+  const editor = useSlateStatic()
+  const preciseSelection = useSlateSelector(isPreciseLinkSelection)
   const dialog = useLayer("dialog")
+  const dialogRef = useRef(dialog)
+  const ownedDialog = useRef<React.FunctionComponent<Record<string, never>> | null>(null)
+  dialogRef.current = dialog
   const isInternalLink = isWikiLinkHref(element.href)
-  const readOnly = !!editor.wysimark.readOnly
-
-  /**
-   * TODO:
-   *
-   * Finish implementing the anchor dialog.
-   *
-   * Stopped partway through because the entire document is being re-rendered
-   * on every keypress.
-   */
+  const readOnly = useReadOnly()
 
   useEffect(() => {
     const anchor = anchorRef.current
     const startEdge = startEdgeRef.current
     if (!anchor || !startEdge) return
-    if (readOnly) { dialog.close(); return }
-    /**
-     * NOTE: Do not use `focused && selected` here because when we click or
-     * focus on the pop up dialogs themselves, this will cause the dialogs to
-     * close.
-     *
-     * TODO: Figure out how to make the dialogs not close when clicking on them.
-     *
-     * It has to support these use cases:
-     *
-     * - Closes when user clicks somewhere in the document outside the link
-     * - Stays open when user clicks on the dialog
-     * - Stays open when user is in an input in the dialog
-     * - Closes when the editor loses focus but stays open when the editor loses
-     *   focus to the anchor dialog or the anchor edit dialog
-     */
-    // Only show dialog when the link is precisely selected (not part of a larger selection)
-    const hasSelection = editor.selection &&
-      editor.selection.anchor.offset !== editor.selection.focus.offset;
-
-    if (selected && !hasSelection) {
-      /**
-       * The setTimeout delay is necessary when first clicking into the browser
-       * and when switching from one link to another. Without it, the dialog
-       * will not open.
-       */
-      const timer = window.setTimeout(() => {
-        dialog.open(() => (
-          <AnchorDialog
-            destAnchor={anchor}
-            destStartEdge={startEdge}
-            element={element}
-          />
-        ))
-      })
-      return () => window.clearTimeout(timer)
-    } else {
-      dialog.close()
+    const closeOwned = () => {
+      if (ownedDialog.current && dialogRef.current.layer?.Component === ownedDialog.current) dialogRef.current.close()
+      ownedDialog.current = null
     }
-  }, [selected, element, readOnly])
+    // Dialog focus must not dismiss a selected link's information card.
+    // A rectangular table selection may cross this link without selecting its cell.
+    if (readOnly || !selected || !preciseSelection) { closeOwned(); return }
+    // Defer opening until Slate's DOM selection has settled.
+    const win = anchor.ownerDocument.defaultView!
+    const timer = win.setTimeout(() => {
+      const card: React.FunctionComponent<Record<string, never>> = () => (
+        <AnchorDialog destAnchor={anchor} destStartEdge={startEdge} element={element} />
+      )
+      ownedDialog.current = card
+      dialogRef.current.open(card)
+    })
+    return () => { win.clearTimeout(timer); closeOwned() }
+  }, [selected, preciseSelection, element, readOnly])
 
   return (
     <$Anchor

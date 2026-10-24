@@ -1,6 +1,6 @@
 import { ui } from "../../utils/translations"
 import styled from "@emotion/styled"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { useSlateStatic } from "slate-react"
 
 import { $Panel } from "../../shared-overlays"
@@ -221,18 +221,28 @@ export function AnchorDialog({
     ? editor.wysimark.renderInternalLinkPreview?.(internalTarget)
     : null
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  useEffect(() => {
+  const [, refreshGeometry] = useState(0)
+  useLayoutEffect(() => {
     const doc = destAnchor.ownerDocument
-    const hide = (event: Event) => {
-      const target = event.target
-      // Scrolling the page dismisses the information card; its own preview
-      // scroll area and unrelated panes do not affect the selected object.
-      if (target === doc || target === doc.scrollingElement ||
-        (target instanceof doc.defaultView!.Element && target.contains(destAnchor))) dialog.close()
+    const win = doc.defaultView!
+    let frame = 0
+    const refresh = () => {
+      if (!frame) frame = win.requestAnimationFrame(() => {
+        frame = 0
+        refreshGeometry(value => value + 1)
+      })
     }
-    doc.addEventListener('scroll', hide, true)
-    return () => doc.removeEventListener('scroll', hide, true)
-  }, [destAnchor])
+    const observer = new win.ResizeObserver(refresh)
+    // Media resize state lives below the portal's owner, so the information
+    // card must measure its anchor even when its own React props do not change.
+    for (const element of new Set([destAnchor, destStartEdge, ref.current])) {
+      if (element) observer.observe(element)
+    }
+    // Scroll events from nested editor panes do not reach the window listener
+    // used by useAbsoluteReposition. Capture them on the owner document too.
+    doc.addEventListener('scroll', refresh, true)
+    return () => { doc.removeEventListener('scroll', refresh, true); observer.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
+  }, [destAnchor, destStartEdge])
 
   const handleDrag = useCallback((deltaX: number, deltaY: number) => {
     setDragOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))

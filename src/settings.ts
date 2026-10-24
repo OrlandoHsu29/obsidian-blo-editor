@@ -17,6 +17,8 @@ export type EditorSettings = {
   restrictExistingBloTabs: boolean
   attachmentFolder: string
   deleteEmbeddedAttachments: boolean
+  enableImageViewer: boolean
+  enableDrawings: boolean
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   hiddenToolbarButtons: string[]
 }
@@ -28,6 +30,8 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   restrictExistingBloTabs: false,
   attachmentFolder: DEFAULT_ATTACHMENT_FOLDER,
   deleteEmbeddedAttachments: false,
+  enableImageViewer: false,
+  enableDrawings: false,
   tableDefaults: { headerRow: true, headerColumn: false },
   hiddenToolbarButtons: [],
 }
@@ -58,6 +62,7 @@ export class BloSettingsTab extends PluginSettingTab {
     const toolbarGroup = group(ui('工具栏配置'))
     const scopeGroup = group(ui('编辑范围'))
     const attachmentGroup = group(ui('附件'))
+    const integrationGroup = group(ui('扩展功能'))
     const toolbarDescription = toolbarGroup.createEl('p', { cls: 'setting-item-description blo-toolbar-description', text: ui('勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。'), attr: { id: 'blo-toolbar-config-description' } })
     toolbarGroup.before(toolbarDescription)
     const toolbarRow = toolbarGroup.createDiv({ cls: 'blo-toolbar-settings', attr: { role: 'group', 'aria-describedby': 'blo-toolbar-config-description' } })
@@ -92,6 +97,17 @@ export class BloSettingsTab extends PluginSettingTab {
           plugin.settings.preferRichEditing = value
           await plugin.saveData(plugin.settings)
         }))
+    for (const [feature, key, name, description] of [
+      ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；开启后自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],
+      ['drawings', 'enableDrawings', '启用画板', '依赖 Excalidraw；开启后自动安装并启用。支持内嵌预览、缩放及放大绘制。'],
+    ] as const) {
+      new Setting(integrationGroup).setName(ui(name)).setDesc(ui(description)).addToggle(toggle => toggle
+        .setValue(plugin.settings[key]).onChange(async value => {
+          toggle.setDisabled(true)
+          try { toggle.setValue(await plugin.setOptionalIntegration(feature, value)) }
+          finally { toggle.setDisabled(false) }
+        }))
+    }
     new Setting(scopeGroup)
       .setName(ui('编辑范围'))
       .setDesc(ui('控制哪些笔记自动使用 Blo；留空应用于整个库。'))

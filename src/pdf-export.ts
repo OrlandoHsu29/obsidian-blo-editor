@@ -103,7 +103,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   for (const element of [clone, ...Array.from(clone.querySelectorAll('*'))]) {
     element.classList.remove('--selected', '--focused', '--dragging', 'is-selected');
     for (const attr of Array.from(element.attributes)) {
-      if (/^on/i.test(attr.name) || ['contenteditable','autofocus','data-block-selected','data-cell-mode','data-axis-selection','data-cell-selection','data-delete-preview'].includes(attr.name)) element.removeAttribute(attr.name);
+      if (/^on/i.test(attr.name) || ['contenteditable','autofocus','data-block-selected','data-cell-selection','data-delete-preview'].includes(attr.name)) element.removeAttribute(attr.name);
       if (['href','xlink:href','src'].includes(attr.name) && /^\s*javascript:/i.test(attr.value)) element.removeAttribute(attr.name);
     }
   }

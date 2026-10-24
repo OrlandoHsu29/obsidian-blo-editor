@@ -9,7 +9,7 @@
  * executed and there were leftover `refresh` calls without a trailing
  * execution.
  */
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { throttle } from "../../utils/throttle"
 
@@ -40,6 +40,8 @@ export function useThrottledRefresh(
       ),
     [intervalInMs]
   )
+
+  useEffect(() => () => refresh.cancel(), [refresh])
 
   return Object.assign(refresh, { counter })
 }

@@ -98,11 +98,11 @@ Ctrl+B 加粗，Ctrl+I 斜体，Ctrl+U 下划线，Ctrl+Alt+C 切换字体颜色
 Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
 更多快捷键在 Obsidian 设置中搜索 **Blo Editor**。
 
-画板功能需安装并启用 [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin)。
+在 Blo Editor 设置的「扩展功能」中开启「启用画板」，会自动安装并启用 [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin)；已安装时直接复用。
 通过 `/画板`、工具栏画板按钮或“插入画板”命令创建附件并内嵌预览；点击预览选中并调整大小，通过右上角“放大绘制”按钮在完整的 Excalidraw 标签页中编辑，
-保存后自动刷新预览，通过左上角「返回笔记」保存并回到原笔记。预览和完整画板右上角均提供「另存为」，可将副本保存到库内相对路径，不替换当前引用。是否同步删除附件由上述设置控制。
+保存后自动刷新预览，通过左上角「返回笔记」保存并回到原笔记。预览和完整画板右上角均提供「另存为」，可将副本保存到库内相对路径；默认保留原引用，勾选「另存后替换当前引用」可更新对应引用，并支持撤销。是否同步删除附件由上述设置控制。
 
-图片查看器 Obsidian Image Toolkit 是可选插件。
+「启用图片查看器」会自动安装并启用 Image Toolkit，支持放大查看图片，并适配了工具栏图标和主题样式。关闭上述开关只停用 Blo 集成，保留依赖插件与附件。
 底层编辑器是 Slate，依赖原生 CodeMirror 接口的第三方编辑插件需要单独适配。
 
 ## 构建

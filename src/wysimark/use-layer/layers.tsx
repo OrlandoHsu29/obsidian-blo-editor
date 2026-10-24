@@ -65,6 +65,7 @@ export function Layers({ children }: { children: React.ReactNode }) {
    */
   function closeLayer(layerType: string) {
     setLayers((layers) => {
+      if (!(layerType in layers)) return layers
       const nextLayers = { ...layers }
       delete nextLayers[layerType]
       return nextLayers

@@ -24,6 +24,7 @@ type SlashCommand = {
   icon: string
   run?: (editor: Editor) => void
   dialog?: 'link' | 'image'
+  feature?: 'drawings'
 }
 
 const normalizeSearch = (text: string) => text.normalize('NFKC').toLowerCase().replace(/[\s_-]+/g, '')
@@ -39,9 +40,9 @@ function command(label: Parameters<typeof ui>[0], icon: string, run: SlashComman
 }
 
 /** Search translated names, common aliases, and Chinese pinyin initials. */
-export function filterSlashCommands(query: string): SlashCommand[] {
+export function filterSlashCommands(query: string, drawingsEnabled = true): SlashCommand[] {
   const search = normalizeSearch(query)
-  return slashCommands.filter(command => command.searchTerms.some(name => name.includes(search)))
+  return slashCommands.filter(command => (!command.feature || drawingsEnabled) && command.searchTerms.some(name => name.includes(search)))
 }
 
 /** These use the same editor methods as the toolbar and formatting shortcuts. */
@@ -56,7 +57,7 @@ export const slashCommands: SlashCommand[] = [
   command('链接', 'link', undefined, {}, ['lj', 'url', 'hyperlink'], 'link'),
   command('图片', 'image', undefined, {}, ['照片', 'photo', 'picture', 'tp', 'zp'], 'image'),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),
-  command('画板', 'pencil-ruler', editor => { void editor.wysimark.insertDrawing?.() }, {}, ['drawing', 'whiteboard', 'canvas', 'excalidraw', 'hb', 'ht']),
+  {...command('画板', 'pencil-ruler', editor => { void editor.wysimark.insertDrawing?.() }, {}, ['drawing', 'whiteboard', 'canvas', 'excalidraw', 'hb', 'ht']), feature: 'drawings'},
   command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线', 'fgx']),
   command('字体颜色', 'palette', editor => editor.wysimark.openTextColor?.(), {}, ['ztys', 'ys']),
 ]

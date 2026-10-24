@@ -1,6 +1,6 @@
 import type BloEditorPlugin from './main';
 import { ui } from "./wysimark/utils/translations"
-import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon } from 'obsidian';
+import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice } from 'obsidian';
 import { Editor, Node, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
 import * as React from 'react';
@@ -356,6 +356,7 @@ function KnowledgeSpaceEditorComponent({
   });
   editor.wysimark.readOnly = readOnly;
   editor.wysimark.toolbarPreferences = plugin.toolbarPreferences;
+  editor.wysimark.integrationPreferences = plugin.integrationPreferences;
   editor.wysimark.normalizeInternalLink = value => normalizeVaultLinkInput(plugin.app, value);
   editor.wysimark.resolveInternalMedia = target => {
     const reference = resolveVaultReference(plugin.app, file.path, target);
@@ -489,6 +490,7 @@ export class BloView extends FileView {
     editor.wysimark.toggleReading = () => this.toggleReading();
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
     editor.wysimark.insertDrawing = async () => {
+      if (!this.plugin.settings.enableDrawings) { new Notice(ui('请先在设置中启用画板')); return; }
       const file = this.currentFile;
       if (file) await insertDrawing(this.app, file, editor, () => this.editor === editor && this.currentFile === file,
         (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder);

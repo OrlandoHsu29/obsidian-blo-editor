@@ -4,6 +4,7 @@ import { MenuItemData } from '../../../shared-overlays/types'
 import { visibleToolbarItems } from '../../items'
 import { $Toolbar, $ToolbarContainer, $ToolbarDivider, $ToolbarDividerContainer } from '../../styles'
 import { ToolbarButton } from './toolbar-button'
+import { getDefaultIntegrations, subscribeDefaultIntegrations } from '../../../../integration-preferences'
 function ToolbarItem({item}:{item:MenuItemData}) {
   const editor=useSlateStatic()
   if(item==='divider')return <$ToolbarDividerContainer data-item-type='divider'><$ToolbarDivider /></$ToolbarDividerContainer>
@@ -15,6 +16,8 @@ const getEmptyHidden = () => emptyHidden
 const subscribeEmpty = () => () => {}
 export function Toolbar() {
   const editor=useSlateStatic()
+  const integrations=editor.wysimark.integrationPreferences
+  useSyncExternalStore(integrations?.subscribe ?? subscribeDefaultIntegrations, integrations?.getSnapshot ?? getDefaultIntegrations)
   const preferences = editor.wysimark.toolbarPreferences
   const hidden = useSyncExternalStore(preferences?.subscribe ?? subscribeEmpty, preferences?.getSnapshot ?? getEmptyHidden, getEmptyHidden)
   const items = visibleToolbarItems(hidden, item => !item.show || item.show(editor))

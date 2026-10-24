@@ -143,16 +143,17 @@ Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
-For embedded drawings, install and enable [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin).
+Turn on **Enable drawings** under **Optional integrations** in Blo Editor settings to install and activate [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin), or reuse an existing installation.
 Use `/drawing`, the drawing toolbar button, or **Insert drawing** to create an attachment
 and embed its preview. Click the preview to select and resize it; use its top-right
 **Open drawing editor** button to draw in a full-size Excalidraw tab;
 saved changes refresh the preview. **Back to note** saves and returns to the source
 note. **Save drawing as** is available at the top right of both the preview and
-the full drawing view; save a vault-relative copy without replacing the current
-embed. Attachment deletion follows the settings described above.
+the full drawing view. Save a vault-relative copy; the current embed stays unchanged
+unless **Replace current reference after saving** is checked. Reference updates
+support undo. Attachment deletion follows the settings described above.
 
-Obsidian Image Toolkit is an optional image viewer. The editor uses Slate; third-party editing extensions
+**Enable image viewer** installs and activates Image Toolkit for enlarged image previews, with adapted toolbar icons and theme styling. Turning either integration off keeps its dependency plugin and attachments. The editor uses Slate; third-party editing extensions
 that require CodeMirror do not automatically apply to this view.
 
 ## Development

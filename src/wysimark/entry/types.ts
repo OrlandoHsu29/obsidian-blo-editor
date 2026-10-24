@@ -1,6 +1,7 @@
 import { Descendant } from "slate"
 import type { ReactNode } from "react"
 import type { ToolbarPreferences } from '../../toolbar-preferences'
+import type { IntegrationPreferences } from '../../integration-preferences'
 
 /**
  * Handler for saving image files to vault
@@ -37,6 +38,7 @@ export type WysimarkEditor = {
     resolveInternalMedia?: (target: string) => string | undefined
     getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined
     toolbarPreferences?: ToolbarPreferences
+    integrationPreferences?: IntegrationPreferences
     resolveImageUrl?: (url: string) => string
     save?: () => Promise<void>
     toggleReading?: () => Promise<void>

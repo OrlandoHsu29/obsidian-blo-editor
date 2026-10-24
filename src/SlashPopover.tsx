@@ -1,5 +1,6 @@
 import { ui } from "./wysimark/utils/translations"
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { getDefaultIntegrations, subscribeDefaultIntegrations } from './integration-preferences'
 import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
 import { ReactEditor, useFocused, useSlate } from 'slate-react'
@@ -9,6 +10,8 @@ import { ImageUrlDialog } from './wysimark/toolbar-plugin/components/dialog/imag
 
 export function SlashPopover() {
   const editor = useSlate(), focused = useFocused()
+  const preferences = editor.wysimark.integrationPreferences
+  const integrations = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations)
   const [dialog, setDialog] = useState<{kind: 'link' | 'image'; left: number; top: number; height: number} | null>(null)
   const [dialogAnchor, setDialogAnchor] = useState<HTMLSpanElement | null>(null)
   const context = focused && !dialog ? getSlashContext(editor) : null
@@ -16,7 +19,7 @@ export function SlashPopover() {
   const [choice, setChoice] = useState({key: '', index: 0})
   const popup = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({left: 0, top: 0, maxHeight: 280})
-  const matches = filterSlashCommands(context?.query || '')
+  const matches = filterSlashCommands(context?.query || '', integrations.drawings)
   const visible = !!context && context.key !== dismissed && matches.length > 0
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
   const choose = (index: number) => {

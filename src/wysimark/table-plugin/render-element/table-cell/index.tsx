@@ -20,16 +20,7 @@ export function TableCell({
   const cellSelected=tableContext.isSelected&&(tableContext.blockSelected||(cells
     ?element.x!==undefined&&element.y!==undefined&&element.x>=cells.left&&element.x<=cells.right&&element.y>=cells.top&&element.y<=cells.bottom
     :selected))
-  /**
-   * table has slection and we are in the top left cell
-   */
-  /**
-   * table has selection and we are in the left columns
-   */
   const showRowMenu = tableContext.isSelected && element.x === 0
-  /**
-   * table has selection and we are in the top row
-   */
   const showColumnMenu = tableContext.isSelected && element.y === 0
   return (
     <$TableCell

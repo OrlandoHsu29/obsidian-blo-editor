@@ -47,7 +47,7 @@ export function Table({
   }, [])
   return (
     <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
-      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-axis-selection={cells?.axis} data-cell-selection={cells&&!readOnly?true:undefined} data-cell-mode={cells?.kind==='cell'&&!readOnly?(cells.left!==cells.right||cells.top!==cells.bottom?'range':'selected'):undefined}>
+      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={cells&&!readOnly?true:undefined}>
         <tbody>{children}</tbody>
       </$Table>
       <TableInteractions element={element} readOnly={readOnly} active={isSelected||blockSelected} />

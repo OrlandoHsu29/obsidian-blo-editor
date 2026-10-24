@@ -1,12 +1,13 @@
 import { App, Component, Notice, Plugin, TFile, ItemView, WorkspaceLeaf, setIcon, addIcon, removeIcon } from 'obsidian'
 import { ui } from './wysimark/utils/translations'
-import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DRAWING_SAVE_AS_SVG } from './drawing-save-as'
+import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DRAWING_SAVE_AS_SVG, DrawingReference, copyDrawingReference } from './drawing-save-as'
 
 type DrawingView = ItemView & { file?: TFile; forceSave?: () => Promise<void> }
 type ReturnSession = {
   leaf: WorkspaceLeaf; view: DrawingView; file: TFile
   source: WorkspaceLeaf; sourceFile: TFile; sourceType: string; sourceState: Record<string, unknown>
   bar: HTMLElement; button: HTMLButtonElement; returning: boolean; dispose: () => void
+  reference?: DrawingReference
 }
 const navigations = new WeakMap<App, DrawingNavigation>()
 
@@ -37,10 +38,11 @@ class DrawingNavigation extends Component {
       }
     }
   }
-  async open(file: TFile, source: WorkspaceLeaf, sourceFile: TFile): Promise<void> {
+  async open(file: TFile, source: WorkspaceLeaf, sourceFile: TFile, reference?: DrawingReference): Promise<void> {
     this.refresh()
     const previous = Array.from(this.sessions.values()).find(session => session.file === file && session.source === source && session.sourceFile === sourceFile)
     if (previous) {
+      previous.reference?.path.unref(); previous.reference = copyDrawingReference(reference)
       await this.app.workspace.revealLeaf(previous.leaf)
       this.app.workspace.setActiveLeaf(previous.leaf, { focus: true })
       return
@@ -60,7 +62,7 @@ class DrawingNavigation extends Component {
     setIcon(button.createSpan(), 'arrow-left')
     button.createSpan({ text: ui('返回笔记') })
     const click = () => { void this.returnToSource(session) }
-    const saveAs = view.addAction(DRAWING_SAVE_AS_ICON, ui('画板另存为'), () => new DrawingSaveAsModal(this.app, file).open())
+    const saveAs = view.addAction(DRAWING_SAVE_AS_ICON, ui('画板另存为'), () => new DrawingSaveAsModal(this.app, file, session.reference).open())
     const positionSaveAs = () => {
       const save = view.containerEl.querySelector('.view-actions .lucide-save')?.closest<HTMLElement>('.view-action')
       if (save && save.previousElementSibling !== saveAs) save.before(saveAs)
@@ -76,8 +78,8 @@ class DrawingNavigation extends Component {
       view.contentEl.addClass('blo-drawing-return-layout')
       if (!view.contentEl.contains(bar)) view.contentEl.prepend(bar)
     })
-    const session: ReturnSession = { leaf, view, file, source, sourceFile, sourceType, sourceState, bar, button, returning: false,
-      dispose: () => { observer.disconnect(); actionObserver.disconnect(); button.removeEventListener('click', click); saveAs.remove(); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
+    const session: ReturnSession = { leaf, view, file, source, sourceFile, sourceType, sourceState, bar, button, returning: false, reference: copyDrawingReference(reference),
+      dispose: () => { session.reference?.path.unref(); observer.disconnect(); actionObserver.disconnect(); button.removeEventListener('click', click); saveAs.remove(); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
     button.addEventListener('click', click)
     view.contentEl.addClass('blo-drawing-return-layout')
     view.contentEl.prepend(bar)
@@ -121,9 +123,9 @@ export function installDrawingNavigation(plugin: Plugin): void {
   plugin.addChild(navigation)
 }
 
-export async function openEmbeddedDrawing(app: App, file: TFile, source: WorkspaceLeaf, sourceFile: TFile): Promise<boolean> {
+export async function openEmbeddedDrawing(app: App, file: TFile, source: WorkspaceLeaf, sourceFile: TFile, reference?: DrawingReference): Promise<boolean> {
   const navigation = navigations.get(app)
   if (!navigation) return false
-  await navigation.open(file, source, sourceFile)
+  await navigation.open(file, source, sourceFile, reference)
   return true
 }

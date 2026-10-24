@@ -69,10 +69,10 @@
 
 /* Image Toolkit uses raster sprite icons upstream; the plugin replaces them with native SVGs. */
 .oit-normal .oit-img-footer { bottom:20px; }
-.oit-normal .oit-img-footer .oit-img-toolbar { display:flex; align-items:center; justify-content:center; width:max-content; max-width:calc(100vw - 40px); height:auto; gap:4px; padding:8px; margin:0 auto; background:var(--background-secondary); color:var(--text-muted); border:1px solid var(--background-modifier-border); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.16); }
-.oit-normal .oit-img-footer .oit-img-toolbar:hover { background:var(--background-secondary); }
-.oit-normal .oit-img-footer .oit-img-toolbar > li { float:none; display:flex; align-items:center; justify-content:center; width:32px; height:32px; margin:0; border-radius:6px; line-height:1; flex:0 0 32px; }
-.oit-normal .oit-img-footer .oit-img-toolbar > li:hover { animation:none; background:var(--background-modifier-hover); color:var(--text-normal); }
+.oit.oit-normal .oit-img-footer .oit-img-toolbar { display:flex; align-items:center; justify-content:center; box-sizing:border-box; width:max-content; max-width:calc(100vw - 40px); height:auto; gap:4px; padding:8px; margin:0 auto; overflow-x:auto; background:var(--background-secondary); color:var(--text-muted); border:1px solid var(--background-modifier-border); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.16); }
+.oit.oit-normal .oit-img-footer .oit-img-toolbar:hover { background:var(--background-secondary); }
+.oit.oit-normal .oit-img-footer .oit-img-toolbar > li { float:none; display:flex; align-items:center; justify-content:center; box-sizing:border-box; width:32px; height:32px; margin:0; padding:0; border-radius:6px; line-height:1; flex:0 0 32px; }
+.oit.oit-normal .oit-img-footer .oit-img-toolbar > li:hover { animation:none; background:var(--background-modifier-hover); color:var(--text-normal); }
 .oit-normal .oit-img-footer .oit-img-toolbar > li::before { content:none !important; background-image:none !important; }
 .oit-normal .oit-img-footer .oit-img-toolbar svg { width:20px; height:20px; stroke-width:1.5px; pointer-events:none; }
 .oit-normal .oit-img-footer .oit-img-toolbar svg * { pointer-events:none; }
@@ -284,12 +284,12 @@
 .wysimark-editor table[data-block-selected="true"] td { background: var(--text-selection); }
 .wysimark-editor table[data-block-selected="true"] { caret-color: transparent; }
 .wysimark-editor [data-wysimark-code-block][data-block-selected="true"] { caret-color:transparent; }
-.wysimark-editor table[data-axis-selection] { caret-color: transparent; }
-.wysimark-editor table:is([data-cell-mode="selected"],[data-cell-mode="range"]) { caret-color:transparent; }
-.wysimark-editor table[data-cell-mode="selected"] td.--selected { background:var(--text-selection); }
-.wysimark-editor table[data-cell-mode="selected"] ::selection { background:transparent; color:inherit; }
-.wysimark-editor table[data-axis-selection] td.--selected { background: var(--text-selection); }
-.wysimark-editor table[data-axis-selection] ::selection { background: transparent; }
+.wysimark-editor table[data-cell-selection="true"] { caret-color:transparent; }
+.wysimark-editor table[data-cell-selection="true"] td.--selected { background:var(--text-selection); outline:none; }
+/* Slate's row-major range also marks links in cells outside the selected rectangle. */
+.wysimark-editor table[data-cell-selection="true"] a.--selected { background:transparent; transition:none; }
+.wysimark-editor table[data-cell-selection="true"] td.--selected::selection,
+.wysimark-editor table[data-cell-selection="true"] td.--selected ::selection { background:transparent; color:inherit; }
 .wysimark-editor table[data-block-selected="true"]::selection,
 .wysimark-editor table[data-block-selected="true"] ::selection,
 .wysimark-editor table[data-cell-selection="true"] td:not(.--selected)::selection,
@@ -527,10 +527,23 @@
 .blo-video > video { display:block; width:100%; height:auto; border-radius:8px; }
 .blo-video.is-selected > video { outline:2px solid var(--interactive-accent); outline-offset:1px; }
 .blo-drawing-unavailable { padding:24px 12px; color:var(--text-muted); font-size:var(--font-ui-small); }
-.view-content.blo-drawing-return-layout { display:flex; flex-direction:column; }
+.view-content.blo-drawing-return-layout { position:relative; display:flex; flex-direction:column; }
 .blo-drawing-return-layout > .excalidraw-wrapper { flex:1 1 auto; min-height:0; height:0 !important; }
-.blo-drawing-return-bar { display:flex; flex:0 0 auto; align-items:center; padding:6px 12px; border-bottom:1px solid var(--background-modifier-border); background:var(--background-primary); }
-.blo-drawing-return-bar button { display:inline-flex; align-items:center; gap:6px; height:28px; padding:4px 8px; color:var(--text-normal); background:var(--interactive-normal); border:1px solid var(--background-modifier-border); border-radius:6px; box-shadow:none; font-family:var(--font-interface); font-size:var(--font-ui-small); cursor:pointer; }
-.blo-drawing-return-bar button:hover { background:var(--interactive-hover); }
+.blo-drawing-return-bar { position:absolute; top:8px; left:12px; z-index:5; display:flex; align-items:center; pointer-events:none; }
+.blo-drawing-return-bar button { display:inline-flex; align-items:center; gap:6px; height:40px; padding:4px 12px; color:#1b1b1f; background:#fff; border:1px solid #e6e6e6; border-radius:8px; box-shadow:0 2px 8px #00000014; font-family:var(--font-interface); font-size:var(--font-ui-small); cursor:pointer; pointer-events:auto; }
+.blo-drawing-return-bar button:hover { color:#1b1b1f; background:#f5f5f5; }
+.blo-drawing-return-bar button:focus-visible { outline:2px solid #6965db; outline-offset:2px; }
 .blo-drawing-return-bar button:disabled { cursor:wait; opacity:.6; }
 .blo-drawing-return-bar button svg { display:block; width:16px; height:16px; }
+.blo-drawing-replace-reference { display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:var(--font-ui-small); }
+.blo-drawing-replace-reference input { margin:0; }
+
+/* Image and video size controls share Obsidian's surface and state colors. */
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) { top:auto; bottom:calc(100% + 8px); left:0; z-index:3; gap:4px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:8px; background:var(--background-secondary); color:var(--text-normal); box-shadow:var(--shadow-s); font:13px/1 var(--font-interface); }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span { outline:none; border-radius:4px; background:transparent; }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span + span { border-left:1px solid var(--background-modifier-border); border-radius:0; padding-left:4px; }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-width:28px; height:28px; padding:0 7px; border:0; border-radius:4px; background:transparent; color:var(--text-normal); font-size:inherit; line-height:1; }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span.--selected { color:var(--text-accent); background:var(--background-modifier-hover); }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span.--disabled { color:var(--text-faint); background:transparent; cursor:default; }
+.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) svg { position:static; top:auto; display:block; width:17px; height:17px; }

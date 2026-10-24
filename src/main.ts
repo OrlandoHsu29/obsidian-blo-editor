@@ -42,7 +42,12 @@ export default class BloEditorPlugin extends Plugin {
       const placement=control.dataset.tooltipPosition;
       setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
     },true);
-    this.settings = Object.assign(this.settings, await this.loadData());
+    const savedSettings = await this.loadData();
+    this.settings = Object.assign(this.settings, savedSettings);
+    // Do not broaden an old per-type deletion opt-in to every embedded medium.
+    if (typeof savedSettings?.deleteEmbeddedAttachments !== 'boolean') this.settings.deleteEmbeddedAttachments = false;
+    delete (this.settings as any).deleteImageAttachments;
+    delete (this.settings as any).deleteDrawingAttachments;
     this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
     installDrawingNavigation(this);

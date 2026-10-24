@@ -114,9 +114,11 @@ settings, notes, attachments, dependencies, or migration tools.
 Use `/` for commands, the block handle for block actions, and the floating toolbar
 for formatting. Find/replace, reading mode, code highlighting, image insertion and
 resizing are included. Changes save automatically and before closing; Ctrl+S saves
-immediately. Removing an image or drawing keeps its attachment by default.
-Separate settings can move unreferenced image/drawing attachments to trash on
-deletion. Undo restores the attachment and refreshes the preview automatically.
+immediately. Removing embedded images, audio, video, PDFs or drawings keeps the
+original by default. The single **Delete attachment when removing an embedded file**
+setting moves unreferenced files to trash only within the attachment folder and
+its subfolders. Other folders keep originals; an empty path covers root-level
+files only. Undo restores attachments and refreshes previews automatically.
 
 Slash commands include 3×3 tables, checkboxes, links, and images; link/image
 commands reuse the toolbar insertion dialogs. In **Toolbar configuration**, shared

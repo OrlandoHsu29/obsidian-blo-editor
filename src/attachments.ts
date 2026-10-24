@@ -10,6 +10,14 @@ export function normalizeAttachmentFolder(value: string): string {
   return path ? normalizePath(path).replace(/^\.\/?$|\/$/g, '') : ''
 }
 
+/** A root attachment folder owns root files, not every directory in the vault. */
+export function isAttachmentPath(path: string, folder: string): boolean {
+  let directory: string
+  try { directory = normalizeAttachmentFolder(folder) }
+  catch { return false }
+  return directory ? path.startsWith(directory + '/') : !path.includes('/')
+}
+
 /** Both images and drawings use the same vault-relative folder and collision policy. */
 export async function attachmentPath(app: App, folder: string, filename: string): Promise<string> {
   const directory = normalizeAttachmentFolder(folder)

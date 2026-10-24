@@ -16,8 +16,7 @@ export type EditorSettings = {
   richEditingFolder: string
   restrictExistingBloTabs: boolean
   attachmentFolder: string
-  deleteImageAttachments: boolean
-  deleteDrawingAttachments: boolean
+  deleteEmbeddedAttachments: boolean
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   hiddenToolbarButtons: string[]
 }
@@ -28,8 +27,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   richEditingFolder: '',
   restrictExistingBloTabs: false,
   attachmentFolder: DEFAULT_ATTACHMENT_FOLDER,
-  deleteImageAttachments: false,
-  deleteDrawingAttachments: false,
+  deleteEmbeddedAttachments: false,
   tableDefaults: { headerRow: true, headerColumn: false },
   hiddenToolbarButtons: [],
 }
@@ -116,7 +114,7 @@ export class BloSettingsTab extends PluginSettingTab {
         }))
     new Setting(attachmentGroup)
       .setName(ui('附件保存路径'))
-      .setDesc(ui('图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。'))
+      .setDesc(ui('粘贴或导入的媒体和新画板保存于此，相对于知识库根目录；留空保存到根目录。'))
       .addText(text => text
         .setPlaceholder(DEFAULT_ATTACHMENT_FOLDER)
         .setValue(plugin.settings.attachmentFolder)
@@ -131,17 +129,12 @@ export class BloSettingsTab extends PluginSettingTab {
             text.inputEl.reportValidity()
           }
         }))
-    for (const [key, label] of [
-      ['deleteImageAttachments', '删除图片时删除附件'],
-      ['deleteDrawingAttachments', '删除画板时删除附件'],
-    ] as const) {
       new Setting(attachmentGroup)
-        .setName(ui(label))
-        .setDesc(ui('将不再被引用的附件移入回收站，支持撤销恢复。'))
-        .addToggle(toggle => toggle.setValue(plugin.settings[key]).onChange(async value => {
-          plugin.settings[key] = value
+        .setName(ui('删除内嵌文件时删除附件'))
+        .setDesc(ui('包含图片、音视频、PDF 和画板。仅将附件目录及子目录内、无其他引用的文件移入回收站，可撤销；其他目录保留源文件。路径留空时仅限库根目录文件。'))
+        .addToggle(toggle => toggle.setValue(plugin.settings.deleteEmbeddedAttachments).onChange(async value => {
+          plugin.settings.deleteEmbeddedAttachments = value
           await plugin.saveData(plugin.settings)
         }))
-    }
   }
 }

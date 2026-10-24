@@ -5,8 +5,9 @@ import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark
 import { ui } from './wysimark/utils/translations'
 import type { EditorSettings } from './settings'
 import { attachmentRestored } from './wysimark/image-plugin/attachment-revision'
+import { isAttachmentPath } from './attachments'
 
-const IMAGE_EXTENSIONS = new Set(['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'])
+const MEDIA_EXTENSIONS = new Set(['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp', 'mp3', 'wav', 'm4a', 'ogg', 'oga', 'opus', 'flac', 'aac', 'mp4', 'webm', 'ogv', 'mov', 'mkv', '3gp', 'pdf'])
 
 function imageUrls(nodes: Descendant[]): string[] {
   const urls: string[] = []
@@ -21,7 +22,7 @@ function imageUrls(nodes: Descendant[]): string[] {
 
 /** Observe actual removals, so moving blocks, initial loading and ordinary edits never delete files. */
 export function watchAttachments(app: App, source: TFile, editor: Editor, settings: () => EditorSettings): () => void {
-  type RemovedAttachment = { file: TFile; drawing: boolean; urls: Set<string>; content?: ArrayBuffer; deleted: boolean }
+  type RemovedAttachment = { file: TFile; urls: Set<string>; content?: ArrayBuffer; deleted: boolean }
   const records = new Map<string, RemovedAttachment>()
   const resolve = (url: string, sourcePath = source.path) => {
     let target = url
@@ -32,7 +33,8 @@ export function watchAttachments(app: App, source: TFile, editor: Editor, settin
     }
     return app.metadataCache.getFirstLinkpathDest(target.split('#')[0], sourcePath)
   }
-  const enabled = (record: RemovedAttachment) => record.drawing ? settings().deleteDrawingAttachments : settings().deleteImageAttachments
+  const enabled = (record: RemovedAttachment) => isAttachmentPath(record.file.path, settings().attachmentFolder) &&
+    settings().deleteEmbeddedAttachments
   const present = (record: RemovedAttachment, candidate: Editor = editor, sourcePath = source.path) => imageUrls(candidate.children).some(url =>
     (record.urls.has(url) && candidate === editor) || resolve(url, sourcePath)?.path === record.file.path)
   const shared = (record: RemovedAttachment) => {
@@ -76,7 +78,7 @@ export function watchAttachments(app: App, source: TFile, editor: Editor, settin
   const apply = editor.apply
   const wrapped: Editor['apply'] = operation => {
     const affected = new Set<RemovedAttachment>()
-    if (!editor.wysimark.readOnly && (records.size || settings().deleteDrawingAttachments || settings().deleteImageAttachments) &&
+    if (!editor.wysimark.readOnly && (records.size || settings().deleteEmbeddedAttachments) &&
       (operation.type === 'remove_node' || operation.type === 'insert_node') && Element.isElement(operation.node)) {
       const affectedNode = operation.type === 'remove_node' && Node.has(editor, operation.path) ? Node.get(editor, operation.path) : operation.node
       for (const url of imageUrls([affectedNode as Descendant])) {
@@ -85,9 +87,9 @@ export function watchAttachments(app: App, source: TFile, editor: Editor, settin
           const file = resolve(url)
           if (file) {
             const drawing = isDrawingFile(app, file)
-            const allowed = drawing ? settings().deleteDrawingAttachments : settings().deleteImageAttachments && IMAGE_EXTENSIONS.has(file.extension.toLowerCase())
-            if (allowed) {
-              record = records.get(file.path) ?? { file, drawing, urls: new Set(), deleted: false }
+            const allowed = settings().deleteEmbeddedAttachments && (drawing || MEDIA_EXTENSIONS.has(file.extension.toLowerCase()))
+            if (allowed && isAttachmentPath(file.path, settings().attachmentFolder)) {
+              record = records.get(file.path) ?? { file, urls: new Set(), deleted: false }
               records.set(file.path, record)
             }
           }

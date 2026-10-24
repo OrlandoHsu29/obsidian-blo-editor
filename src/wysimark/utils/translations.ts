@@ -129,6 +129,8 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "删除内嵌文件时删除附件": { zh: "删除内嵌文件时删除附件", en: "Delete attachment when removing an embedded file" },
+  "包含图片、音视频、PDF 和画板。仅将附件目录及子目录内、无其他引用的文件移入回收站，可撤销；其他目录保留源文件。路径留空时仅限库根目录文件。": { zh: "包含图片、音视频、PDF 和画板。仅将附件目录及子目录内、无其他引用的文件移入回收站，可撤销；其他目录保留源文件。路径留空时仅限库根目录文件。", en: "Includes images, audio, video, PDFs and drawings. Only unreferenced files in the attachment folder and its subfolders go to trash; undo restores them. Other folders keep originals. An empty path covers root-level files only." },
   "编辑器尚未就绪，请稍后重试": { zh: "编辑器尚未就绪，请稍后重试", en: "The editor is not ready. Please try again shortly" },
   "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。", en: "Check to show buttons; gray checked items are always visible. Hover for names. Changes apply immediately." },
   "复选框": { zh: "复选框", en: "Checkbox" },
@@ -159,7 +161,7 @@ export const uiMessages = {
   "网络图片下载失败，已保留原链接": { zh: "网络图片下载失败，已保留原链接", en: "Unable to download a remote image; the original link was kept" },
   "无法插入附件：{name}": { zh: "无法插入附件：{name}", en: "Unable to insert attachment: {name}" },
   "附件已保存，原插入位置已失效": { zh: "附件已保存，原插入位置已失效", en: "Attachments saved, but the original insertion point is no longer available" },
-  "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。": { zh: "图片和画板统一保存于此，路径相对于知识库根目录；留空保存到根目录。", en: "Save images and drawings here, relative to the vault root. Leave empty to use the vault root." },
+  "粘贴或导入的媒体和新画板保存于此，相对于知识库根目录；留空保存到根目录。": { zh: "粘贴或导入的媒体和新画板保存于此，相对于知识库根目录；留空保存到根目录。", en: "Save pasted/imported media and new drawings here, relative to the vault root. Leave empty to use the vault root." },
   "请填写知识库内的相对路径": { zh: "请填写知识库内的相对路径", en: "Enter a relative path within the vault" },
   "控制哪些笔记自动使用 Blo；留空应用于整个库。": { zh: "控制哪些笔记自动使用 Blo；留空应用于整个库。", en: "Choose which notes open in Blo automatically. Leave blank for the whole vault." },
   "右侧插入列":{zh:"右侧插入列",en:"Insert column right"},
@@ -552,8 +554,6 @@ export const uiMessages = {
   "放大绘制": { "zh": "放大绘制", "en": "Open drawing editor" },
   "返回笔记": { "zh": "返回笔记", "en": "Back to note" },
   "无法同步附件，请检查附件文件": { "zh": "无法同步附件，请检查附件文件", "en": "Unable to synchronize the attachment; check the attachment file" },
-  "删除图片时删除附件": { "zh": "删除图片时删除附件", "en": "Delete attachment when removing an image" },
-  "删除画板时删除附件": { "zh": "删除画板时删除附件", "en": "Delete attachment when removing a drawing" },
   "将不再被引用的附件移入回收站，支持撤销恢复。": { "zh": "将不再被引用的附件移入回收站，支持撤销恢复。", "en": "Move unreferenced attachments to trash. Undo restores the attachment." },
   "无法返回笔记，画板仍保留打开": { "zh": "无法返回笔记，画板仍保留打开", "en": "Unable to return to the note; the drawing remains open" },
   "安装 Excalidraw": { "zh": "安装 Excalidraw", "en": "Install Excalidraw" },

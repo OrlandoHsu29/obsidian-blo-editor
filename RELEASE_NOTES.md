@@ -2,6 +2,8 @@
 
 ## 中文
 
+- **跨屏拖动**：拖块靠近编辑区顶部或底部时自动滚动，支持整组块移动及撤销。
+- **引用文件信息**：选中附件目录外的媒体引用时显示来源与路径，可打开、修改或移除引用；滚动页面后隐藏，重新选中后再显示，源文件保留。
 - **库内媒体嵌入与链接**：从文件浏览器拖入已有图片、视频、画板等媒体，直接引用原文件；本地库链接菜单支持嵌入，自动识别本库链接和路径。编辑模式 Ctrl/Cmd 单击打开内部链接，阅读模式直接单击。
 - **视频块交互**：保留播放控件，支持块选中、等比缩放和尺寸预设；尺寸可保存，并支持撤销与重做。
 - **画板另存为**：按库内相对路径保存副本，同名自动避让，保留原画板和当前引用。
@@ -14,6 +16,8 @@
 
 ## English
 
+- **Cross-screen dragging:** scroll automatically near the editor's top or bottom while dragging blocks, with subtree moves and undo.
+- **Referenced file details:** select media outside the attachment folder to inspect its source, open it, change the reference or remove it while preserving the original. Scrolling dismisses the card until the object is selected again.
 - **Vault media and links:** drag existing images, videos and drawings from the file explorer to embed the original without copying it. Embed media from the vault link dialog and resolve this vault's copied links and paths. Ctrl/Cmd-click internal links while editing; click directly in reading mode.
 - **Video blocks:** keep native playback controls while adding atomic selection, proportional resizing, size presets, persisted dimensions and undo/redo.
 - **Save drawing as:** save a vault-relative copy with collision-safe naming, preserving the original and current embed.

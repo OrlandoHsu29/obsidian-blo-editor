@@ -2,6 +2,9 @@
 
 ## 0.1.16 — 2026-10-24
 
+- Auto-scroll at editor edges during block dragging, preserving subtree moves and undo.
+- Show source details and reference actions for media outside the attachment folder;
+  dismiss link cards on page scroll until the object is selected again.
 - Embed existing vault media without copying files; resolve vault paths and links,
   and open internal links with Ctrl/Cmd-click in editing mode or a click in reading mode.
 - Add resizable video blocks with native controls, atomic selection, proportional

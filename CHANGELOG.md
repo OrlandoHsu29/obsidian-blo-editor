@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.17 — 2026-10-24
+
+- Add optional image viewer and drawing integrations that install and enable their
+  dependencies on demand, without uninstalling them when an integration is disabled.
+- Optionally replace the originating drawing reference after saving a copy;
+  preserve dimensions and original files, with undo/redo and drawing-window support.
+- Keep source cards aligned during resizing and dismiss them before drawing actions.
+- Improve floating return controls and media toolbar theme styling and sizing.
+- Refine table cell selection and link-card behavior across rows.
+
 ## 0.1.16 — 2026-10-24
 
 - Auto-scroll at editor edges during block dragging, preserving subtree moves and undo.

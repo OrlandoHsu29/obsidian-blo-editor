@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.18 — 2026-10-24
+
+- Drag multiple selected blocks together, preserving child blocks and undo/redo.
+  Show rounded block highlights and fade the original blocks during dragging.
+- Use cell background highlights for tables selected together with other blocks,
+  without text-selection backgrounds or highlighted borders.
+- Preserve explicitly typed ordered-list numbers and create a separate paragraph
+  when pressing Enter at the end of a numbered heading.
+- Fix moving the caret outside trailing inline code with arrow keys or deletion.
+- Show the opening note's name while loading.
+
 ## 0.1.17 — 2026-10-24
 
 - Add optional image viewer and drawing integrations that install and enable their

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
+import { Path, Range } from "slate"
 import { ReactEditor, useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
@@ -20,6 +21,14 @@ export function Table({
   const isSelected = useSelected()
   const readOnly=useReadOnly()
   const blockSelected=useBlockSelection(element)
+  // Cross-block text ranges use the same cell backgrounds as table selections.
+  // Keep the original range intact for clipboard and deletion operations.
+  const crossBlockSelection=useSlateSelector(useCallback(editor=>{
+    const selection=editor.selection
+    if(!selection||Range.isCollapsed(selection))return false
+    const path=ReactEditor.findPath(editor,element)
+    return !Path.isAncestor(path,selection.anchor.path)||!Path.isAncestor(path,selection.focus.path)
+  },[editor,element]))
   const [deletePreview,setDeletePreview]=useState<TableDeletePreview>(null)
   const axis=useSyncExternalStore(useCallback(listener=>subscribeTableAxisSelection(editor,listener),[editor]),
     useCallback(()=>getTableAxisSelection(editor),[editor]))
@@ -47,7 +56,7 @@ export function Table({
   }, [])
   return (
     <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
-      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={cells&&!readOnly?true:undefined}>
+      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}>
         <tbody>{children}</tbody>
       </$Table>
       <TableInteractions element={element} readOnly={readOnly} active={isSelected||blockSelected} />

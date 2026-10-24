@@ -3,7 +3,7 @@ import { App, Notice, TFile } from 'obsidian'
 import * as React from 'react'
 
 /** File name belongs to the view, never to Markdown or Slate's text selection. */
-export function DocumentTitle({app,file,save}:{app:App;file:TFile;save:()=>Promise<void>}) {
+export function DocumentTitle({app,file,save,onEnterEnd}:{app:App;file:TFile;save:()=>Promise<void>;onEnterEnd?:()=>void}) {
   const labelId=React.useId()
   const [name,setName]=React.useState(file.basename)
   const [saving,setSaving]=React.useState(false)
@@ -30,6 +30,16 @@ export function DocumentTitle({app,file,save}:{app:App;file:TFile;save:()=>Promi
     <span id={labelId} className="wysimark-accessible-label">{ui("文件名；修改后按 Enter 或点击正文重命名")}</span>
     <input aria-labelledby={labelId} value={name} disabled={saving} spellCheck={false}
       onChange={event=>setName(event.target.value)} onBlur={()=>void commit()}
-      onKeyDown={event=>{if(event.key==='Enter'&&!event.nativeEvent.isComposing){event.preventDefault();event.currentTarget.blur()}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();event.currentTarget.value=file.basename;setName(file.basename)}}} />
+      onKeyDown={event=>{
+        if(event.key==='Enter'&&!event.nativeEvent.isComposing&&event.nativeEvent.keyCode!==229){
+          event.preventDefault();event.stopPropagation()
+          const input=event.currentTarget
+          const atEnd=input.selectionStart===input.value.length&&input.selectionEnd===input.value.length
+          input.blur()
+          if(atEnd&&!event.shiftKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey)onEnterEnd?.()
+        }else if(event.key==='Escape'){
+          event.preventDefault();event.stopPropagation();event.currentTarget.value=file.basename;setName(file.basename)
+        }
+      }} />
   </div>
 }

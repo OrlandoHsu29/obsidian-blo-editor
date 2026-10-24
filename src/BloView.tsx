@@ -11,6 +11,7 @@ import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/li
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
 import { selectDocumentEndFromPointer } from './blocks/document-end-pointer';
+import { insertDocumentStartParagraph } from './blocks/document-start';
 import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
@@ -355,7 +356,8 @@ function KnowledgeSpaceEditorComponent({
     const drawing = exact instanceof TFile ? exact : plugin.app.metadataCache.getFirstLinkpathDest(target, file.path);
     return drawing instanceof TFile && isDrawingFile(plugin.app, drawing);
   };
-  editor.wysimark.documentTitle = <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}} />;
+  editor.wysimark.documentTitle = <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
+    onEnterEnd={readOnly ? undefined : () => insertDocumentStartParagraph(editor)} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
     if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) return url;
     let decoded = url;

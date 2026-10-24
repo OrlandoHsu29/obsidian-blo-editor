@@ -6,6 +6,8 @@
   Show rounded block highlights and fade the original blocks during dragging.
 - Use cell background highlights for tables selected together with other blocks,
   without text-selection backgrounds or highlighted borders.
+- Avoid synthetic empty header rows when pasting tables from Yuque and other
+  HTML editors, while retaining genuine empty rows and header formatting.
 - Preserve explicitly typed ordered-list numbers and create a separate paragraph
   when pressing Enter at the end of a numbered heading. Split numbered headings
   and body text into separate list items on Enter within text, preserving formatting,

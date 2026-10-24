@@ -11,6 +11,7 @@ import { blockGap } from './typography'
 import { clearBlockSelection, selectBlockContents } from './selection'
 import { isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { showBlockMenu } from './block-menu'
+import { startBlockDragAutoScroll } from './drag-auto-scroll'
 
 type DropPosition = 'before' | 'after'
 type DropPreview={position:DropPosition;depth:number;maxDepth:number;origin:number;step:number;left:number;top:number}
@@ -22,20 +23,30 @@ const dragging = new WeakMap<Editor, {node:Element;group:BlockDragGroup;previewN
 /** Route drops in the indentation gutter to the block at the same height. */
 function listenToDragGutter(editor:Editor) {
   const editable=ReactEditor.toDOMNode(editor,editor),doc=editable.ownerDocument,win=doc.defaultView!
+  const blockAtPoint=(clientX:number,clientY:number)=>{
+    const direct=doc.elementFromPoint(clientX,clientY)?.closest<HTMLDivElement>('[data-wysimark-block]')
+    if(direct&&editable.contains(direct))return direct
+    const rect=editable.getBoundingClientRect(),padding=parseFloat(win.getComputedStyle(editable).paddingRight)||0
+    const x=Math.min(win.innerWidth-2,rect.right-padding-2)
+    const root=doc.elementFromPoint(x,clientY)?.closest<HTMLDivElement>('[data-wysimark-block]')
+    return root&&editable.contains(root)?root:undefined
+  }
+  const stopScroll=startBlockDragAutoScroll(editable,(clientX,clientY)=>{
+    const root=blockAtPoint(clientX,clientY)
+    if(root)dragHandlers.get(root)?.current?.over({currentTarget:root,clientX,clientY,preventDefault:()=>{},stopPropagation:()=>{}})
+  })
   const forward=(event:globalThis.DragEvent)=>{
     const target=event.target as HTMLElement
     if(target.closest?.('[data-wysimark-block]'))return
-    const rect=editable.getBoundingClientRect(),padding=parseFloat(getComputedStyle(editable).paddingRight)||0
-    const x=Math.min(win.innerWidth-2,rect.right-padding-2)
-    const root=doc.elementFromPoint(x,event.clientY)?.closest<HTMLDivElement>('[data-wysimark-block]')
-    if(!root||!editable.contains(root))return
+    const root=blockAtPoint(event.clientX,event.clientY)
+    if(!root)return
     const handlers=dragHandlers.get(root)?.current
     const handler=event.type==='drop'?handlers?.drop:handlers?.over
     handler?.({currentTarget:root,clientX:event.clientX,clientY:event.clientY,
       preventDefault:()=>event.preventDefault(),stopPropagation:()=>event.stopPropagation()})
   }
   editable.addEventListener('dragover',forward);editable.addEventListener('drop',forward)
-  return()=>{editable.removeEventListener('dragover',forward);editable.removeEventListener('drop',forward)}
+  return()=>{stopScroll();editable.removeEventListener('dragover',forward);editable.removeEventListener('drop',forward)}
 }
 
 function dropPosition(event: BlockDragEvent): DropPosition {

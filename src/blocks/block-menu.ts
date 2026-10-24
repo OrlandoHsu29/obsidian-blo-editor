@@ -50,6 +50,11 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
   menu.showAtPosition({ x: anchor.getBoundingClientRect().left, y: 8 }, document)
   const popup = Array.from(document.querySelectorAll<HTMLElement>('.menu'))
     .find(element => !existingMenus.has(element))
+  // Drawings and structured-block gutters stop bubbling to preserve selection.
+  // Close outside the menu before those handlers run, without consuming the click.
+  const onPointerDown = (event: PointerEvent) => {
+    if (!popup || !event.composedPath().includes(popup)) menu.hide()
+  }
   const position = () => {
     if (!popup || !anchor.isConnected) return
     const handle = anchor.getBoundingClientRect()
@@ -69,10 +74,12 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
   }
   position()
   document.addEventListener('keydown', onKeyDown, true)
+  document.addEventListener('pointerdown', onPointerDown, true)
   document.addEventListener('scroll', position, true)
   window.addEventListener('resize', position)
   menu.onHide(() => {
     document.removeEventListener('keydown', onKeyDown, true)
+    document.removeEventListener('pointerdown', onPointerDown, true)
     document.removeEventListener('scroll', position, true)
     window.removeEventListener('resize', position)
   })

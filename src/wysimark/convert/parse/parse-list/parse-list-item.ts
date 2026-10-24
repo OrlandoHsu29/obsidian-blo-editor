@@ -10,11 +10,16 @@ export function parseListItem(
   options: { depth: number; ordered: boolean },
   internalLinkOptions: InternalLinkOptions = {}
 ): Element[] {
+  const type = typeof listItem.checked === "boolean" ? "task-list-item"
+    : options.ordered ? "ordered-list-item" : "unordered-list-item"
+  if (!listItem.children.length) return [{
+    type, depth: options.depth,
+    ...(type === "task-list-item" ? { checked: !!listItem.checked } : {}),
+    children: [{ text: "" }],
+  } as Element]
   const complex = listItem.children.filter((child) => child.type === "paragraph").length > 1 ||
     listItem.children.some((child) => child.type !== "paragraph" && child.type !== "list")
   if (complex) {
-    const type = typeof listItem.checked === "boolean" ? "task-list-item"
-      : options.ordered ? "ordered-list-item" : "unordered-list-item"
     return [{
       type,
       depth: options.depth,

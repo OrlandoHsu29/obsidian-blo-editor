@@ -62,7 +62,7 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
     }
     if(node.type==='ordered-list-item'&&!recoveredList) {
       if(typeof chunk.metadata.start==='number')node.start=chunk.metadata.start;else delete node.start
-      if(['continue','restart'].includes(chunk.metadata.numbering))node.__numbering=chunk.metadata.numbering
+      if(['continue','restart','explicit'].includes(chunk.metadata.numbering))node.__numbering=chunk.metadata.numbering
     }
     result.push(node,...parsed.slice(1))
   }

@@ -1,7 +1,7 @@
 import { Editor, Element, Node, NodeEntry, Path, Point, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 
-type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart'; __firstAtDepth?: boolean; depth?: number; start?: number }
+type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart' | 'explicit'; __firstAtDepth?: boolean; depth?: number; start?: number }
 export const blockDepth = (node: Node): number => Element.isElement(node) ? Math.max(0, (node as Block).__blockDepth ?? (node as Block).depth ?? 0) : 0
 export const isListBlock = (node: Node) => Element.isElement(node) && ['ordered-list-item','unordered-list-item','task-list-item'].includes(node.type)
 export const isEditorSpacer = (node: Node) => Element.isElement(node)&&node.type==='paragraph'&&node.__collapsible&&Node.string(node)===''
@@ -93,7 +93,7 @@ export function resolveOrderedNumbers(nodes: Node[]) {
     if(isListBlock(node)||headingLevel!==undefined)for(const level of counts.keys())if(level>depth)counts.delete(level)
     if(Element.isElement(node)&&node.type==='ordered-list-item') {
       const block=node as Block
-      const number=restartsNumbering(block)?1:(counts.get(depth)||0)+1
+      const number=block.__numbering==='explicit'&&block.start!==undefined?block.start:restartsNumbering(block)?1:(counts.get(depth)||0)+1
       counts.set(depth,number);numbers.set(node,number)
       if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
       else {
@@ -229,7 +229,7 @@ export function reflowFollowingLists(editor: Editor, path: Path, depth = blockDe
     if(blockDepth(node)<depth)break
     if(blockDepth(node)!==depth)continue
     if(!Element.isElement(node)||node.type!=='ordered-list-item')continue
-    if(restartsNumbering(node as Block))break
+    if(restartsNumbering(node as Block)||node.__numbering==='explicit')break
     const at=[...parentPath,i]
     Transforms.unsetNodes(editor,'start',{at})
   }
@@ -252,15 +252,15 @@ export function normalizeOrderedText(editor: Editor, [node,path]: NodeEntry): bo
       const containing=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'})
       if(containing) {
         listPath=containing[1]
-        Transforms.setNodes(editor,{start:Number(match[1]),__numbering:defaultOrderedNumbering(editor,listPath)},{at:listPath})
+        Transforms.setNodes(editor,{start:Number(match[1]),__numbering:'explicit'},{at:listPath})
       } else {
         Transforms.wrapNodes(editor,{
           type:'ordered-list-item',depth:blockDepth(node),blockChildren:true,
-          start:Number(match[1]),__numbering:defaultOrderedNumbering(editor,path),children:[],
+          start:Number(match[1]),__numbering:'explicit',children:[],
         },{at:path})
       }
     } else {
-      Transforms.setNodes(editor,{type:'ordered-list-item',depth:blockDepth(node),start:Number(match[1]),__numbering:defaultOrderedNumbering(editor,path)},{at:path})
+      Transforms.setNodes(editor,{type:'ordered-list-item',depth:blockDepth(node),start:Number(match[1]),__numbering:'explicit'},{at:path})
     }
     Transforms.unsetNodes(editor,'__literalOrderedText',{at:node.type==='heading'?[...listPath,0]:listPath})
     reflowFollowingLists(editor,listPath,blockDepth(node))

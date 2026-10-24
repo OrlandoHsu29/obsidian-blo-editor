@@ -60,7 +60,7 @@ type CustomEditor = PluginTypes["Editor"]
 type CustomElement = PluginTypes["Element"] & {
   __blockDepth?: number
   __subtitle?: true
-  __numbering?: 'continue' | 'restart'
+  __numbering?: 'continue' | 'restart' | 'explicit'
   __literalOrderedText?: string
   __markdownLeadingNewlines?: number
   __markdownTrailingNewlines?: number

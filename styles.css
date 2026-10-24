@@ -45,7 +45,11 @@
 .wysimark-container button.wysimark-list-number { display:inline-block; vertical-align:baseline; width:1.5em; min-width:1.5em; height:auto; min-height:0; margin:0 .5em 0 -2em; padding:0; font:inherit; line-height:inherit; text-align:center; border:0; box-shadow:none; border-radius:4px; background:transparent; color:var(--text-muted); cursor:pointer; }
 .wysimark-container button.wysimark-list-number:hover:not(:disabled) { background:var(--background-modifier-hover); color:var(--text-normal); box-shadow:inset 0 0 0 1px var(--background-modifier-border); }
 .wysimark-container button.wysimark-list-number:disabled { opacity:1; cursor:default; }
-.wysimark-container button.wysimark-list-number { position:static; flex:0 0 auto; align-self:baseline; margin:0 8px 0 calc(-1.5em - 8px); transform:none; font-size:calc(var(--wysimark-list-number-size,1em) - 2px); line-height:var(--wysimark-list-number-line,1.65); font-weight:var(--wysimark-list-number-weight,inherit); }
+.wysimark-container button.wysimark-list-number { position:static; flex:0 0 auto; align-self:baseline; margin:0 1px 0 calc(-1.5em - 8px); transform:none; font-size:calc(var(--wysimark-list-number-size,1em) - 2px); line-height:var(--wysimark-list-number-line,1.65); font-weight:var(--wysimark-list-number-weight,inherit); }
+.wysimark-container li:not([data-list-heading-level]) > button.wysimark-list-number { margin:0 8px 0 calc(-1.5em - 15px); }
+.wysimark-container .wysimark-block[data-block-type="ordered-list-item"] { anchor-scope:--blo-list-number; }
+.wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > li > button.wysimark-list-number { anchor-name:--blo-list-number; }
+.wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > button.wysimark-block-handle { position-anchor:--blo-list-number; left:calc(anchor(left) - 26px); }
 .wysimark-editor li[data-list-heading-level] { --wysimark-list-number-weight:var(--font-bold,700); }
 
 .wysimark-editor li[data-list-heading-level="1"] { --wysimark-list-number-size:1.75em; --wysimark-list-number-line:1.4; }

@@ -16,6 +16,7 @@ import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
 import { PdfExportModal } from './pdf-export';
 import { ToolbarPreferences } from './toolbar-preferences';
+import { parseBlockDocument } from './blocks/persistence';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
@@ -24,6 +25,7 @@ export default class BloEditorPlugin extends Plugin {
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
   private pdfExportLeaves = new WeakSet<WorkspaceLeaf>();
+  private bloFormatCache = new WeakMap<TFile, { mtime: number; size: number; result: Promise<boolean> }>();
   async onload(): Promise<void> {
     await super.onload();
     this.register(()=>this.styleCache.sheet.flush());
@@ -243,14 +245,28 @@ export default class BloEditorPlugin extends Plugin {
     }
   }
   private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
-    if (isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) || !this.isFileInEditingScope(file) ||
+    if (file.extension !== 'md' || isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) ||
+      (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) ||
       !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
     const mode = leaf.view.getMode();
     this.openingLeaves.add(leaf);
     try {
       await leaf.view.save();
-      if (!this.settings.preferRichEditing || !this.isFileInEditingScope(file) || isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+      if (!this.isFileInEditingScope(file)) {
+        if (this.settings.restrictExistingBloTabs) return;
+        let cached = this.bloFormatCache.get(file);
+        if (!cached || cached.mtime !== file.stat.mtime || cached.size !== file.stat.size) {
+          cached = { mtime: file.stat.mtime, size: file.stat.size,
+            result: this.app.vault.cachedRead(file).then(source => parseBlockDocument(source, () => []) !== null) };
+          this.bloFormatCache.set(file, cached);
+        }
+        if (!await cached.result) return;
+      }
+      if (!this.settings.preferRichEditing || (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) || this.nativeLeaves.has(leaf) || isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode }, active: true });
+    } catch (error) {
+      this.bloFormatCache.delete(file);
+      console.error('Blo Editor: could not restore rich editor', error);
     } finally { this.openingLeaves.delete(leaf); }
   }
 

@@ -224,7 +224,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
   if (readOnly) return null
   return <>
     {menu && createPortal(<div ref={menuRef} className="wysimark-overlay wysimark-table-actions" data-table-align-menu contentEditable={false} style={{ position: 'fixed', ...menu }}>
-      {(['left', 'center', 'right'] as const).map(value => <button key={value} aria-label={ui(value === 'left' ? '左对齐' : value === 'center' ? '居中对齐' : '右对齐')}
+      {(['left', 'center', 'right'] as const).map(value => <button key={value} aria-label={ui(value === 'left' ? '列左对齐' : value === 'center' ? '列居中对齐' : '列右对齐')}
         onMouseDown={event => { event.preventDefault(); event.stopPropagation(); align(value) }}>
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           {[5, 10, 15, 20].map((y, i) => <path key={y} d={`M${i % 2 ? value === 'right' ? 10 : value === 'center' ? 6 : 3 : 3} ${y}h${i % 2 ? 11 : 18}`} />)}

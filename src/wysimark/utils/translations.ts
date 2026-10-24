@@ -511,17 +511,17 @@ export const uiMessages = {
     "zh": "关闭",
     "en": "Close"
   },
-  "左对齐": {
-    "zh": "左对齐",
-    "en": "Align left"
+  "列左对齐": {
+    "zh": "列左对齐",
+    "en": "Align column left"
   },
-  "居中对齐": {
-    "zh": "居中对齐",
-    "en": "Align center"
+  "列居中对齐": {
+    "zh": "列居中对齐",
+    "en": "Align column center"
   },
-  "右对齐": {
-    "zh": "右对齐",
-    "en": "Align right"
+  "列右对齐": {
+    "zh": "列右对齐",
+    "en": "Align column right"
   },
   "Select files...": {
     "zh": "选择文件…",

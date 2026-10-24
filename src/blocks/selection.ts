@@ -11,7 +11,6 @@ export function subscribeBlockSelection(editor:Editor,listener:()=>void) {
  let set=listeners.get(editor);if(!set){set=new Set();listeners.set(editor,set)}
  set.add(listener);return ()=>{set!.delete(listener)}
 }
-export function blockSelectionSnapshot(editor:Editor){return staged.get(editor)}
 function setBlockSelection(editor:Editor,value:{index:number;range:Range}|undefined) {
  if(value)staged.set(editor,value);else staged.delete(editor)
  listeners.get(editor)?.forEach(listener=>listener())

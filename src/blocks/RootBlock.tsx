@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, DragEvent, MouseEvent, ReactNode } from 'react'
 import type { Menu } from 'obsidian'
-import type { Editor, Element } from 'slate'
+import type { Editor, Element, Node } from 'slate'
 import { ReactEditor, useReadOnly, useSlateSelector, useSlateStatic } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBlock, moveBlockGroup, rootCache } from './model'
+import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBlock, moveBlockGroup, rootCache, selectedBlockDragGroup } from './model'
 import type { BlockDragGroup } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
@@ -12,13 +12,14 @@ import { clearBlockSelection, selectBlockContents } from './selection'
 import { isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { showBlockMenu } from './block-menu'
 import { startBlockDragAutoScroll } from './drag-auto-scroll'
+import { BlockHighlight, highlightBlockDrag } from './block-highlight'
 
 type DropPosition = 'before' | 'after'
 type DropPreview={position:DropPosition;depth:number;maxDepth:number;origin:number;step:number;left:number;top:number}
 type BlockDragEvent={currentTarget:HTMLDivElement;clientX:number;clientY:number;preventDefault:()=>void;stopPropagation:()=>void}
 type DragHandlers={over:(event:BlockDragEvent)=>void;drop:(event:BlockDragEvent)=>void}
 const dragHandlers=new WeakMap<HTMLElement,{current:DragHandlers|null}>()
-const dragging = new WeakMap<Editor, {node:Element;group:BlockDragGroup;previewNode?:Element;clearPreview?:()=>void;cleanup?:()=>void}>()
+const dragging = new WeakMap<Editor, {node:Node;lastNode:Node;group:BlockDragGroup;previewNode?:Element;clearPreview?:()=>void;cleanup?:()=>void}>()
 
 /** Route drops in the indentation gutter to the block at the same height. */
 function listenToDragGutter(editor:Editor) {
@@ -70,11 +71,13 @@ export function RootBlock({ element, children }: { element: Element; children: R
   const handlers=useRef<DragHandlers|null>(null)
   const menu = useRef<Menu | null>(null)
   const didDrag = useRef(false)
+  const pendingDrag = useRef<{group:BlockDragGroup;start:()=>void;clear:()=>void}|null>(null)
   const alignHandle = useFirstLineAlignment(ref, '--wysimark-handle-center', true,
     index !== undefined && !isEditorSpacer(element))
 
   useEffect(() => () => {
     menu.current?.hide()
+    pendingDrag.current?.clear();pendingDrag.current=null
     const state=dragging.get(editor)
     if(state?.node===element){state.clearPreview?.();state.cleanup?.();dragging.delete(editor)}
   }, [editor,element])
@@ -88,6 +91,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
   const selectAndOpenMenu = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
+    pendingDrag.current?.clear();pendingDrag.current=null
     if (didDrag.current && event.detail > 0) return
     if (!selectBlockContents(editor, index)) return
     ReactEditor.focus(editor)
@@ -99,8 +103,8 @@ export function RootBlock({ element, children }: { element: Element; children: R
     const state=dragging.get(editor)
     if(!state)return
     if(state.group.children!==editor.children) {
-      const from=rootCache(editor).indices.get(state.node)
-      const group=from===undefined?undefined:blockDragGroup(editor.children,from)
+      const indices=rootCache(editor).indices,from=indices.get(state.node),last=indices.get(state.lastNode)
+      const group=from===undefined||last===undefined?undefined:blockDragGroup(editor.children,from,last+1)
       if(!group)return
       state.group=group
     }
@@ -135,7 +139,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
     event.stopPropagation()
     const target=dropTarget(event)
     const from = rootCache(editor).indices.get(state.node)
-    if (target&&from !== undefined && moveBlockGroup(editor, from, index, dropPosition(event),target.depth)) {
+    if (target&&from !== undefined && moveBlockGroup(editor, from, index, dropPosition(event),target.depth,state.group.end)) {
       ReactEditor.focus(editor)
     }
     state.clearPreview?.()
@@ -177,16 +181,35 @@ export function RootBlock({ element, children }: { element: Element; children: R
     }} onDrop={onDrop}>
     {!readOnly && <button className="wysimark-block-handle" contentEditable={false} draggable
       aria-label={ui('拖动整块及子块；点击选中并打开块菜单')} data-tooltip-position="right"
-      onMouseDown={() => { didDrag.current = false }}
+      onMouseDown={event => {
+        if(event.button!==0)return
+        didDrag.current = false
+        const previous=dragging.get(editor)
+        previous?.clearPreview?.();previous?.cleanup?.();dragging.delete(editor)
+        pendingDrag.current?.clear()
+        const group=selectedBlockDragGroup(editor,index)
+        if(!group){pendingDrag.current=null;return}
+        const highlight=highlightBlockDrag(editor,group),doc=event.currentTarget.ownerDocument
+        const release=()=>{if(!didDrag.current){pendingDrag.current?.clear();pendingDrag.current=null}}
+        pendingDrag.current={group,start:highlight.start,clear:()=>{highlight.clear();doc.removeEventListener('mouseup',release)}}
+        doc.addEventListener('mouseup',release,{once:true})
+      }}
+      onMouseUp={() => {if(!didDrag.current){pendingDrag.current?.clear();pendingDrag.current=null}}}
       onClick={selectAndOpenMenu} onContextMenu={selectAndOpenMenu}
       onDragStart={event => {
         didDrag.current = true
         menu.current?.hide()
-        const group=blockDragGroup(editor.children,index)
-        if(!group){event.preventDefault();return}
+        const pending=pendingDrag.current
+        const group=pending?.group.children===editor.children?pending.group:selectedBlockDragGroup(editor,index)
+        if(!group){pending?.clear();pendingDrag.current=null;event.preventDefault();return}
         dragging.get(editor)?.clearPreview?.();dragging.get(editor)?.cleanup?.()
-        dragging.set(editor, {node:element,group,cleanup:listenToDragGutter(editor)})
-        event.dataTransfer.setData('application/x-wysimark-block', String(index))
+        if(pending?.group!==group)pending?.clear()
+        const highlight=pending?.group===group?pending:highlightBlockDrag(editor,group)
+        highlight.start()
+        pendingDrag.current=null
+        const stopGutter=listenToDragGutter(editor)
+        dragging.set(editor, {node:editor.children[group.from],lastNode:editor.children[group.end-1],group,cleanup:()=>{highlight.clear();stopGutter()}})
+        event.dataTransfer.setData('application/x-wysimark-block', String(group.from))
         event.dataTransfer.effectAllowed = 'move'
         event.stopPropagation()
       }} onDragEnd={() => { const state=dragging.get(editor);state?.clearPreview?.();state?.cleanup?.();dragging.delete(editor); setDrop(null) }}>
@@ -207,6 +230,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
         </g>)}
       </svg>
     </span>}
+    <BlockHighlight element={element} rootRef={ref} />
     {children}
   </div>
 }

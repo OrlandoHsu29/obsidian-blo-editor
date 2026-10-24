@@ -160,12 +160,25 @@ export function deleteBlockGroup(editor: Editor, index: number): boolean {
   return true
 }
 export type BlockDragGroup={children:Node[];from:number;end:number;depth:number;maxRelativeDepth:number;ends:Map<number,number>}
-export function blockDragGroup(children:Node[],from:number):BlockDragGroup|undefined {
+export function blockDragGroup(children:Node[],from:number,selectedEnd=from+1):BlockDragGroup|undefined {
   if(!children[from]||isEditorSpacer(children[from]))return
-  const end=groupEnd(children,from),depth=blockDepth(children[from])
+  let end=groupEnd(children,from)
+  while(end<Math.min(selectedEnd,children.length))end=groupEnd(children,end)
+  let depth=blockDepth(children[from])
+  for(let i=from;i<end;i++)if(!isEditorSpacer(children[i]))depth=Math.min(depth,blockDepth(children[i]))
   let maxRelativeDepth=0
   for(let i=from;i<end;i++)if(!isEditorSpacer(children[i]))maxRelativeDepth=Math.max(maxRelativeDepth,blockDepth(children[i])-depth)
   return {children,from,end,depth,maxRelativeDepth,ends:new Map([[from,end]])}
+}
+/** A handle inside a multi-block text selection drags every selected subtree. */
+export function selectedBlockDragGroup(editor:Editor,index:number):BlockDragGroup|undefined {
+  const selection=editor.selection
+  if(selection&&Range.isExpanded(selection)) {
+    const [start,end]=Range.edges(selection)
+    const last=end.path[0]-(end.path[0]>start.path[0]&&Point.equals(end,Editor.start(editor,[end.path[0]]))?1:0)
+    if(last>start.path[0]&&index>=start.path[0]&&index<=last)return blockDragGroup(editor.children,start.path[0],last+1)
+  }
+  return blockDragGroup(editor.children,index)
 }
 /** Share the exact insertion boundary and depth between the guide and the move. */
 export function blockDropTarget(group:BlockDragGroup,target:number,position:'before'|'inside'|'after',requestedDepth?:number) {
@@ -195,9 +208,9 @@ export function blockDropTarget(group:BlockDragGroup,target:number,position:'bef
   const depth=Math.min(desired,maxDepth)
   return {destination,depth,maxDepth}
 }
-export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after',requestedDepth?:number) {
+export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after',requestedDepth?:number,selectedEnd=from+1) {
   if(editor.wysimark.readOnly)return false
-  const group=blockDragGroup(editor.children,from)
+  const group=blockDragGroup(editor.children,from,selectedEnd)
   if(!group)return false
   const drop=blockDropTarget(group,target,position,requestedDepth)
   if(!drop)return false

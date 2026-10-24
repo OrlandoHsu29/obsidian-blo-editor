@@ -1,4 +1,4 @@
-import { Editor, Range, Transforms } from "slate"
+import { Editor, Element, Path, Point, Range, Transforms } from "slate"
 import { ReactEditor } from "slate-react"
 import type { RenderLeafProps } from "slate-react"
 
@@ -28,8 +28,33 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(
       return selection?.isCollapsed && !element?.closest('code') &&
         element?.closest('[data-inline-code-caret], [data-slate-mark-placeholder]')
     }
+    const codeEnd = () => {
+      if (!editor.selection || !Range.isCollapsed(editor.selection)) return false
+      const point = editor.selection.anchor, [text] = Editor.leaf(editor, point)
+      return !!text.code && point.offset === text.text.length
+    }
+    const leaveCode = () => {
+      if (codeEnd()) Editor.removeMark(editor, "code")
+    }
+    const textBlock = (point: Point) => Editor.above(editor, {
+      at: point, match: node => Element.isElement(node) && Editor.isBlock(editor, node), mode: "lowest",
+    })
+    const atBlockEdge = (edge: "start" | "end") => {
+      if (!editor.selection || !Range.isCollapsed(editor.selection)) return false
+      const point = editor.selection.anchor, block = textBlock(point)
+      return !!block && (edge === "start" ? Editor.isStart(editor, point, block[1]) : Editor.isEnd(editor, point, block[1]))
+    }
     return {
       name: "inline-code",
+      editor: {
+        deleteBackward: () => atBlockEdge("start") ? leaveCode : false,
+        deleteForward: () => codeEnd() && atBlockEdge("end") ? leaveCode : false,
+        deleteFragment: () => {
+          if (!editor.selection || Range.isCollapsed(editor.selection)) return false
+          const [start, end] = Range.edges(editor.selection), first = textBlock(start), last = textBlock(end)
+          return first && last && !Path.equals(first[1], last[1]) ? leaveCode : false
+        },
+      },
       renderEditable: ({ attributes, Editable }) => <Editable {...attributes}
         onMouseUp={event => {
           attributes.onMouseUp?.(event)
@@ -73,7 +98,15 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(
           }
         },
         onKeyDown: event => {
+          if (event.key === "ArrowRight" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey &&
+              !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 &&
+              !editor.wysimark.readOnly && codeEnd() && !outsideCode()) {
+            leaveCode()
+            event.preventDefault()
+            return true
+          }
           if (event.key === "ArrowLeft" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey &&
+              !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && !editor.wysimark.readOnly &&
               editor.selection && Range.isCollapsed(editor.selection) && outsideCode()) {
             const point = editor.selection.anchor
             const [text] = Editor.leaf(editor, point)

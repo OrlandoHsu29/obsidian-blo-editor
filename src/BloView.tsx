@@ -17,7 +17,7 @@ import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
 import { VideoEmbed, VIDEO_FILE_PATTERN } from './VideoEmbed';
-import { attachmentPath } from './attachments';
+import { attachmentPath, isAttachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
 import { handleMediaTransfer, handleVaultMediaTransfer } from './media-paste';
@@ -360,6 +360,12 @@ function KnowledgeSpaceEditorComponent({
   editor.wysimark.resolveInternalMedia = target => {
     const reference = resolveVaultReference(plugin.app, file.path, target);
     return reference ? vaultMediaUrl(plugin.app, file.path, reference) : undefined;
+  };
+  editor.wysimark.getReferencedMedia = url => {
+    const target = isWikiEmbedUrl(url) ? wikiLinkTarget(wikiEmbedSpecFromUrl(url)) : url;
+    const reference = resolveVaultReference(plugin.app, file.path, target);
+    if (!reference || isAttachmentPath(reference.file.path, plugin.settings.attachmentFolder)) return;
+    return { target: reference.file.path, name: reference.file.name, path: reference.file.path };
   };
   editor.wysimark.isDrawingEmbed = (url: string) => {
     if (!isWikiEmbedUrl(url)) return false;

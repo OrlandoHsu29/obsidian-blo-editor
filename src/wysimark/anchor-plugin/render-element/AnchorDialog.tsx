@@ -1,6 +1,6 @@
 import { ui } from "../../utils/translations"
 import styled from "@emotion/styled"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useSlateStatic } from "slate-react"
 
 import { $Panel } from "../../shared-overlays"
@@ -199,6 +199,7 @@ export function AnchorDialog({
   element?: AnchorElement
   embed?: {
     target: string
+    file?: { name: string; path: string }
     onEdit: () => void
     onRemove: () => void
   }
@@ -220,6 +221,18 @@ export function AnchorDialog({
     ? editor.wysimark.renderInternalLinkPreview?.(internalTarget)
     : null
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  useEffect(() => {
+    const doc = destAnchor.ownerDocument
+    const hide = (event: Event) => {
+      const target = event.target
+      // Scrolling the page dismisses the information card; its own preview
+      // scroll area and unrelated panes do not affect the selected object.
+      if (target === doc || target === doc.scrollingElement ||
+        (target instanceof doc.defaultView!.Element && target.contains(destAnchor))) dialog.close()
+    }
+    doc.addEventListener('scroll', hide, true)
+    return () => doc.removeEventListener('scroll', hide, true)
+  }, [destAnchor])
 
   const handleDrag = useCallback((deltaX: number, deltaY: number) => {
     setDragOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
@@ -290,8 +303,8 @@ export function AnchorDialog({
   }, [destAnchor, destStartEdge, element, embed, dialog])
 
   const iconButtons = (
-    <span className={`--icons${isInternalLink ? " --internal-icons" : ""}`}>
-      {isInternalLink ? (
+    <span className={`--icons${isInternalLink && !embed?.file ? " --internal-icons" : ""}`}>
+      {isInternalLink && !embed?.file ? (
         <span
           className="--icon --internal-link"
           onClick={openInternalLink}
@@ -329,10 +342,21 @@ export function AnchorDialog({
   )
 
   return (
-    <$AnchorDialog ref={ref} contentEditable={false} style={style}>
+    <$AnchorDialog ref={ref} contentEditable={false} style={style} data-blo-reference-popover={embed?.file ? true : undefined}>
       <DraggableHeader onDrag={handleDrag} />
       <div style={{ padding: "1em" }}>
-        {isInternalLink ? (
+        {embed?.file ? (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75em' }}>
+            <span className="--link --internal-link" onClick={openInternalLink} aria-label={openTooltip}>
+              <ExternalLinkIcon />
+              <span className="--url" style={{ minWidth: 0 }}>
+                <span className="--hostname" style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{embed.file.name}</span>
+                <span className="--pathname" style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{embed.file.path}</span>
+              </span>
+            </span>
+            {iconButtons}
+          </div>
+        ) : isInternalLink ? (
           <div className="--internal-content">
             <div className="--internal-title" title={internalTarget}>
               {internalTitle}

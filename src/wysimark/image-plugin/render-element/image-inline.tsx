@@ -7,6 +7,7 @@ import { $ImageInline } from "../styles/image-inline-styles"
 import { ImageInlineElement } from "../types"
 import { ImageWithControls } from "./image-with-controls"
 import { WikiEmbedView } from "./wiki-embed-view"
+import { MediaReferenceDialog } from './media-reference-dialog'
 
 export function ImageInline({
   element,
@@ -18,6 +19,7 @@ export function ImageInline({
     return (
       <span {...attributes} style={{ display: "inline-block" }}>
         <WikiEmbedView element={element} />
+        <MediaReferenceDialog element={element} />
         {children}
       </span>
     )
@@ -30,6 +32,7 @@ export function ImageInline({
           presets={editor.image.imageInlinePresets}
         />
       </$ImageInline>
+      <MediaReferenceDialog element={element} />
       {children}
     </span>
   )

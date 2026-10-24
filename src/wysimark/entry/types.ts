@@ -35,6 +35,7 @@ export type WysimarkEditor = {
     openSearch?: (replace?: boolean) => void
     normalizeInternalLink?: (value: string) => { target: string; display?: string }
     resolveInternalMedia?: (target: string) => string | undefined
+    getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined
     toolbarPreferences?: ToolbarPreferences
     resolveImageUrl?: (url: string) => string
     save?: () => Promise<void>

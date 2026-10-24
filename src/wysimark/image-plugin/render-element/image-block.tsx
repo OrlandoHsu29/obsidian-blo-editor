@@ -7,6 +7,7 @@ import { $ImageBlock } from "../styles/image-block-styles"
 import { ImageBlockElement } from "../types"
 import { ImageWithControls } from "./image-with-controls"
 import { WikiEmbedView } from "./wiki-embed-view"
+import { MediaReferenceDialog } from './media-reference-dialog'
 
 export function ImageBlock({
   element,
@@ -18,6 +19,7 @@ export function ImageBlock({
     return (
       <div {...attributes}>
         <WikiEmbedView element={element} />
+        <MediaReferenceDialog element={element} />
         {children}
       </div>
     )
@@ -30,6 +32,7 @@ export function ImageBlock({
           presets={editor.image.imageBlockPresets}
         />
       </$ImageBlock>
+      <MediaReferenceDialog element={element} />
       {children}
     </div>
   )

@@ -129,6 +129,8 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "引用文件": { zh: "引用文件", en: "Referenced file" },
+  "修改引用": { zh: "修改引用", en: "Change reference" },
   "保存路径": { zh: "保存路径", en: "Save path" },
   "取消": { zh: "取消", en: "Cancel" },
   "删除内嵌文件时删除附件": { zh: "删除内嵌文件时删除附件", en: "Delete attachment when removing an embedded file" },

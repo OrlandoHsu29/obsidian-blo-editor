@@ -77,6 +77,7 @@ export function WikiEmbedView({
     const anchor = embedRef.current
     const startEdge = startEdgeRef.current
     if (!anchor || !startEdge) return
+    if (editor.wysimark.getReferencedMedia?.(element.url)) return
     const hasSelection =
       editor.selection &&
       editor.selection.anchor.offset !== editor.selection.focus.offset

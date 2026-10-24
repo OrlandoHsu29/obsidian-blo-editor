@@ -1,6 +1,6 @@
-import { App, Component, Notice, Plugin, TFile, ItemView, WorkspaceLeaf, setIcon } from 'obsidian'
+import { App, Component, Notice, Plugin, TFile, ItemView, WorkspaceLeaf, setIcon, addIcon, removeIcon } from 'obsidian'
 import { ui } from './wysimark/utils/translations'
-import { DrawingSaveAsModal } from './drawing-save-as'
+import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DRAWING_SAVE_AS_SVG } from './drawing-save-as'
 
 type DrawingView = ItemView & { file?: TFile; forceSave?: () => Promise<void> }
 type ReturnSession = {
@@ -60,7 +60,16 @@ class DrawingNavigation extends Component {
     setIcon(button.createSpan(), 'arrow-left')
     button.createSpan({ text: ui('返回笔记') })
     const click = () => { void this.returnToSource(session) }
-    const saveAs = view.addAction('save', ui('画板另存为'), () => new DrawingSaveAsModal(this.app, file).open())
+    const saveAs = view.addAction(DRAWING_SAVE_AS_ICON, ui('画板另存为'), () => new DrawingSaveAsModal(this.app, file).open())
+    const positionSaveAs = () => {
+      const save = view.containerEl.querySelector('.view-actions .lucide-save')?.closest<HTMLElement>('.view-action')
+      if (save && save.previousElementSibling !== saveAs) save.before(saveAs)
+    }
+    // Excalidraw adds its header actions asynchronously after opening the view.
+    const actionObserver = new MutationObserver(positionSaveAs)
+    const header = saveAs.closest('.view-header') || saveAs.parentElement
+    if (header) actionObserver.observe(header, { childList: true, subtree: true })
+    positionSaveAs()
     // Excalidraw rebuilds its content after the view first opens.
     const observer = new MutationObserver(() => {
       if (this.disposed || leaf.view !== view || view.file !== file) return
@@ -68,7 +77,7 @@ class DrawingNavigation extends Component {
       if (!view.contentEl.contains(bar)) view.contentEl.prepend(bar)
     })
     const session: ReturnSession = { leaf, view, file, source, sourceFile, sourceType, sourceState, bar, button, returning: false,
-      dispose: () => { observer.disconnect(); button.removeEventListener('click', click); saveAs.remove(); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
+      dispose: () => { observer.disconnect(); actionObserver.disconnect(); button.removeEventListener('click', click); saveAs.remove(); bar.remove(); view.contentEl.removeClass('blo-drawing-return-layout') } }
     button.addEventListener('click', click)
     view.contentEl.addClass('blo-drawing-return-layout')
     view.contentEl.prepend(bar)
@@ -105,6 +114,8 @@ class DrawingNavigation extends Component {
 }
 
 export function installDrawingNavigation(plugin: Plugin): void {
+  addIcon(DRAWING_SAVE_AS_ICON, DRAWING_SAVE_AS_SVG)
+  plugin.register(() => removeIcon(DRAWING_SAVE_AS_ICON))
   const navigation = new DrawingNavigation(plugin.app)
   navigations.set(plugin.app, navigation)
   plugin.addChild(navigation)

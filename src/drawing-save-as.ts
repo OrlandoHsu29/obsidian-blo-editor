@@ -2,6 +2,9 @@ import { App, Modal, Notice, Setting, TFile } from 'obsidian'
 import { attachmentPath, normalizeAttachmentFolder } from './attachments'
 import { ui } from './wysimark/utils/translations'
 
+export const DRAWING_SAVE_AS_ICON = 'blo-drawing-save-as'
+export const DRAWING_SAVE_AS_SVG = '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11V5l-2-2H5v18h7M8 3v6h8V3M8 21v-8h5m4 1v8m-4-4h8" /></g>'
+
 /** Save a distinct vault copy; never replace the source drawing or its embed. */
 export class DrawingSaveAsModal extends Modal {
   private busy = false

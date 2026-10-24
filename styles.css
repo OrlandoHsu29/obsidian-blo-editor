@@ -521,6 +521,7 @@
 .blo-drawing-preview .embed-title { display:none; }
 .blo-drawing-open { position:absolute; z-index:2; top:6px; right:6px; display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:5px; border:1px solid var(--background-modifier-border); border-radius:6px; background:var(--background-primary); color:var(--text-muted); cursor:pointer; }
 .blo-drawing-open:hover { color:var(--text-normal); background:var(--interactive-hover); }
+.blo-drawing-open svg { display:block; width:16px; height:16px; }
 .blo-drawing-save-as { right:40px; }
 .blo-video { display:inline-block; position:relative; max-width:100%; vertical-align:top; border-radius:8px; cursor:default; }
 .blo-video > video { display:block; width:100%; height:auto; border-radius:8px; }

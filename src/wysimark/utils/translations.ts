@@ -543,6 +543,8 @@ export const uiMessages = {
     "zh": "打开 Markdown 文件进行编辑",
     "en": "Open a Markdown file to edit"
   },
+  "正在打开笔记…": { "zh": "正在打开笔记…", "en": "Opening note…" },
+  "正在打开「{name}」…": { "zh": "正在打开「{name}」…", "en": "Opening “{name}”…" },
   "Select a .md file from the file explorer": {
     "zh": "从文件列表选择 .md 文件",
     "en": "Select a .md file from the file explorer"

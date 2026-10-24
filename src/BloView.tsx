@@ -63,12 +63,16 @@ function combineFrontmatter(frontmatter: string, body: string): string {
 }
 
 // Empty state component when no file is selected
-function EmptyState() {
+function EmptyState({loading=false,fileName}:{loading?:boolean;fileName?:string}) {
+  const icon=React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(()=>{if(icon.current)setIcon(icon.current,'file-text');},[]);
   return (
-    <div className="wysimark-empty-state">
-      <div className="wysimark-empty-state-icon">📝</div>
-      <div className="wysimark-empty-state-text">{ui("Open a Markdown file to edit")}</div>
-      <div className="wysimark-empty-state-hint">{ui("Select a .md file from the file explorer")}</div>
+    <div className="wysimark-empty-state" role={loading?'status':undefined} aria-live={loading?'polite':undefined}>
+      <div ref={icon} className="wysimark-empty-state-icon" aria-hidden="true" />
+      <div className="wysimark-empty-state-text">{loading
+        ?fileName?ui('正在打开「{name}」…',{name:fileName}):ui('正在打开笔记…')
+        :ui("Open a Markdown file to edit")}</div>
+      {!loading&&<div className="wysimark-empty-state-hint">{ui("Select a .md file from the file explorer")}</div>}
     </div>
   );
 }
@@ -419,6 +423,8 @@ function KnowledgeSpaceEditorComponent({
 // Main container component
 function KnowledgeSpaceContainer({
   file,
+  loading,
+  openingFileName,
   content,
   onChange,
   onReload,
@@ -429,6 +435,8 @@ function KnowledgeSpaceContainer({
   readOnly,
 }: {
   file: TFile | null;
+  loading: boolean;
+  openingFileName?: string;
   content: string;
   onChange: (markdown: string) => void;
   onReload: () => void;
@@ -439,7 +447,7 @@ function KnowledgeSpaceContainer({
   readOnly: boolean;
 }) {
   if (!file) {
-    return <EmptyState />;
+    return <EmptyState loading={loading} fileName={openingFileName} />;
   }
 
   return (
@@ -462,6 +470,8 @@ export class BloView extends FileView {
   plugin: BloEditorPlugin;
   root: Root | null = null;
   currentFile: TFile | null = null;
+  private openingFile: TFile | null = null;
+  private stateReady = false;
   fileContent: string = '';
   private frontmatter: string = '';  // Store frontmatter separately
   private bodyContent: string = '';  // Store body content (without frontmatter)
@@ -630,6 +640,9 @@ export class BloView extends FileView {
     // Obsidian reuses a FileView that accepts .md, bypassing the native
     // Markdown-to-Blo handler for drawings and files outside the editing scope.
     const file = state.file ? this.app.vault.getAbstractFileByPath(state.file) : null;
+    this.stateReady = true;
+    this.openingFile = file instanceof TFile && file.path !== this.currentFile?.path ? file : null;
+    if (!this.currentFile) this.renderEditor();
     if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file) && !this.plugin.isPdfExportLeaf(this.leaf)))) {
       // Finish Obsidian's current view assignment first; a nested switch is
       // otherwise overwritten when the outer setViewState call completes.
@@ -644,6 +657,7 @@ export class BloView extends FileView {
     }
     this.readOnly = state.mode === 'preview';
     await super.setState(state, result);
+    this.openingFile = null;
     this.updateModeUI(); this.renderEditor();
   }
   private updateModeUI() {
@@ -703,6 +717,9 @@ export class BloView extends FileView {
     if (this.currentFile?.path === file.path) {
       return;
     }
+    this.openingFile = file;
+    this.stateReady = true;
+    if (!this.currentFile) this.renderEditor();
 
     // Save previous file before switching
     if (this.currentFile && this.isDirty) {
@@ -720,6 +737,7 @@ export class BloView extends FileView {
     this.lineEnding = getLineEnding(rawContent);
     this.isDirty = false;
 
+    this.openingFile = null;
     this.renderEditor();
   }
 
@@ -832,6 +850,8 @@ export class BloView extends FileView {
       <KnowledgeSpaceContainer
         readOnly={this.readOnly}
         file={this.currentFile}
+        loading={!this.stateReady||!!this.openingFile}
+        openingFileName={this.openingFile?.basename}
         content={this.bodyContent}  // Pass only body content (without frontmatter)
         onChange={this.handleChange}
         onReload={this.handleReload}

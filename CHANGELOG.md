@@ -6,9 +6,8 @@
   and open internal links with Ctrl/Cmd-click in editing mode or a click in reading mode.
 - Add resizable video blocks with native controls, atomic selection, proportional
   dimensions, presets, persistence and undo/redo.
-- Save drawing copies from embedded previews and full drawing views, using a
-  distinct save-plus icon, vault-relative paths and collision-safe filenames.
-  Place the full-view action directly left of Save.
+- Save drawing copies from embedded previews and full drawing views, using
+  vault-relative paths and collision-safe filenames.
 - Unify optional embedded attachment cleanup. Protect files outside the attachment
   folder and shared references; retain trash recovery and undo preview refresh.
   The new setting defaults off, including when migrating old per-type toggles.

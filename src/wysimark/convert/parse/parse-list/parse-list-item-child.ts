@@ -4,6 +4,7 @@ import { InternalLinkOptions } from "../../obsidian-links"
 import { Element } from "../../types"
 import { parseContent } from "../parse-content"
 import { parsePhrasingContents } from "../parse-phrasing-content/parse-phrasing-content"
+import { splitSegmentLines } from "../parse-phrasing-content/split-segment-lines"
 import { parseList } from "./parse-list"
 
 export function parseListItemChild(
@@ -17,32 +18,28 @@ export function parseListItemChild(
 ): Element[] {
   switch (child.type) {
     case "paragraph":
-      if (checked === true || checked === false) {
-        return [
-          {
+      return splitSegmentLines(parsePhrasingContents(child.children, {}, options)).map(children => {
+        if (checked === true || checked === false) {
+          return {
             type: "task-list-item",
             depth,
             checked,
-            children: parsePhrasingContents(child.children, {}, options),
-          },
-        ]
-      } else if (ordered) {
-        return [
-          {
+            children,
+          }
+        } else if (ordered) {
+          return {
             type: "ordered-list-item",
             depth,
-            children: parsePhrasingContents(child.children, {}, options),
-          },
-        ]
-      } else {
-        return [
-          {
+            children,
+          }
+        } else {
+          return {
             type: "unordered-list-item",
             depth,
-            children: parsePhrasingContents(child.children, {}, options),
-          },
-        ]
-      }
+            children,
+          }
+        }
+      })
     case "list":
       return parseList(child, depth + 1, options)
     default:

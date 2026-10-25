@@ -6,6 +6,7 @@ import { ImageBlockElement, ImageInlineElement } from "../../image-plugin/types"
 import { InternalLinkOptions } from "../obsidian-links"
 import { Element, Segment } from "../types"
 import { parsePhrasingContents } from "./parse-phrasing-content/parse-phrasing-content"
+import { splitSegmentLines } from "./parse-phrasing-content/split-segment-lines"
 
 function isImageBlock(segments: Segment[]): boolean {
   if (segments.length !== 3) return false
@@ -26,20 +27,19 @@ export function parseParagraph(
   content: Paragraph,
   options: InternalLinkOptions = {}
 ): Element[] {
-  const segments = parsePhrasingContents(content.children, {}, options)
-  if (isImageBlock(segments)) {
-    const imageSegment = segments[1] as ImageInlineElement
-    const imageBlockElement: ImageBlockElement = {
-      ...imageSegment,
-      type: "image-block",
+  return splitSegmentLines(parsePhrasingContents(content.children, {}, options)).map(segments => {
+    if (isImageBlock(segments)) {
+      const imageSegment = segments[1] as ImageInlineElement
+      const imageBlockElement: ImageBlockElement = {
+        ...imageSegment,
+        type: "image-block",
+      }
+      return imageBlockElement
     }
-    return [imageBlockElement]
-  }
-  return [
-    {
+    return {
       type: "paragraph",
       children: segments,
       ...(content.data?.escapedOrderedPrefix ? {__literalOrderedText:segments.map(n=>Node.string(n)).join('')} : {}),
-    },
-  ]
+    }
+  })
 }

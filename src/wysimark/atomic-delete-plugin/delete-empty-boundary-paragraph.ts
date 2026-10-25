@@ -1,15 +1,15 @@
 import { Editor, Element, Node, Path, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
-import { isEditorSpacer } from '../../blocks/model'
+import { isEditorSpacer, isListBlock } from '../../blocks/model'
 import { isStructuredBlock, selectStructuredBoundary } from '../../blocks/boundary'
 
-/** Delete the empty text block, never merge it into an adjacent structured block. */
+/** Delete empty prose blocks, keeping list and structured-block deletion with their plugins. */
 export function deleteEmptyBoundaryParagraph(editor: Editor, direction: 'backward' | 'forward'): boolean {
   if(editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection))return false
-  const entry=Editor.above(editor,{match:n=>Element.isElement(n)&&n.type==='paragraph'})
+  const entry=Editor.above(editor,{match:n=>Element.isElement(n)&&editor.convertElement.isConvertibleElement(n)&&!isListBlock(n)})
   if(!entry)return false
   const [paragraph,path]=entry
-  if(!Element.isElement(paragraph)||paragraph.type!=='paragraph'||paragraph.__collapsible||!paragraph.children.every(n=>Text.isText(n)&&n.text===''))return false
+  if(!Element.isElement(paragraph)||('__collapsible' in paragraph&&paragraph.__collapsible)||!Array.from<Node>(paragraph.children).every(n=>Text.isText(n)&&n.text===''))return false
   if(direction==='backward'&&path.length===1&&path[0]===0) {
     const next=editor.children.findIndex((node,index)=>index>0&&!isEditorSpacer(node))
     if(next<0)return false

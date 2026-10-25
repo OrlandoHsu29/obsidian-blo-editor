@@ -5,12 +5,12 @@ import { ReactEditor, useReadOnly, useSlateStatic } from 'slate-react'
 import { isEditorSpacer, rootCache } from './model'
 import type { BlockDragGroup } from './model'
 import { useBlockSelection } from './use-block-selection'
+import { structuredBlockContent } from './structured-block'
 
 function measureBlockHighlight(editor:Editor,index:number,root:HTMLElement) {
     const node=editor.children[index]
     const content=ReactEditor.toDOMNode(editor,node)
-    const structured=['table','code-block','image-block'].includes(root.dataset.blockType??'')
-      ?root.querySelector<HTMLElement>('table,[data-wysimark-code-block],[data-blo-drawing],[data-blo-image]'):null
+    const structured=structuredBlockContent(root)
     const rangeBounds=structured?.getBoundingClientRect()??ReactEditor.toDOMRange(editor,Editor.range(editor,[index])).getBoundingClientRect()
     const bounds=rangeBounds.height?rangeBounds:content.getBoundingClientRect()
     const box=root.getBoundingClientRect(),scale=box.width&&root.offsetWidth?box.width/root.offsetWidth:1

@@ -4,6 +4,7 @@ import { ReactEditor } from 'slate-react'
 import { rootCache } from './model'
 import { selectStructuredBoundary } from './boundary'
 import { clearBlockSelection } from './selection'
+import { structuredBlockContent, structuredBlockSelector } from './structured-block'
 
 /** Catch the right page gutter before Slate resolves it to a table cell. */
 export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTMLElement>): boolean {
@@ -23,12 +24,12 @@ export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTML
     for (const chunk of chunks) {
       const bounds = chunk.getBoundingClientRect()
       if (event.clientY < bounds.top || event.clientY > bounds.bottom) continue
-      candidates.push(...chunk.querySelectorAll<HTMLElement>('[data-wysimark-block]:is([data-block-type="table"],[data-block-type="code-block"],[data-block-type="image-block"])'))
+      candidates.push(...chunk.querySelectorAll<HTMLElement>(structuredBlockSelector))
     }
   }
   for (const block of candidates) {
     if (!event.currentTarget.contains(block)) continue
-    const content = block.querySelector<HTMLElement>(':scope > table,:scope > [data-wysimark-code-block],[data-blo-drawing],[data-blo-image]')
+    const content = structuredBlockContent(block)
     if (!content) continue
     const bounds = content.getBoundingClientRect()
     if (event.clientX < bounds.right - 1 || event.clientY < bounds.top || event.clientY > bounds.bottom) continue

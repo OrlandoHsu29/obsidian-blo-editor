@@ -4,6 +4,7 @@ import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStr
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
 import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
+import { isEditableStructure } from './structured-block'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 const staged=new WeakMap<Editor,{index:number;range:Range}>()
@@ -57,7 +58,6 @@ export function selectBlockContents(editor:Editor,index:number):boolean {
  setBlockSelection(editor,{index,range})
  return true
 }
-const isEditableStructure=(node:unknown)=>Element.isElement(node)&&(node.type==='table'||node.type==='code-block')
 function enterStructure(editor:Editor,index:number,backwards:boolean):void {
  const point=backwards?Editor.end(editor,[index]):Editor.start(editor,[index])
  const node=editor.children[index]
@@ -69,7 +69,7 @@ function enterStructure(editor:Editor,index:number,backwards:boolean):void {
 }
 /** Horizontal navigation visits the same outside caret for every structured block. */
 export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
- const structured=(node:unknown)=>isStructuredBlock(node,editor)
+ const structured=isStructuredBlock
  if(editor.wysimark.readOnly||!editor.selection||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
  if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return false
  const boundary=boundaryBlockIndex(editor)

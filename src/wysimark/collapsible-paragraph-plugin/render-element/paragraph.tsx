@@ -6,6 +6,7 @@ import { HistoryEditor } from "slate-history"
 import { ReactEditor, useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 import { isEditorSpacer, rootCache } from "../../../blocks/model"
 import { isStructuredBlock, selectStructuredBoundary } from "../../../blocks/boundary"
+import { structuredBlockContent } from '../../../blocks/structured-block'
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -30,7 +31,7 @@ export function Paragraph({
   const anchor = useSlateSelector(useCallback(editor => {
     const index = rootCache(editor).indices.get(element)
     const previous = index === undefined ? undefined : editor.children[index - 1]
-    return isEditorSpacer(element) && isStructuredBlock(previous, editor)
+    return isEditorSpacer(element) && isStructuredBlock(previous)
       ? `--blo-${ReactEditor.findKey(editor, previous).id}` : undefined
   }, [element]))
   useLayoutEffect(() => {
@@ -43,7 +44,8 @@ export function Paragraph({
     const position = () => {
       const parent = paragraph.offsetParent as HTMLElement | null
       if (!parent) return
-      const target = (block.querySelector('[data-blo-drawing],[data-blo-image]') || block).getBoundingClientRect(), origin = parent.getBoundingClientRect()
+      const root = block.closest<HTMLElement>('[data-wysimark-block]')
+      const target = ((root && structuredBlockContent(root)) || block).getBoundingClientRect(), origin = parent.getBoundingClientRect()
       const scale = parent.offsetWidth ? origin.width / parent.offsetWidth : 1
       const line = parseFloat(getComputedStyle(paragraph).lineHeight)
       paragraph.style.left = `${(target.right - origin.left) / scale + parent.scrollLeft - parent.clientLeft + 4}px`

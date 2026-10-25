@@ -9,7 +9,6 @@ import type { BlockDragGroup } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
 import { clearBlockSelection, selectBlockContents } from './selection'
-import { isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { showBlockMenu } from './block-menu'
 import { startBlockDragAutoScroll } from './drag-auto-scroll'
 import { BlockHighlight, highlightBlockDrag } from './block-highlight'
@@ -166,13 +165,6 @@ export function RootBlock({ element, children }: { element: Element; children: R
     data-drop-depth={drop?.depth}
     onMouseDownCapture={event => {
       if (!(event.target as HTMLElement).closest('.wysimark-block-handle')) clearBlockSelection(editor)
-    }}
-    onMouseDown={event => {
-      if (readOnly || event.button !== 0 || event.shiftKey || !isStructuredBlock(element, editor)) return
-      const content = ref.current?.querySelector<HTMLElement>('table,[data-wysimark-code-block],[data-blo-drawing],[data-blo-image]')
-      if (!content || event.clientX < content.getBoundingClientRect().right) return
-      event.preventDefault(); event.stopPropagation()
-      if (selectStructuredBoundary(editor, index)) ReactEditor.focus(editor)
     }}
     onMouseEnter={alignHandle} onFocusCapture={alignHandle}
     onDragOver={onDragOver}

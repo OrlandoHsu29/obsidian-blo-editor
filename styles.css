@@ -1,4 +1,7 @@
 /* Wysimark Editor for Obsidian */
+/* Align leading root groups without expanding skipped native heading levels. */
+.workspace-leaf-content[data-type="outline"] { --blo-outline-indent-step:calc(var(--nav-item-children-margin-start,var(--nav-item-children-margin-left,12px)) + var(--nav-item-children-padding-start,var(--nav-item-children-padding-left,4px)) + var(--nav-indentation-guide-width,1px)); }
+.workspace-leaf-content[data-type="outline"] [data-blo-outline-root] { margin-inline-start:calc(var(--blo-outline-root-offset) * var(--blo-outline-indent-step)); }
 .blo-settings .setting-item-heading { padding-inline:0; margin-inline:0; }
 .blo-settings .setting-group:has(> .blo-toolbar-description) > .setting-item-heading { margin-bottom:4px; }
 .blo-toolbar-description { margin:0 0 12px; padding-top:0; }

@@ -1,14 +1,44 @@
 import type { ListItemCache, Plugin, TFile, View } from 'obsidian'
+import { debounce } from 'obsidian'
 import type { Editor } from 'slate'
 import { Node } from 'slate'
 import { rootCache } from './blocks/model'
 import type { BlockHeading } from './blocks/model'
 type Heading={level:number;heading?:string;__bloSourceHeading?:string;__bloHeadingIndex?:number}
+type HeadingDom={heading:Heading;el?:HTMLElement}
 type OutlineView=View & {
-  file?:TFile;cachedFile?:unknown;cachedHeadingDom?:{heading:Heading}[];
-  getHeadings?:()=>Heading[];requestUpdate?:()=>void;update?:()=>void;
+  file?:TFile;cachedFile?:unknown;cachedHeadingDom?:HeadingDom[];
+  getHeadings?:()=>Heading[];requestUpdate?:(()=>void)&{cancel?:()=>void};update?:()=>void;
   getOwner?:()=>unknown;findActiveHeading?:(owner:unknown)=>unknown;setHighlightedItem?:(item:unknown)=>void
   searchQuery?:{query:string}|null;prevQuery?:string
+}
+
+/** Offset leading root groups for later shallower roots; keep native subtree depths. */
+export function outlineIndentOffsets(headings:Heading[]):number[] {
+  let rootLevel=Infinity,group=-1
+  const groups=headings.map(heading=>{
+    if(heading.level<rootLevel){rootLevel=heading.level;group++}
+    return group
+  })
+  return groups.map(index=>group-index)
+}
+
+function applyOutlineIndent(nodes:HeadingDom[],headings:Heading[]) {
+  const offsets=outlineIndentOffsets(headings)
+  let rootLevel=Infinity
+  nodes.forEach((node,index)=>{
+    const root=headings[index].level<=rootLevel
+    rootLevel=Math.min(rootLevel,headings[index].level)
+    // Native items own their entire subtree, including guides and fold icons.
+    // Offset only the root; all child layout stays under native control.
+    if(root&&offsets[index]) {
+      node.el?.setAttribute('data-blo-outline-root','')
+      node.el?.style.setProperty('--blo-outline-root-offset',String(offsets[index]))
+    } else {
+      node.el?.removeAttribute('data-blo-outline-root')
+      node.el?.style.removeProperty('--blo-outline-root-offset')
+    }
+  })
 }
 
 /** Decorate native input while retaining original source positions and cache objects. */
@@ -35,7 +65,7 @@ export function outlineHeadings(headings:Heading[],blocks?:BlockHeading[],listIt
 }
 /** Reuse the editor's numbering projection, never scan or rewrite the virtual tree DOM. */
 export function installOutlineFilter(plugin:Plugin,getEditor?:(file:unknown)=>Editor|undefined) {
-  const patched=new Map<OutlineView,{original:()=>Heading[];wrapped:()=>Heading[];own:boolean;originalUpdate?:()=>void;wrappedUpdate?:()=>void;ownUpdate:boolean}>()
+  const patched=new Map<OutlineView,{original:()=>Heading[];wrapped:()=>Heading[];own:boolean;originalUpdate?:()=>void;wrappedUpdate?:()=>void;ownUpdate:boolean;originalRequest?:OutlineView['requestUpdate'];wrappedRequest?:OutlineView['requestUpdate'];ownRequest:boolean}>()
   const attach=()=>{
     for(const leaf of plugin.app.workspace.getLeavesOfType('outline')) {
       const view=leaf.view as OutlineView
@@ -52,6 +82,7 @@ export function installOutlineFilter(plugin:Plugin,getEditor?:(file:unknown)=>Ed
         return filtered
       }
       const originalUpdate=view.update,ownUpdate=Object.prototype.hasOwnProperty.call(view,'update')
+      let styledNodes:HeadingDom[]|undefined
       const wrappedUpdate=originalUpdate&&function(this:OutlineView){
         const headings=this.getHeadings!(),nodes=this.cachedHeadingDom
         // Enter and list prefixes change source positions without changing the
@@ -59,19 +90,33 @@ export function installOutlineFilter(plugin:Plugin,getEditor?:(file:unknown)=>Ed
         if(this.file&&this.file===this.cachedFile&&(this.searchQuery?.query??'')===this.prevQuery&&nodes&&nodes.length===headings.length&&
           nodes.every((n,i)=>n.heading.level===headings[i].level&&n.heading.heading===headings[i].heading)) {
           nodes.forEach((node,i)=>{node.heading=headings[i]})
+          if(styledNodes!==nodes){applyOutlineIndent(nodes,headings);styledNodes=nodes}
           this.setHighlightedItem?.(this.findActiveHeading?.(this.getOwner?.()))
           return
         }
-        return originalUpdate.call(this)
+        const result=originalUpdate.call(this)
+        const rendered=this.cachedHeadingDom
+        if(rendered?.length===headings.length){applyOutlineIndent(rendered,headings);styledNodes=rendered}
+        return result
       }
-      view.getHeadings=wrapped;if(wrappedUpdate)view.update=wrappedUpdate
-      patched.set(view,{original,wrapped,own,originalUpdate,wrappedUpdate,ownUpdate});view.requestUpdate?.()
+      const originalRequest=view.requestUpdate,ownRequest=Object.prototype.hasOwnProperty.call(view,'requestUpdate')
+      // Native requestUpdate captures the old update function in its constructor.
+      // Route scheduled refreshes through the same wrapper as direct updates.
+      const wrappedRequest=wrappedUpdate&&debounce(()=>view.update?.(),10)
+      view.getHeadings=wrapped
+      if(wrappedUpdate){originalRequest?.cancel?.();view.update=wrappedUpdate;view.requestUpdate=wrappedRequest}
+      patched.set(view,{original,wrapped,own,originalUpdate,wrappedUpdate,ownUpdate,originalRequest,wrappedRequest,ownRequest});view.requestUpdate?.()
     }
   }
   plugin.app.workspace.onLayoutReady(attach)
   plugin.registerEvent(plugin.app.workspace.on('layout-change',attach))
   plugin.register(()=>{
-    for(const [view,{original,wrapped,own,originalUpdate,wrappedUpdate,ownUpdate}] of patched) {
+    for(const [view,{original,wrapped,own,originalUpdate,wrappedUpdate,ownUpdate,originalRequest,wrappedRequest,ownRequest}] of patched) {
+      if(wrappedRequest&&view.requestUpdate===wrappedRequest){wrappedRequest.cancel?.();if(ownRequest)view.requestUpdate=originalRequest;else delete view.requestUpdate}
+      for(const node of view.cachedHeadingDom??[]){
+        node.el?.removeAttribute('data-blo-outline-root')
+        node.el?.style.removeProperty('--blo-outline-root-offset')
+      }
       if(wrappedUpdate&&view.update===wrappedUpdate){if(ownUpdate)view.update=originalUpdate;else delete view.update}
       if(view.getHeadings===wrapped){if(own)view.getHeadings=original;else delete view.getHeadings;view.requestUpdate?.()}
     }

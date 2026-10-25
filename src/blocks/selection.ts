@@ -32,8 +32,13 @@ export function indentBlockSelection(editor:Editor,delta:1|-1):boolean {
 }
 export function deleteWholeBlockSelection(editor:Editor):boolean {
  const pending=staged.get(editor)
- if(editor.wysimark.readOnly||!pending||!isWholeBlockSelected(editor,pending.index))return false
- const index=pending.index
+ if(editor.wysimark.readOnly||!editor.selection)return false
+ let index=pending&&isWholeBlockSelected(editor,pending.index)?pending.index:undefined
+ if(index===undefined&&Range.isCollapsed(editor.selection)) {
+  const entry=Editor.above(editor,{match:n=>isStructuredBlock(n)&&editor.isVoid(n)})
+  if(entry?.[1].length===1)index=entry[1][0]
+ }
+ if(index===undefined)return false
  clearBlockSelection(editor)
  return deleteBlockGroup(editor,index)
 }

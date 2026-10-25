@@ -10,6 +10,7 @@ import { positionInside, useAbsoluteReposition } from '../../use-reposition'
 import { useLayer } from '../../use-layer'
 import { ui } from '../../utils/translations'
 import type { ImageBlockElement, ImageInlineElement } from '../types'
+import { deleteBlockGroup } from '../../../blocks/model'
 
 function EditMediaReference({ anchor, target, onSave }: { anchor: HTMLElement; target: string; onSave: (target: string) => void }) {
   const ref = useRef<HTMLDivElement>(null), [value, setValue] = useState(target)
@@ -43,7 +44,12 @@ export function MediaReferenceDialog({ element }: { element: ImageBlockElement |
       const anchor = root.querySelector<HTMLElement>('[data-blo-drawing],[data-blo-image]') || root
       const card = () => <AnchorDialog destAnchor={anchor} destStartEdge={anchor} embed={{
         target: file.target, file,
-        onRemove: () => { if (!editor.wysimark.readOnly) Transforms.removeNodes(editor, { at: ReactEditor.findPath(editor, elementRef.current) }) },
+        onRemove: () => {
+          if (editor.wysimark.readOnly) return
+          const at=ReactEditor.findPath(editor,elementRef.current)
+          if(at.length===1)deleteBlockGroup(editor,at[0])
+          else Transforms.removeNodes(editor,{at})
+        },
         onEdit: () => dialogRef.current.open(() => <EditMediaReference anchor={anchor} target={file.target} onSave={target => {
           if (editor.wysimark.readOnly) return
           const url = editor.wysimark.resolveInternalMedia?.(target)

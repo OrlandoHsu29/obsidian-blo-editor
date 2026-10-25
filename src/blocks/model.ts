@@ -1,5 +1,6 @@
 import { Editor, Element, Node, NodeEntry, Path, Point, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
+import { isStructuredBlock } from './structured-block'
 
 type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart' | 'explicit'; __firstAtDepth?: boolean; depth?: number; start?: number }
 export const blockDepth = (node: Node): number => Element.isElement(node) ? Math.max(0, (node as Block).__blockDepth ?? (node as Block).depth ?? 0) : 0
@@ -147,9 +148,18 @@ export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
 /** Remove the same subtree that the block handle selects, as one undo step. */
 export function deleteBlockGroup(editor: Editor, index: number): boolean {
   if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
+  const removed=editor.children[index]
   const end=groupEnd(editor.children,index)
   batch(editor,()=>{
     for(let i=end-1;i>=index;i--)Transforms.removeNodes(editor,{at:[i]})
+    // Restore a durable input row at the removed block, instead of accepting
+    // Slate's fallback caret inside the preceding heading/table/code block.
+    if(isStructuredBlock(removed)) {
+      Transforms.insertNodes(editor,{type:'paragraph',__blockDepth:blockDepth(removed),children:[{text:''}]},{at:[index]})
+      Transforms.select(editor,Editor.start(editor,[index]))
+      editor.marks=null
+      return
+    }
     if(!editor.children.length)Transforms.insertNodes(editor,{type:'paragraph',children:[{text:''}]},{at:[0]})
     const target=Math.min(index,editor.children.length-1),node=editor.children[target]
     // Structured neighbors stay selected rather than unexpectedly entering a cell or code.

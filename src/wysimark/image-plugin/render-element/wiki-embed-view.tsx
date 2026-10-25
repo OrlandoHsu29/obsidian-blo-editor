@@ -8,6 +8,7 @@ import { AnchorDialog } from "../../anchor-plugin/render-element/AnchorDialog"
 import { AnchorEditDialog } from "../../anchor-plugin/render-element/AnchorEditDialog"
 import { useLayer } from "../../use-layer"
 import { ImageBlockElement, ImageInlineElement } from "../types"
+import { deleteBlockGroup } from '../../../blocks/model'
 import { useAttachmentRevision } from '../attachment-revision'
 
 const $WikiEmbed = styled("span")`
@@ -70,7 +71,8 @@ export function WikiEmbedView({
 
   const handleRemove = useCallback(() => {
     const at = ReactEditor.findPath(editor, element)
-    Transforms.removeNodes(editor, { at })
+    if(at.length===1)deleteBlockGroup(editor,at[0])
+    else Transforms.removeNodes(editor, { at })
   }, [editor, element])
 
   useEffect(() => {

@@ -24,6 +24,8 @@ export function getMarksFromSegment(segment: Segment): MarkKey[] {
       )
     }
     return getMarksFromText(segment)
+  } else if (segment.type === "math-inline") {
+    return []
   } else if (segment.type === "anchor") {
     return getCommonAnchorMarks(segment.children as Segment[])
   } else {
@@ -43,7 +45,7 @@ export function getCommonAnchorMarks(segments: Segment[]): MarkKey[] {
        *
        * [![Semantic description](https://roneo.org/img/ok.png "Your title")](http://jamstack.club)
        */
-      if (segment.type === "image-inline") continue
+      if (segment.type === "image-inline" || segment.type === "math-inline") continue
       /**
        * TODO: This is not actually true. It can be an inline image which we
        * still need to add.

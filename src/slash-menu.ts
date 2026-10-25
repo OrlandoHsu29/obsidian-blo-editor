@@ -54,6 +54,7 @@ export const slashCommands: SlashCommand[] = [
   command('复选框', 'list-checks', editor => editor.list.convertTaskList(true), {}, ['任务列表', '待办', 'task', 'todo', 'checklist', 'fxk', 'rwlb', 'db']),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
   command('表格', 'table', editor => { editor.tablePlugin.insertTable(3, 3) }, {}, ['bg', 'grid', 'spreadsheet']),
+  command('插入行内公式', 'sigma', editor => { editor.math.insertInline() }, {}, ['公式', '数学公式', 'LaTeX', 'math', 'equation', 'formula', 'hngs', 'crhngs', 'gs', 'sxgs']),
   command('链接', 'link', undefined, {}, ['lj', 'url', 'hyperlink'], 'link'),
   command('图片', 'image', undefined, {}, ['照片', 'photo', 'picture', 'tp', 'zp'], 'image'),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),

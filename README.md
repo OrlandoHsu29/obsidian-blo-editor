@@ -15,6 +15,10 @@
 Edit content directly and organize ideas by dragging and indenting blocks.
 Notes stay in Markdown, with automatic saving, rich copy/paste, and inline drawings.
 
+Insert inline LaTeX with `Ctrl/Cmd+Shift+M`, the formula toolbar button, or `/math`.
+Type the source in place, leave the field to render it, and double-click to edit.
+Formulas use Obsidian's built-in MathJax and save as `$...$`; no extra rendering plugin is required.
+
 Export the rendered note through the file explorer context menu, tab menu, or **Blo Editor: Export PDF** command,
 without another export plugin. Choose A4, A3, or Letter, orientation, margins, title,
 and page numbers. PDFs use a light background and preserve code highlighting,

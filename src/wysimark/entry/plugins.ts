@@ -14,6 +14,7 @@ import { ConvertElementPlugin } from "../convert-element-plugin"
 import { HeadingPlugin } from "../heading-plugin"
 import { HorizontalRulePlugin } from "../horizontal-rule-plugin"
 import { InlineCodePlugin } from "../inline-code-plugin"
+import { MathPlugin } from "../math-plugin"
 import { ListPlugin } from "../list-plugin"
 import { MarksPlugin } from "../marks-plugin"
 import { ColorBoundaryPlugin } from '../marks-plugin/color-boundary'
@@ -37,6 +38,7 @@ export const plugins = [
   HeadingPlugin,
   MarksPlugin,
   InlineCodePlugin,
+  MathPlugin,
   BlockQuotePlugin,
   CodeBlockPlugin,
   HtmlBlockPlugin,

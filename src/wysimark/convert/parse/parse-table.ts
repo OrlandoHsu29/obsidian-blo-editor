@@ -21,7 +21,7 @@ export function parseTable(
       columns: table.align.map((align) => ({
         align: align || "left",
       })),
-      children: table.children.map((row) => parseTableRow(row, options)),
+      children: table.children.map((row) => parseTableRow(row, { ...options, inTable: true })),
     },
   ]
 }

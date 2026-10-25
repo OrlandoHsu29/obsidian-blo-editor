@@ -1,6 +1,7 @@
 import { MenuItemData } from '../../shared-overlays'
 import { t, ui } from '../../utils/translations'
-import { Drawing, Normal, TextColorPreview } from '../icons'
+import { Drawing, Formula, Normal, TextColorPreview } from '../icons'
+import { canInsertMath } from '../../math-plugin'
 import { isFixedToolbarButton } from '../../../toolbar-preferences'
 import { compactBlockItems } from './block-items'
 import { dialogItems } from './dialogItems'
@@ -32,7 +33,9 @@ export const toolbarGroups: ToolbarEntry[][] = [
     entry('quote',pick(expandedQuoteItems,t('quote'))),entry('code-block',pick(expandedQuoteItems,t('codeBlock'))),
     entry('horizontal-rule',pick(dialogItems,t('horizontalRule')))],
   [entry('outdent',blockIndentItems[0]),entry('indent',blockIndentItems[1])],
-  [entry('table',pick(dialogItems,t('insertTable'))),entry('link',pick(dialogItems,t('insertLink'))),
+  [entry('table',pick(dialogItems,t('insertTable'))),
+    entry('inline-math', { title: ui('插入行内公式'), icon: Formula, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline() } }),
+    entry('link',pick(dialogItems,t('insertLink'))),
     entry('image',pick(dialogItems,t('insertImageFromUrl'))),
     entry('drawing',{ title: ui('插入画板'), icon: Drawing, show: editor => editor.wysimark.integrationPreferences?.getSnapshot().drawings ?? true, action: editor => { void editor.wysimark.insertDrawing?.() } })],
   [entry('find-replace',utilityItems[0])],

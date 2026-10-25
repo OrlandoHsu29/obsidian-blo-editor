@@ -7,6 +7,8 @@ export type InternalLinkOptions = {
   enableInternalLinks?: boolean
   /** Import compatibility inferred from Yuque's styled font wrappers. */
   yuqueFormatting?: boolean
+  /** GFM table cell escaping also applies inside mathematical source. */
+  inTable?: boolean
 }
 
 export function protectEscapedWikiLinks(markdown: string): string {

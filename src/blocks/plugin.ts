@@ -5,7 +5,7 @@ import { Editor, Element, Range, Transforms } from 'slate'
 import type { Descendant } from 'slate'
 import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isWholeBlockSelected, navigateBlockBoundary } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
-import { boundaryBlockIndex, insertBreakAtBoundary, normalizeStructuredBoundary } from './boundary'
+import { boundaryBlockIndex, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary } from './boundary'
 import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
 import { exitEmptyQuote } from './subtitle'
 type Types={Name:'block-structure';Editor:{}}
@@ -19,19 +19,14 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
     !Range.equals(editor.selection,{...editor.selection,...operation.newProperties}))clearBlockSelection(editor)
   apply(operation)
  }
- const materializeBoundary=()=>{
-  const index=editor.selection!.anchor.path[0],node=editor.children[index-1]
-  const indentation=blockDepth(node)||(Element.isElement(node)&&node.__blockDepth!==undefined)?{__blockDepth:blockDepth(node)}:{}
-  Transforms.setNodes(editor,{__collapsible:undefined,...indentation},{at:[index]})
- }
  editor.insertText=text=>{
   if(!text||boundaryBlockIndex(editor)===undefined)return insertText(text)
-  Editor.withoutNormalizing(editor,()=>{materializeBoundary();insertText(text)})
+  Editor.withoutNormalizing(editor,()=>{materializeTextBoundary(editor);insertText(text)})
  }
  editor.insertFragment=(fragment,options)=>{
   const insert=()=>insertFragment(cleanPastedFragment(fragment as Descendant[]),options)
   if(!fragment.length||boundaryBlockIndex(editor)===undefined)return insert()
-  Editor.withoutNormalizing(editor,()=>{materializeBoundary();insert()})
+  Editor.withoutNormalizing(editor,()=>{materializeTextBoundary(editor);insert()})
  }
  return {
  name:'block-structure',editor:{

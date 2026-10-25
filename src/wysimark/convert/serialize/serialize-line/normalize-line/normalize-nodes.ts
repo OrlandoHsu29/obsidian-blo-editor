@@ -27,7 +27,7 @@ export function normalizeNodes(
        * Normalize the children of the current Node before normalizing the
        * Node itself.
        */
-      if (isElement(node)) {
+      if (isElement(node) && (node.type === 'anchor' || node.type === 'line')) {
         const isChildrenUpdated = normalizeNodes(
           node.children as Array<AnchorElement | LineElement>,
           node

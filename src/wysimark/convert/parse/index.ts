@@ -1,5 +1,6 @@
 import type { Root, TopLevelContent } from "mdast"
 import remarkParse from "remark-parse"
+import remarkMath from "remark-math"
 import { unified } from "unified"
 import { visit } from "unist-util-visit"
 
@@ -15,7 +16,7 @@ import { getLineEnding, withLineEnding } from "../line-endings"
 import { parseBlockDocument } from '../../../blocks/persistence'
 import { hasUnclosedExportedFont } from './parse-code-block'
 
-const parser = unified().use(remarkParse).use(customRemarkGfm())
+const parser = unified().use(remarkParse).use(customRemarkGfm()).use(remarkMath)
 
 /** Yuque can put a closing font tag at column zero inside an indented list.
  * Restore only those continuations so Markdown can recover the complete list.
@@ -55,7 +56,7 @@ function repairYuqueStrong(source:string,ast:Root):string {
   if(!source.includes('**')||!/<font\b/i.test(source))return source
   const codeRanges:{start:number;end:number}[]=[]
   visit(ast,node=>{
-    if(node.type!=='code'&&node.type!=='inlineCode')return
+    if(node.type!=='code'&&node.type!=='inlineCode'&&node.type!=='math'&&node.type!=='inlineMath')return
     const start=node.position?.start.offset,end=node.position?.end.offset
     if(start!==undefined&&end!==undefined)codeRanges.push({start,end})
   })

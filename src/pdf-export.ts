@@ -27,23 +27,35 @@ body{padding:0!important;margin:0!important;font-family:var(--font-text);font-si
 [data-blo-image]{max-width:100%!important;outline:none!important;box-shadow:none!important}
 [data-blo-image]>img{height:auto!important}
 [data-blo-drawing]{max-width:100%!important;outline:none!important;box-shadow:none!important}
+[data-blo-math]{outline:none!important;break-inside:avoid}
 .blo-pdf-title{font-size:2em;font-weight:700;line-height:1.3;margin:0 0 1em;break-after:avoid-page}
 `;
 
-function stylesheetText(doc: Document): string {
-  return Array.from(doc.styleSheets).map(sheet => {
-    try { return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n'); }
-    catch { return ''; }
-  }).join('\n');
+async function stylesheetText(doc: Document, includeMath: boolean): Promise<string> {
+  const rules = Array.from(doc.styleSheets).flatMap(sheet => {
+    try { return Array.from(sheet.cssRules); } catch { return []; }
+  });
+  let text = rules.map(rule => rule.cssText).join('\n');
+  if (includeMath) {
+    const fonts = new Set<string>();
+    for (const rule of rules) {
+      if (!/^@font-face\s*\{\s*font-family:\s*["']?MJX/.test(rule.cssText)) continue;
+      for (const match of rule.cssText.matchAll(/url\(["']?([^"')]+)["']?\)/g)) if (!match[1].startsWith('data:')) fonts.add(match[1]);
+    }
+    const embedded = await Promise.all([...fonts].map(async url => [url, await dataUrl(new URL(url, doc.baseURI).href)] as const));
+    for (const [url, data] of embedded) text = text.split(url).join(data);
+  }
+  return text;
 }
 
-async function waitForDrawings(source: HTMLElement): Promise<void> {
-  const ready = () => Array.from(source.querySelectorAll('.blo-drawing-content')).every(el => el.querySelector('svg,img,canvas'));
+async function waitForPreviews(source: HTMLElement): Promise<void> {
+  const ready = () => Array.from(source.querySelectorAll('.blo-drawing-content')).every(el => el.querySelector('svg,img,canvas')) &&
+    Array.from(source.querySelectorAll('.blo-math-preview')).every(el => el.hasChildNodes());
   if (ready()) return;
   await new Promise<void>((resolve, reject) => {
     const finish = (error?: Error) => { observer.disconnect(); window.clearTimeout(timeout); error ? reject(error) : resolve(); };
     const observer = new MutationObserver(() => { if (ready()) finish(); });
-    const timeout = window.setTimeout(() => finish(new Error(ui('画板尚未加载完成，请稍后重试'))), 20000);
+    const timeout = window.setTimeout(() => finish(new Error(ui('预览尚未加载完成，请稍后重试'))), 20000);
     observer.observe(source, { childList: true, subtree: true });
   });
 }
@@ -70,7 +82,7 @@ async function dataUrl(src: string): Promise<string> {
 export async function createPdfHtml(view: BloView, options: PdfOptions): Promise<string> {
   const source = view.contentEl.querySelector<HTMLElement>('[data-slate-editor="true"]');
   if (!source || !view.currentFile) throw new Error(ui('请先打开一篇笔记'));
-  await waitForDrawings(source);
+  await waitForPreviews(source);
   const doc = source.ownerDocument;
   const clone = source.cloneNode(true) as HTMLElement;
   // Canvas pixels are not copied by cloneNode (SVG drawings already are).
@@ -134,7 +146,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   const charset = output.createElement('meta'); charset.setAttribute('charset', 'utf-8'); output.head.appendChild(charset);
   const csp = output.createElement('meta'); csp.httpEquiv = 'Content-Security-Policy';
   csp.content = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:;"; output.head.appendChild(csp);
-  const style = output.createElement('style'); style.textContent = stylesheetText(doc) + '\n' + PRINT_CSS; output.head.appendChild(style);
+  const style = output.createElement('style'); style.textContent = await stylesheetText(doc, !!source.querySelector('[data-blo-math]')) + '\n' + PRINT_CSS; output.head.appendChild(style);
   output.body.className = doc.body.className.replace(/theme-dark/g, 'theme-light'); output.body.classList.add('theme-light','blo-pdf');
   // Preserve the user's configured font, while selecting the light theme's colors.
   const computed = doc.defaultView!.getComputedStyle(source);

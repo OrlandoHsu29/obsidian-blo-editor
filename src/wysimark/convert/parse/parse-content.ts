@@ -65,6 +65,8 @@ export function parseContent(
   options: InternalLinkOptions = {}
 ): Element[] {
   switch (content.type) {
+    case "math":
+      return [{ type: "math-block", latex: content.value, children: [{ text: "" }] }]
     case "blockquote":
       return parseBlockquote(content, options)
     case "code":

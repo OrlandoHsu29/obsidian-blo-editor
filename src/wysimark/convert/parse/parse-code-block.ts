@@ -1,5 +1,6 @@
 import type { Code, List, Root } from "mdast"
 import remarkParse from "remark-parse"
+import remarkMath from "remark-math"
 import { unified } from "unified"
 import { visit } from "unist-util-visit"
 
@@ -8,7 +9,7 @@ import { InternalLinkOptions, restoreEscapedWikiLinks } from "../obsidian-links"
 import { customRemarkGfm } from "./custom-gfm"
 import { parseList } from "./parse-list"
 
-const listParser = unified().use(remarkParse).use(customRemarkGfm())
+const listParser = unified().use(remarkParse).use(customRemarkGfm()).use(remarkMath)
 
 function isExportedList(content: Code): boolean {
   return !content.lang && !content.meta && /^\s*(?:[-+*]|\d+[.)])\s+/.test(content.value) &&

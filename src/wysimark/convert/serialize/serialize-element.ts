@@ -8,6 +8,7 @@ import { serializeLine } from "./serialize-line"
 import { serializeTable } from "./serialize-table"
 import { ListItemElement } from "../../list-plugin/types"
 import { serializeAnchor } from "./serialize-line/segment/serialize-anchor"
+import { serializeMath } from "../../math-plugin/serialize"
 
 const LIST_INDENT_SIZE = 4
 
@@ -31,6 +32,10 @@ export function serializeElement(
   options: InternalLinkOptions = {}
 ): string {
   switch (element.type) {
+    case "math-block":
+      return serializeMath(element.latex, true)
+    case "math-inline":
+      return serializeMath(element.latex)
     case "anchor":
       return serializeAnchor(element, options)
     case "block-quote": {

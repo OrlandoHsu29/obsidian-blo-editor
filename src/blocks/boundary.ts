@@ -3,7 +3,18 @@ import { HistoryEditor } from 'slate-history'
 import { blockDepth, isEditorSpacer } from './model'
 
 export const isStructuredBlock = (node: unknown, editor?: Editor): node is Element =>
-  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block' || node.type === 'image-block')
+  Element.isElement(node) && (node.type === 'table' || node.type === 'code-block' || node.type === 'image-block' || node.type === 'math-block')
+
+/** Turn an insertion caret into a durable text row before inserting content. */
+export function materializeTextBoundary(editor: Editor): boolean {
+  if (!editor.selection) return false
+  const index = editor.selection.anchor.path[0], node = editor.children[index]
+  if (!isEditorSpacer(node)) return false
+  Transforms.setNodes(editor, {
+    __collapsible: undefined, __blockDepth: blockDepth(editor.children[index - 1] ?? node),
+  }, { at: [index] })
+  return true
+}
 
 /** Navigation paragraphs are real Slate points, omitted from Markdown. */
 export function normalizeStructuredBoundary(editor: Editor, [node, path]: NodeEntry<Node>): boolean {

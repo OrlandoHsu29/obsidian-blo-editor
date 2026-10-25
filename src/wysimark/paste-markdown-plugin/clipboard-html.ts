@@ -2,6 +2,8 @@ import { Editor, Element, Node, Range, Text } from 'slate'
 import type { Descendant } from 'slate'
 import { blockDepth, isEditorSpacer, isListBlock, resolveOrderedNumbers, rootCache } from '../../blocks/model'
 import { cleanInlineStyle } from '../../blocks/typography'
+import { serializeMath } from "../math-plugin/serialize"
+import { serialize } from "../convert"
 
 /** Build semantic HTML from just the copied fragment, without editor controls/CSS. */
 export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>()): string {
@@ -25,6 +27,11 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
       const style = cleanInlineStyle(node.inlineStyle)
       if (style) { const span = wrap('span', result); span.setAttribute('style', style); result = span }
       return result
+    }
+    if (node.type === 'math-inline' || node.type === 'math-block') {
+      const source = document.createElement(node.type === 'math-block' ? 'div' : 'span')
+      source.textContent = serializeMath(node.latex, node.type === 'math-block')
+      return source
     }
     if (node.type === 'code-block') {
       const code = document.createElement('code')
@@ -123,6 +130,9 @@ export function installRichClipboard(editor: Editor): void {
       if (label) labels.set(node, label)
     })
     data.setData('text/html', clipboardFragmentHtml(fragment, encoded, labels))
+    if (fragment.some(node => [...Node.elements(node)].some(([element]) => element.type === 'math-inline' || element.type === 'math-block'))) {
+      data.setData('text/plain', serialize(fragment as Element[]))
+    }
     return result
   }
 }

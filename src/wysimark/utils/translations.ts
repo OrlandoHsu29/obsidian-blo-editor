@@ -129,6 +129,10 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "插入行内公式": { "zh": "插入行内公式", "en": "Insert inline math" },
+  "LaTeX 公式源码": { "zh": "LaTeX 公式源码", "en": "LaTeX formula source" },
+  "双击编辑公式": { "zh": "双击编辑公式", "en": "Double-click to edit formula" },
+  "预览尚未加载完成，请稍后重试": { "zh": "预览尚未加载完成，请稍后重试", "en": "The preview is still loading. Please try again shortly" },
   "相对于知识库根目录；保存为新的画板文件。": { zh: "相对于知识库根目录；保存为新的画板文件。", en: "Relative to the vault root. Saves a new drawing file." },
   "另存后替换当前引用": { zh: "另存后替换当前引用", en: "Replace current reference after saving" },
   "副本已保存，原引用已不可用，未替换。": { zh: "副本已保存，原引用已不可用，未替换。", en: "Copy saved. The original reference is no longer available and was not replaced." },
@@ -172,7 +176,6 @@ export const uiMessages = {
   "无法使用系统 PDF 导出": { zh: "无法使用系统 PDF 导出", en: "System PDF export is unavailable" },
   "笔记已切换，请重新导出": { zh: "笔记已切换，请重新导出", en: "The note changed. Please export again" },
   "PDF 已导出": { zh: "PDF 已导出", en: "PDF exported" },
-  "画板尚未加载完成，请稍后重试": { zh: "画板尚未加载完成，请稍后重试", en: "The drawing is still loading. Please try again shortly" },
   "编辑器": { zh: "编辑器", en: "Editor" },
   "附件": { zh: "附件", en: "Attachments" },
   "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。": { zh: "Markdown 笔记默认使用富文本编辑；阅读视图不受影响。", en: "Open Markdown notes in the rich editor by default; reading views are unaffected." },

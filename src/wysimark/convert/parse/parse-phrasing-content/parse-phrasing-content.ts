@@ -221,6 +221,10 @@ function parsePhrasingContent(
 ): Segment[] {
   const marks = contextMarks(baseMarks, context)
   switch (phrasingContent.type) {
+    case "inlineMath":
+      return [{ type: "math-inline", latex: options.inTable
+        ? phrasingContent.value.replace(/(\\+)\|/g, (_, slashes: string) => '\\'.repeat(Math.floor(slashes.length / 2)) + '|')
+        : phrasingContent.value, children: [{ text: "" }] }]
     case "delete":
       return parsePhrasingContents(
         phrasingContent.children,

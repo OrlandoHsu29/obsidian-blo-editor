@@ -19,6 +19,7 @@ import { ToolbarPreferences } from './toolbar-preferences';
 import { parseBlockDocument } from './blocks/persistence';
 import { IntegrationPreferences, IntegrationFlags } from './integration-preferences';
 import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from './optional-integrations';
+import { canInsertMath } from './wysimark/math-plugin';
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
@@ -93,6 +94,12 @@ export default class BloEditorPlugin extends Plugin {
     this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
       const view=this.app.workspace.getActiveViewOfType(BloView);if(!view?.editor||view.readOnly)return false;
       if(!checking)clearFormatting(view.editor);return true;
+    }});
+    this.addCommand({ id: 'insert-inline-math', name: ui('插入行内公式'), hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'm' }], checkCallback: checking => {
+      const view = this.app.workspace.getActiveViewOfType(BloView);
+      if (!view?.editor || view.readOnly || !canInsertMath(view.editor)) return false;
+      if (!checking) view.editor.math.insertInline();
+      return true;
     }});
     for (const [id, name, key, replace] of [['find-text',ui("查找当前文档"),'f',false],['replace-text',ui("替换当前文档"),'h',true]] as const) {
       this.addCommand({id, name, hotkeys:[{modifiers:['Mod'],key}], checkCallback:checking=>{

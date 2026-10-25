@@ -159,6 +159,8 @@ export function escapeText(s: string, options: EscapeTextOptions = {}) {
 
     if (ch === "`") {
       result += escapeBackticks ? "\\`" : ch
+    } else if (ch === "$") {
+      result += "\\$"
     } else if (ch === "\\") {
       result += isAsciiPunct(next) ? "\\\\" : "\\"
     } else if (ch === "<") {

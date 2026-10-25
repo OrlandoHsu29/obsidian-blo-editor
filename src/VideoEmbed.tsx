@@ -39,7 +39,7 @@ export function VideoEmbed({ app, file }: { app: App; file: TFile }) {
         if (video.videoWidth && video.videoHeight) setNaturalSize({ width: video.videoWidth, height: video.videoHeight })
       }} />
     {!readOnly && selected && displaySize && naturalSize && <>
-      <ImageToolbar element={element} size={displaySize} setSize={setSize} srcSize={naturalSize}
+      <ImageToolbar element={element} size={displaySize} setSize={setSize} srcSize={naturalSize} isDragging={isDragging}
         presets={element.type === 'image-block' ? editor.image.imageBlockPresets : editor.image.imageInlinePresets} />
       <ImageResizeControl element={element} size={displaySize} setSize={setSize} srcSize={naturalSize}
         isDragging={isDragging} setIsDragging={setIsDragging} />

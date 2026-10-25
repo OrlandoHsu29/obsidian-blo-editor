@@ -568,11 +568,11 @@
 .blo-drawing-replace-reference input { margin:0; }
 
 /* Image and video size controls share Obsidian's surface and state colors. */
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) { top:auto; bottom:calc(100% + 8px); left:0; z-index:3; gap:4px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:8px; background:var(--background-secondary); color:var(--text-normal); box-shadow:var(--shadow-s); font:13px/1 var(--font-interface); }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span { outline:none; border-radius:4px; background:transparent; }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span + span { border-left:1px solid var(--background-modifier-border); border-radius:0; padding-left:4px; }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-width:28px; height:28px; padding:0 7px; border:0; border-radius:4px; background:transparent; color:var(--text-normal); font-size:inherit; line-height:1; }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span.--selected { color:var(--text-accent); background:var(--background-modifier-hover); }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) > span > span.--disabled { color:var(--text-faint); background:transparent; cursor:default; }
-.wysimark-container [data-blo-image] > span:has([data-wysimark-image-preset]) svg { position:static; top:auto; display:block; width:17px; height:17px; }
+.wysimark-image-toolbar { gap:4px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:8px; background:var(--background-secondary); color:var(--text-normal); box-shadow:var(--shadow-s); font:13px/1 var(--font-interface); }
+.wysimark-image-toolbar > span { outline:none; border-radius:4px; background:transparent; }
+.wysimark-image-toolbar > span + span { border-left:1px solid var(--background-modifier-border); border-radius:0; padding-left:4px; }
+.wysimark-image-toolbar > span > span { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; min-width:28px; height:28px; padding:0 7px; border:0; border-radius:4px; background:transparent; color:var(--text-normal); font-size:inherit; line-height:1; }
+.wysimark-image-toolbar > span > span:hover { color:var(--text-normal); background:var(--background-modifier-hover); }
+.wysimark-image-toolbar > span > span.--selected { color:var(--text-accent); background:var(--background-modifier-hover); }
+.wysimark-image-toolbar > span > span.--disabled { color:var(--text-faint); background:transparent; cursor:default; }
+.wysimark-image-toolbar svg { position:static; top:auto; display:block; width:17px; height:17px; }

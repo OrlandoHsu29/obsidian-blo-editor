@@ -111,6 +111,7 @@ export function ImageWithControls({
           setSize={setSize}
           srcSize={srcSize}
           presets={presets}
+          isDragging={isDragging}
         />
       ) : null}
       {/**

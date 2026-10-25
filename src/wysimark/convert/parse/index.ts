@@ -13,8 +13,43 @@ import { parseContents } from "./parse-content"
 import { transformInlineLinks } from "./transform-inline-links"
 import { getLineEnding, withLineEnding } from "../line-endings"
 import { parseBlockDocument } from '../../../blocks/persistence'
+import { hasUnclosedExportedFont } from './parse-code-block'
 
 const parser = unified().use(remarkParse).use(customRemarkGfm())
+
+/** Yuque can put a closing font tag at column zero inside an indented list.
+ * Restore only those continuations so Markdown can recover the complete list.
+ */
+function repairYuqueListContinuations(source: string, ast: Root): string {
+  const lines = source.split('\n')
+  let changed = false
+  const listPrefix = /^([ \t]*)(?:[-+*]|\d+[.)])[ \t]+/
+  visit(ast, 'code', node => {
+    if (!node.position || !hasUnclosedExportedFont(node)) return
+    const start = node.position.start.line - 1, end = node.position.end.line
+    const first = lines[start].match(listPrefix)
+    // A real fenced code block must remain literal, including an unlabelled one.
+    if (!first || first[1].length < 4) return
+    const base = first[1].length
+    let continuation = first[0].replace(/\S/g, ' '), value = node.value
+    for (let line = start; line < end; line++) {
+      const prefix = lines[line].match(listPrefix)
+      if (prefix) continuation = prefix[0].replace(/\S/g, ' ')
+    }
+    for (let line = end; line < lines.length && lines[line].trim(); line++) {
+      const indent = lines[line].match(/^[ \t]*/)![0].length
+      if (indent < base) {
+        if (!/^\s*<\/font\s*>/i.test(lines[line]) || !hasUnclosedExportedFont({ ...node, value })) break
+        lines[line] = continuation + lines[line].trimStart()
+        changed = true
+      }
+      const prefix = lines[line].match(listPrefix)
+      if (prefix) continuation = prefix[0].replace(/\S/g, ' ')
+      value += '\n' + lines[line].slice(base)
+    }
+  })
+  return changed ? lines.join('\n') : source
+}
 
 function repairYuqueStrong(source:string,ast:Root):string {
   if(!source.includes('**')||!/<font\b/i.test(source))return source
@@ -57,12 +92,21 @@ export function parseToAst(
   let source = options.enableInternalLinks ? protectEscapedWikiLinks(markdown) : markdown
   let ast = parser.parse(source) as Root
   if(options.yuqueFormatting){
+    const continued = repairYuqueListContinuations(source, ast)
+    if (continued !== source) { source = continued; ast = parser.parse(source) as Root }
     const repaired=repairYuqueStrong(source,ast)
     if(repaired!==source){source=repaired;ast=parser.parse(source) as Root}
   }
   visit(ast, 'paragraph', node => {
     const start=node.position?.start.offset
     if(start!==undefined&&/^\d{1,6}\\\. /.test(source.slice(start)))node.data={...node.data,escapedOrderedPrefix:true}
+    const end = node.position?.end.offset
+    if (options.yuqueFormatting && start !== undefined && end !== undefined) {
+      const raw = source.slice(start, end)
+      if (/^(?:[-+*]|\d+[.)])\s+/.test(raw) && /\n[ \t]+(?:[-+*]|\d+[.)])\s+/.test(raw)) {
+        node.data = { ...node.data, yuqueListSource: raw }
+      }
+    }
   })
   visit(ast, "definition", (node) => {
     const start = node.position?.start.offset

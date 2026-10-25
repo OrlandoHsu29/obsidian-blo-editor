@@ -7,6 +7,7 @@ import { InternalLinkOptions } from "../obsidian-links"
 import { Element, Segment } from "../types"
 import { parsePhrasingContents } from "./parse-phrasing-content/parse-phrasing-content"
 import { splitSegmentLines } from "./parse-phrasing-content/split-segment-lines"
+import { parseExportedListSource } from "./parse-code-block"
 
 function isImageBlock(segments: Segment[]): boolean {
   if (segments.length !== 3) return false
@@ -27,6 +28,10 @@ export function parseParagraph(
   content: Paragraph,
   options: InternalLinkOptions = {}
 ): Element[] {
+  if (typeof content.data?.yuqueListSource === "string") {
+    const recovered = parseExportedListSource(content.data.yuqueListSource, 0, options)
+    if (recovered) return recovered
+  }
   return splitSegmentLines(parsePhrasingContents(content.children, {}, options)).map(segments => {
     if (isImageBlock(segments)) {
       const imageSegment = segments[1] as ImageInlineElement

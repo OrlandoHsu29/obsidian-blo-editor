@@ -22,18 +22,3 @@ export const $InlineCode = styled("code")`
   font-size: 0.75em;
   vertical-align: baseline;
 `
-
-/**
- * These invisible spans fix a bug in Chrome which doesn't allow the cursor to
- * sit on both the "inside" and "outside" of the inline-code span. By placing
- * this 1px wide span just inside of the inline code, we are able to workaround
- * this limitation.
- */
-export const $InvisibleSpan = styled("span")`
-  display: inline-block;
-  opacity: 0;
-  width: 1px;
-  height: 0;
-  vertical-align: baseline;
-  overflow: hidden;
-`

@@ -1,6 +1,6 @@
 import type { PhrasingContent } from "mdast"
 
-import { MarkProps, Segment } from "../../types"
+import { MarkProps, Segment, Text } from "../../types"
 import { assertUnreachable } from "../../utils"
 import { normalizeSegments } from "./normalize-segments"
 import { parseInlineImage } from "./parse-inline-image"
@@ -142,7 +142,7 @@ function contextMarks(marks: MarkProps, context?: InlineContext): MarkProps {
 }
 
 /** Yuque places presentation wrappers inside code spans; fenced code stays literal. */
-function parseFontCode(value: string, marks: MarkProps, yuqueFormatting=false): Segment[] {
+function parseFontCode(value: string, marks: MarkProps, yuqueFormatting=false): Text[] {
   const bareBold=yuqueFormatting&&/^(\*\*|__)[\s\S]+\1$/.test(value)
   if (!/<font\b/i.test(value)&&!bareBold) return [{ text: restoreEscapedWikiLinks(value, true), ...marks, code: true }]
   let text = value, hasFont = false
@@ -244,7 +244,7 @@ function parsePhrasingContent(
     case "image":
       return parseInlineImage(phrasingContent)
     case "inlineCode": {
-      return parseFontCode(phrasingContent.value, marks, options.yuqueFormatting)
+      return [{ type: 'inline-code', children: parseFontCode(phrasingContent.value, marks, options.yuqueFormatting).map(({ code: _code, ...text }) => text) }]
     }
     case "link":
       return [

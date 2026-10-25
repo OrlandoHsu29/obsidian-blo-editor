@@ -32,6 +32,8 @@ export function serializeElement(
   options: InternalLinkOptions = {}
 ): string {
   switch (element.type) {
+    case 'inline-code':
+      return serializeLine([element], [], [], options)
     case "math-block":
       return serializeMath(element.latex, true)
     case "math-inline":

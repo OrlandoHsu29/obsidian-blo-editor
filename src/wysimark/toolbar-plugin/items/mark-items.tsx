@@ -1,5 +1,5 @@
 import { ui } from "../../utils/translations"
-import { Editor } from "slate"
+import { Editor, Element } from "slate"
 import { MenuItemData } from "../../shared-overlays"
 
 import * as Icon from "../icons"
@@ -12,7 +12,7 @@ function getMarks(editor: Editor) {
     bold: marks?.bold || false,
     italic: marks?.italic || false,
     strike: marks?.strike || false,
-    code: marks?.code || false,
+    code: !!editor.selection && !!Editor.above(editor, { match: node => Element.isElement(node) && node.type === 'inline-code' }),
     underline: marks?.underline || false,
   }
 }

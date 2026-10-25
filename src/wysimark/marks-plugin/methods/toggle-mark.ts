@@ -25,7 +25,7 @@ export function toggleMark(
     Editor.isEnd(editor, point, Editor.end(editor, []))
   )
 
-  const validMarkKey = markKey as 'bold' | 'italic' | 'underline' | 'strike'
+  const validMarkKey = markKey
   const marks = Editor.marks(editor) || {}
   const selectedLeaves = Range.isRange(at) && Range.isExpanded(at)
     ? Editor.fragment(editor, at).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length > 0)
@@ -35,16 +35,19 @@ export function toggleMark(
     : marks[validMarkKey] === true
 
   // Store mark state for next insert if at line end
-  if (isAtLineEnd) {
+  // Inline code ends at its own boundary; it must never be reapplied by the
+  // separate sticky-style state after deletion or moving to another block.
+  const stickyMark = (['bold', 'italic', 'underline', 'strike', 'highlight'] as const).find(key => key === markKey)
+  if (isAtLineEnd && stickyMark) {
     if (!isActive) {
       // Turning mark on
       editor.activeMarks = {
         ...editor.activeMarks,
-        [validMarkKey]: true
+        [stickyMark]: true
       }
     } else {
       // Turning mark off
-      const { [validMarkKey]: _unused, ...remainingMarks } = editor.activeMarks || {}
+      const { [stickyMark]: _unused, ...remainingMarks } = editor.activeMarks || {}
       void _unused
       editor.activeMarks = remainingMarks
     }

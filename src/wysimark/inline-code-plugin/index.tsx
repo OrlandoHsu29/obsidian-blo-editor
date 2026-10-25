@@ -1,130 +1,116 @@
-import { Editor, Element, Path, Point, Range, Transforms } from "slate"
-import { ReactEditor } from "slate-react"
-import type { RenderLeafProps } from "slate-react"
-
+import { Editor, Element, Node, Path, Point, Range, Text, Transforms } from "slate"
+import { HistoryEditor } from "slate-history"
 import { createHotkeyHandler, createPlugin, TypedPlugin } from "../sink"
-
-import { $InlineCode, $InvisibleSpan } from "./styles"
-import { InlineCodePluginCustomTypes } from "./types"
-import { cleanInlineStyle } from '../../blocks/typography'
+import { materializeTextBoundary } from "../../blocks/boundary"
+import { InlineCode } from "./render-element"
+import type { InlineCodeElement, InlineCodePluginCustomTypes } from "./types"
 export * from "./styles"
 export * from "./types"
 
-export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(
-  (editor) => {
-    if (!editor.marksPlugin)
-      throw new Error(
-        "InlineCodePlugin has a dependency on the MarksPlugin but the MarksPlugin has not been added or is added after the InlineCodePlugin"
-      )
-    editor.inlineCode = {
-      toggleInlineCode: () => editor.marksPlugin.toggleMark("code"),
-    }
-    const hotkeys = createHotkeyHandler({
-      "mod+j": () => editor.inlineCode.toggleInlineCode(),
-    })
-    const outsideCode = () => {
-      const selection = window.getSelection()
-      const element = selection?.anchorNode?.parentElement
-      return selection?.isCollapsed && !element?.closest('code') &&
-        element?.closest('[data-inline-code-caret], [data-slate-mark-placeholder]')
-    }
-    const codeEnd = () => {
-      if (!editor.selection || !Range.isCollapsed(editor.selection)) return false
-      const point = editor.selection.anchor, [text] = Editor.leaf(editor, point)
-      return !!text.code && point.offset === text.text.length
-    }
-    const leaveCode = () => {
-      if (codeEnd()) Editor.removeMark(editor, "code")
-    }
-    const textBlock = (point: Point) => Editor.above(editor, {
-      at: point, match: node => Element.isElement(node) && Editor.isBlock(editor, node), mode: "lowest",
-    })
-    const atBlockEdge = (edge: "start" | "end") => {
-      if (!editor.selection || !Range.isCollapsed(editor.selection)) return false
-      const point = editor.selection.anchor, block = textBlock(point)
-      return !!block && (edge === "start" ? Editor.isStart(editor, point, block[1]) : Editor.isEnd(editor, point, block[1]))
-    }
-    return {
-      name: "inline-code",
-      editor: {
-        deleteBackward: () => atBlockEdge("start") ? leaveCode : false,
-        deleteForward: () => codeEnd() && atBlockEdge("end") ? leaveCode : false,
-        deleteFragment: () => {
-          if (!editor.selection || Range.isCollapsed(editor.selection)) return false
-          const [start, end] = Range.edges(editor.selection), first = textBlock(start), last = textBlock(end)
-          return first && last && !Path.equals(first[1], last[1]) ? leaveCode : false
-        },
-      },
-      renderEditable: ({ attributes, Editable }) => <Editable {...attributes}
-        onMouseUp={event => {
-          attributes.onMouseUp?.(event)
-          if (editor.wysimark.readOnly || !outsideCode()) return
-          const selection = window.getSelection()
-          const range = ReactEditor.toSlateRange(editor, selection!, { exactMatch: false, suppressThrow: true })
-          const text = range && Range.isCollapsed(range) ? Editor.leaf(editor, range.anchor)[0] : null
-          if (range && text?.code && range.anchor.offset === text.text.length) {
-            Transforms.select(editor, range)
-            Editor.removeMark(editor, "code")
-          }
-        }} />,
-      editableProps: {
-        renderLeaf: ({ leaf, text, children, leafPosition }: RenderLeafProps) => {
-          if (leaf.code) {
-            const colors = Object.fromEntries((cleanInlineStyle(leaf.inlineStyle)?.split(';') || []).map(part => {
-              const colon = part.indexOf(':'); return [part.slice(0, colon), part.slice(colon + 1)]
-            }))
-            // Slate supplies its own outside caret while pending marks differ.
-            // Another zero-width span here would hide that mark placeholder
-            // from Slate's model-to-DOM point conversion.
-            const hasOutsidePlaceholder = editor.marks != null && !editor.marks.code &&
-              editor.selection && Editor.leaf(editor, editor.selection.anchor)[0] === text
-            return (
-              /**
-               * Disable spellCheck because it's computer code usually.
-               */
-              <><$InlineCode spellCheck={false} style={{color: colors.color, backgroundColor: colors['background-color']}}>
-                {/* These invisible spans are necessary. See comments for $InvisibleSpan. */}
-                <$InvisibleSpan contentEditable={false}>|</$InvisibleSpan>
-                {children}
-              </$InlineCode>
-                {/* A DOM-only caret stop outside the code; no character is
-                    added to Slate text or saved Markdown. */}
-                {!hasOutsidePlaceholder && (!leafPosition || leafPosition.isLast) &&
-                  <span data-inline-code-caret data-slate-zero-width="z" data-slate-length={0}>{'\uFEFF'}</span>}
-              </>
-            )
-          } else {
-            return <>{children}</>
-          }
-        },
-        onKeyDown: event => {
-          if (event.key === "ArrowRight" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey &&
-              !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 &&
-              !editor.wysimark.readOnly && codeEnd() && !outsideCode()) {
-            leaveCode()
-            event.preventDefault()
-            return true
-          }
-          if (event.key === "ArrowLeft" && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey &&
-              !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && !editor.wysimark.readOnly &&
-              editor.selection && Range.isCollapsed(editor.selection) && outsideCode()) {
-            const point = editor.selection.anchor
-            const [text] = Editor.leaf(editor, point)
-            if (!text.code || point.offset !== text.text.length) return hotkeys(event)
-            const element = ReactEditor.toDOMNode(editor, text)
-            const strings = element.querySelectorAll('code [data-slate-string]')
-            const node = strings[strings.length - 1]?.firstChild
-            if (!node) return false
-            editor.marks = null
-            Editor.addMark(editor, "code", true)
-            const offset = node.textContent?.length || 0
-            window.getSelection()?.setBaseAndExtent(node, offset, node, offset)
-            event.preventDefault()
-            return true
-          }
-          return hotkeys(event)
-        },
-      },
-    }
+const isCode = (node: unknown): node is InlineCodeElement => Element.isElement(node) && node.type === 'inline-code'
+
+export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor => {
+  const entry = () => editor.selection ? Editor.above<InlineCodeElement>(editor, { match: isCode }) : undefined
+  const cancelEmpty = () => {
+    const code = entry()
+    if (!code || Node.string(code[0]) !== '') return false
+    Transforms.removeNodes(editor, { at: code[1] })
+    return true
   }
-) as TypedPlugin<InlineCodePluginCustomTypes>
+  // Empty code is an editable node, not a hidden mark on subsequent typing.
+  // Selection movement through its real Slate boundary cancels the empty field.
+  const { apply } = editor
+  editor.apply = operation => {
+    const code = operation.type === 'set_selection' && !editor.wysimark.readOnly ? entry() : undefined
+    const ref = code && Node.string(code[0]) === '' ? Editor.pathRef(editor, code[1]) : undefined
+    try {
+      apply(operation)
+      if (!ref?.current) return
+      const current = entry()
+      if ((!current || !Path.equals(current[1], ref.current)) && Node.has(editor, ref.current)) {
+        Transforms.removeNodes(editor, { at: ref.current })
+      }
+    } finally { ref?.unref() }
+  }
+  editor.inlineCode = {
+    toggleInlineCode: () => {
+      if (editor.wysimark.readOnly || !editor.selection || Editor.above(editor, { match: n => Element.isElement(n) && n.type === 'code-block' })) return
+      HistoryEditor.withNewBatch(editor, () => Editor.withoutNormalizing(editor, () => {
+        if (Range.isCollapsed(editor.selection!)) {
+          const code = entry()
+          if (code) { Transforms.unwrapNodes(editor, { at: code[1] }); return }
+          materializeTextBoundary(editor)
+          const { code: _code, ...marks } = Editor.marks(editor) ?? {}
+          Transforms.insertNodes(editor, { type: 'inline-code', children: [{ ...marks, text: '' }] }, { select: true })
+          return
+        }
+        const leaves = [...Editor.nodes<Text>(editor, { match: Text.isText })].filter(([text]) => text.text.length > 0)
+        if (!leaves.length) return
+        const allCode = leaves.every(([, at]) => Editor.above(editor, { at, match: isCode }))
+        if (allCode) Transforms.unwrapNodes(editor, { match: isCode, split: true })
+        else Transforms.setNodes(editor, { code: true }, { match: Text.isText, split: true })
+        editor.marks = null
+      }))
+    },
+  }
+  const hotkeys = createHotkeyHandler({ 'mod+j': () => editor.inlineCode.toggleInlineCode() })
+  return {
+    name: 'inline-code',
+    editor: {
+      isInline: element => isCode(element) ? true : undefined,
+      normalizeNode: ([node, path]) => {
+        // Accept old Slate clipboard fragments that used a code text mark.
+        if (!Text.isText(node) || !node.code || !path.length) return false
+        const parent = Node.parent(editor, path)
+        if (Element.isElement(parent) && parent.type === 'code-block-line') return false
+        Editor.withoutNormalizing(editor, () => {
+          Transforms.unsetNodes(editor, 'code', { at: path })
+          if (!isCode(parent)) Transforms.wrapNodes(editor, { type: 'inline-code', children: [] }, { at: path })
+        })
+        return true
+      },
+      deleteBackward: () => !editor.wysimark.readOnly && cancelEmpty(),
+      deleteForward: () => !editor.wysimark.readOnly && cancelEmpty(),
+      insertBreak: () => {
+        if (editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection)) return false
+        const code = entry()
+        if (!code || !Editor.isEnd(editor, editor.selection.anchor, code[1])) return false
+        const after = Editor.after(editor, code[1])
+        if (after) Transforms.select(editor, after)
+        return false
+      },
+    },
+    renderEditable: ({ attributes, Editable }) => <Editable {...attributes} onBlur={event => {
+      attributes.onBlur?.(event)
+      if (!editor.wysimark.readOnly && !event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) cancelEmpty()
+    }} />,
+    editableProps: {
+      renderElement: ({ element, attributes, children }) => isCode(element)
+        ? <InlineCode element={element} attributes={attributes}>{children}</InlineCode> : undefined,
+      onKeyDown: event => {
+        if (editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection) || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return false
+        const code = entry()
+        if (event.key === 'Escape' && code) {
+          const after = Editor.after(editor, code[1])
+          if (after) Transforms.select(editor, after)
+          event.preventDefault(); return true
+        }
+        if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return hotkeys(event)
+        const backward = event.key === 'ArrowLeft', point = editor.selection.anchor
+        if (code) {
+          if (!Point.equals(point, backward ? Editor.start(editor, code[1]) : Editor.end(editor, code[1]))) return false
+          const target = backward ? Editor.before(editor, code[1]) : Editor.after(editor, code[1])
+          if (!target) return false
+          Transforms.select(editor, target)
+        } else {
+          const [text] = Editor.leaf(editor, point)
+          if (point.offset !== (backward ? 0 : text.text.length)) return false
+          const sibling = [...point.path.slice(0, -1), point.path.at(-1)! + (backward ? -1 : 1)]
+          if (sibling.at(-1)! < 0 || !Node.has(editor, sibling) || !isCode(Node.get(editor, sibling))) return false
+          Transforms.select(editor, backward ? Editor.end(editor, sibling) : Editor.start(editor, sibling))
+        }
+        event.preventDefault(); return true
+      },
+    },
+  }
+}) as TypedPlugin<InlineCodePluginCustomTypes>

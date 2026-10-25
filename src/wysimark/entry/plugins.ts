@@ -35,9 +35,10 @@ export const plugins = [
   PasteMarkdownPlugin,
   ConvertElementPlugin,
   AnchorPlugin,
-  HeadingPlugin,
   MarksPlugin,
+  // Exit inline code at its end before headings/lists handle a block break.
   InlineCodePlugin,
+  HeadingPlugin,
   MathPlugin,
   BlockQuotePlugin,
   CodeBlockPlugin,

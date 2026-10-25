@@ -9,6 +9,7 @@ import { serializeAnchor } from "./serialize-anchor"
 import { serializeNonCodeText } from "./serialize-non-code-text"
 import { cleanInlineStyle } from '../../../../../blocks/typography'
 import { serializeMath } from "../../../../math-plugin/serialize"
+import { serializeLine } from '../serialize-line'
 
 export function serializeSegment(
   segment: Segment,
@@ -34,6 +35,8 @@ export function serializeSegment(
     return serializeNonCodeText(segment, options)
   }
   switch (segment.type) {
+    case 'inline-code':
+      return segment.children.some(text => text.text) ? serializeLine(segment.children.map(text => ({ ...text, code: true })), [], [], options) : ''
     case "math-inline":
       return serializeMath(segment.latex, false, options?.inTable)
     case "anchor": {

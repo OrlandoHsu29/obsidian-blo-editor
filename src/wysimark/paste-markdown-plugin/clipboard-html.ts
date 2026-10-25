@@ -33,6 +33,11 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
       source.textContent = serializeMath(node.latex, node.type === 'math-block')
       return source
     }
+    if (node.type === 'inline-code') {
+      const code = document.createElement('code')
+      node.children.forEach(child => code.append(render(child)))
+      return code
+    }
     if (node.type === 'code-block') {
       const code = document.createElement('code')
       code.textContent = node.children.map(line => Node.string(line)).join('\n')

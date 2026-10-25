@@ -1,11 +1,8 @@
 import type { Root, TopLevelContent } from "mdast"
-import remarkParse from "remark-parse"
-import remarkMath from "remark-math"
-import { unified } from "unified"
 import { visit } from "unist-util-visit"
 
 import { Element } from "../types"
-import { customRemarkGfm } from "./custom-gfm"
+import { parseMarkdown } from './markdown-parser'
 import {
   InternalLinkOptions,
   protectEscapedWikiLinks,
@@ -15,8 +12,6 @@ import { transformInlineLinks } from "./transform-inline-links"
 import { getLineEnding, withLineEnding } from "../line-endings"
 import { parseBlockDocument } from '../../../blocks/persistence'
 import { hasUnclosedExportedFont } from './parse-code-block'
-
-const parser = unified().use(remarkParse).use(customRemarkGfm()).use(remarkMath)
 
 /** Yuque can put a closing font tag at column zero inside an indented list.
  * Restore only those continuations so Markdown can recover the complete list.
@@ -91,12 +86,12 @@ export function parseToAst(
   options: InternalLinkOptions = { enableInternalLinks: true }
 ) {
   let source = options.enableInternalLinks ? protectEscapedWikiLinks(markdown) : markdown
-  let ast = parser.parse(source) as Root
+  let ast = parseMarkdown(source)
   if(options.yuqueFormatting){
     const continued = repairYuqueListContinuations(source, ast)
-    if (continued !== source) { source = continued; ast = parser.parse(source) as Root }
+    if (continued !== source) { source = continued; ast = parseMarkdown(source) }
     const repaired=repairYuqueStrong(source,ast)
-    if(repaired!==source){source=repaired;ast=parser.parse(source) as Root}
+    if(repaired!==source){source=repaired;ast=parseMarkdown(source)}
   }
   visit(ast, 'paragraph', node => {
     const start=node.position?.start.offset

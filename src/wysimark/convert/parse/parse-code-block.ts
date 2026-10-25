@@ -1,15 +1,10 @@
-import type { Code, List, Root } from "mdast"
-import remarkParse from "remark-parse"
-import remarkMath from "remark-math"
-import { unified } from "unified"
+import type { Code, List } from "mdast"
 import { visit } from "unist-util-visit"
 
 import { Element } from "../types"
 import { InternalLinkOptions, restoreEscapedWikiLinks } from "../obsidian-links"
-import { customRemarkGfm } from "./custom-gfm"
+import { parseMarkdown } from './markdown-parser'
 import { parseList } from "./parse-list"
-
-const listParser = unified().use(remarkParse).use(customRemarkGfm()).use(remarkMath)
 
 function isExportedList(content: Code): boolean {
   return !content.lang && !content.meta && /^\s*(?:[-+*]|\d+[.)])\s+/.test(content.value) &&
@@ -20,7 +15,7 @@ function isExportedList(content: Code): boolean {
 export function hasUnclosedExportedFont(content: Code): boolean {
   if (!isExportedList(content)) return false
   let depth = 0
-  visit(listParser.parse(content.value) as Root, 'html', node => {
+  visit(parseMarkdown(content.value), 'html', node => {
     if (/^<font\b[^>]*>$/i.test(node.value)) depth++
     else if (/^<\/font\s*>$/i.test(node.value)) depth = Math.max(0, depth - 1)
   })
@@ -44,7 +39,7 @@ function recoverExportedList(content: Code, options: InternalLinkOptions): Eleme
 
 /** Retry a complete exported list independently of the preceding broken block. */
 export function parseExportedListSource(source: string, depth: number, options: InternalLinkOptions): Element[] | null {
-  const root = listParser.parse(source) as Root
+  const root = parseMarkdown(source)
   if (!root.children.length || !root.children.every(node => node.type === 'list')) return null
   return root.children.flatMap(list => parseList(list as List, depth, options))
 }

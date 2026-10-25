@@ -3,6 +3,7 @@ import { deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
+import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 const staged=new WeakMap<Editor,{index:number;range:Range}>()
@@ -57,7 +58,16 @@ export function selectBlockContents(editor:Editor,index:number):boolean {
  return true
 }
 const isEditableStructure=(node:unknown)=>Element.isElement(node)&&(node.type==='table'||node.type==='code-block')
-/** Arrow keys enter editable blocks directly; drawings retain atomic navigation. */
+function enterStructure(editor:Editor,index:number,backwards:boolean):void {
+ const point=backwards?Editor.end(editor,[index]):Editor.start(editor,[index])
+ const node=editor.children[index]
+ if(Element.isElement(node)&&node.type==='table') {
+  const cell=Editor.above(editor,{at:point,match:n=>Element.isElement(n)&&n.type==='table-cell'})
+  if(cell)beginTableCellEdit(editor,cell[1])
+ }
+ Transforms.select(editor,point)
+}
+/** Horizontal navigation visits the same outside caret for every structured block. */
 export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  const structured=(node:unknown)=>isStructuredBlock(node,editor)
  if(editor.wysimark.readOnly||!editor.selection||event.shiftKey||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
@@ -66,7 +76,7 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  if(boundary!==undefined) {
   if(event.key==='ArrowLeft') {
    if(!isEditableStructure(editor.children[boundary]))return selectBlockContents(editor,boundary)
-   clearBlockSelection(editor);Transforms.select(editor,Editor.end(editor,[boundary]));return true
+   clearBlockSelection(editor);enterStructure(editor,boundary,true);return true
   }
   if(event.key==='ArrowUp'){clearBlockSelection(editor);Transforms.select(editor,Editor.end(editor,[boundary]));return true}
   let next=boundary+2;while(next<editor.children.length&&isEditorSpacer(editor.children[next]))next++
@@ -96,17 +106,21 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  clearBlockSelection(editor)
  if(!Range.isCollapsed(editor.selection))return false
  const point=editor.selection.anchor,index=point.path[0],current=editor.children[index]
- if(structured(current))return false
+ if(structured(current)) {
+  if(event.key==='ArrowRight'&&Point.equals(point,Editor.end(editor,[index])))return selectStructuredBoundary(editor,index)
+  return false
+ }
  const backwards=event.key==='ArrowLeft'||event.key==='ArrowUp'
  if(!Point.equals(point,backwards?Editor.start(editor,[index]):Editor.end(editor,[index]))&&(!['ArrowUp','ArrowDown'].includes(event.key)||!atVerticalEdge(editor,index,backwards)))return false
  let adjacent=index+(backwards?-1:1);while(adjacent>=0&&adjacent<editor.children.length&&isEditorSpacer(editor.children[adjacent]))adjacent+=backwards?-1:1
  const target=editor.children[adjacent]
  if(!structured(target))return false
+ if(event.key==='ArrowLeft')return selectStructuredBoundary(editor,adjacent)
  if(isEditableStructure(target)) {
   // Native vertical movement retains the caret's visual column, including
   // proportional text, code indentation, wrapping and horizontal scrolling.
   if(event.key==='ArrowDown'&&Element.isElement(target)&&target.type==='code-block')return false
-  Transforms.select(editor,backwards?Editor.end(editor,[adjacent]):Editor.start(editor,[adjacent]))
+  enterStructure(editor,adjacent,backwards)
   return true
  }
  return backwards?selectStructuredBoundary(editor,adjacent):selectBlockContents(editor,adjacent)

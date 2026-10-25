@@ -88,14 +88,16 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor
       renderElement: ({ element, attributes, children }) => isCode(element)
         ? <InlineCode element={element} attributes={attributes}>{children}</InlineCode> : undefined,
       onKeyDown: event => {
-        if (editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection) || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return false
+        if (editor.wysimark.readOnly || !editor.selection || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return false
+        if (hotkeys(event)) return true
+        if (!Range.isCollapsed(editor.selection)) return false
         const code = entry()
         if (event.key === 'Escape' && code) {
           const after = Editor.after(editor, code[1])
           if (after) Transforms.select(editor, after)
           event.preventDefault(); return true
         }
-        if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return hotkeys(event)
+        if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return false
         const backward = event.key === 'ArrowLeft', point = editor.selection.anchor
         if (code) {
           if (!Point.equals(point, backward ? Editor.start(editor, code[1]) : Editor.end(editor, code[1]))) return false

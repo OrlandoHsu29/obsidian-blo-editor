@@ -1,9 +1,7 @@
 import * as Slate from "slate"
 
-import { AnchorElement } from "../../../../anchor-plugin"
-
 import { Segment, Text } from "../../../types"
-import { LineElement, Node } from "../normalize-line/types"
+import { Node } from "../normalize-line/types"
 
 /**
  * Is this a Text Node
@@ -12,22 +10,10 @@ export function isText(segment: Node | undefined): segment is Text {
   return Slate.Text.isText(segment)
 }
 
-/**
- * Is this an Element Node
- *
- * In the context of our normalizers, passing `isElement` means that it is
- * a `LineElement` or `AnchorElement`
- *
- * TODO:
- *
- * We should also add the following in the future:
- *
- * - `ImageInlineElement`
- * - `AttachmentElement`
- */
+/** Include every inline kind; only line/anchor children need text normalization. */
 export function isElement(
   segment: Node
-): segment is LineElement | AnchorElement {
+): segment is Exclude<Node, Text> {
   return Slate.Element.isElement(segment)
 }
 

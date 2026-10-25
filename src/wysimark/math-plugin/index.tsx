@@ -9,7 +9,7 @@ import { materializeTextBoundary } from "../../blocks/boundary"
 const isMath = (node: unknown): node is MathElement => Element.isElement(node) && (node.type === "math-inline" || node.type === "math-block")
 export function canInsertMath(editor: Editor): boolean {
   return !editor.wysimark.readOnly && !!editor.selection && !Editor.above(editor, {
-    match: node => Element.isElement(node) && ['code-block', 'html-block', 'link-definition'].includes(node.type),
+    match: node => Element.isElement(node) && ['inline-code', 'code-block', 'html-block', 'link-definition'].includes(node.type),
   })
 }
 function insertInline(editor: Editor): boolean {

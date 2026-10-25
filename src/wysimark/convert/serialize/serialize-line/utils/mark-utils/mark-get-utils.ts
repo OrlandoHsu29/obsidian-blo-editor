@@ -24,36 +24,18 @@ export function getMarksFromSegment(segment: Segment): MarkKey[] {
       )
     }
     return getMarksFromText(segment)
-  } else if (segment.type === "math-inline" || segment.type === 'inline-code') {
-    return []
   } else if (segment.type === "anchor") {
     return getCommonAnchorMarks(segment.children as Segment[])
   } else {
-    /**
-     * TODO: Need to handle images still.
-     */
-    throw new Error(`Unhandled type ${segment.type}`)
+    // Other inline elements serialize their own content and formatting.
+    return []
   }
 }
 
 export function getCommonAnchorMarks(segments: Segment[]): MarkKey[] {
   let commonMarks: MarkKey[] | undefined
   for (const segment of segments) {
-    if (!isText(segment)) {
-      /**
-       * Use this to test for images in anchors
-       *
-       * [![Semantic description](https://roneo.org/img/ok.png "Your title")](http://jamstack.club)
-       */
-      if (segment.type === "image-inline" || segment.type === "math-inline" || segment.type === 'inline-code') continue
-      /**
-       * TODO: This is not actually true. It can be an inline image which we
-       * still need to add.
-       */
-      throw new Error(
-        `Expected every segment in an anchor to be a Text segment`
-      )
-    }
+    if (!isText(segment)) continue
     if (isPlainSpace(segment)) continue
     const currentMarks = getMarksFromText(segment)
     if (commonMarks === undefined) {

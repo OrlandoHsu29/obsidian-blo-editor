@@ -50,6 +50,8 @@ function lineHasBacktickPairRisk(segments: Segment[]): boolean {
         for (const ch of segment.text) {
           if (ch === "`" && ++count >= 2) return true
         }
+      } else if (segment.type === 'inline-code') {
+        return true
       } else if (segment.type === "anchor") {
         if (visit(segment.children as Segment[])) return true
       }

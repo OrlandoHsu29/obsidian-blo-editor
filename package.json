@@ -1,6 +1,6 @@
 {
   "name": "blo-editor",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Rich-text notes with block editing, tables, code highlighting, and find and replace. Based on Wysimark Editor.",
   "main": "main.js",
   "scripts": {

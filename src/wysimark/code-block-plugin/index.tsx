@@ -1,4 +1,5 @@
 import { Editor, Element, Transforms } from "slate"
+import { HistoryEditor } from "slate-history"
 
 import {
   createHotkeyHandler,
@@ -24,13 +25,18 @@ export const CodeBlockPlugin = createPlugin<CodeBlockPluginCustomTypes>(
     editor.codeBlock = createCodeBlockMethods(editor)
 
     function onDelete(): boolean {
+      if (editor.wysimark.readOnly) return false
       const { selection } = editor
       if (!isCollapsed(selection)) return false
       const codeBlockEntry = findElementUp(editor, "code-block")
       if (codeBlockEntry == null) return false
       const codeBlockText = Editor.string(editor, codeBlockEntry[1])
       if (codeBlockText === "") {
-        Transforms.removeNodes(editor, { at: codeBlockEntry[1] })
+        // Leave a real paragraph at the same position, rather than allowing
+        // Slate to fall back to a collapsed navigation spacer or table cell.
+        const convert = () => { editor.codeBlock.convertCodeBlockToParagraph() }
+        if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, convert)
+        else convert()
         return true
       }
       return false

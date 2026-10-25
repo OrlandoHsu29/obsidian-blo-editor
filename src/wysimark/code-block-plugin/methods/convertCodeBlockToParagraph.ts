@@ -3,6 +3,7 @@ import { Editor, Node, Path, Point, Transforms } from "slate"
 import { findElementUp } from "../../sink"
 import type { CodeBlockElement } from "../types"
 import { isListItem } from '../../list-plugin'
+import { blockDepth } from '../../../blocks/model'
 
 export function convertCodeBlockToParagraph(editor: Editor): boolean {
   const entry = findElementUp<CodeBlockElement>(editor, "code-block")
@@ -26,7 +27,7 @@ export function convertCodeBlockToParagraph(editor: Editor): boolean {
     Transforms.removeNodes(editor, { at: path })
     Transforms.insertNodes(
       editor,
-      { type: "paragraph", children: [{ text: lines.join("\n") }] },
+      { type: "paragraph", __blockDepth: blockDepth(block), children: [{ text: lines.join("\n") }] },
       { at: path }
     )
     if (selection) Transforms.select(editor, selection)

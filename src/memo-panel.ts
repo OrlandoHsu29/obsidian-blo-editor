@@ -1,12 +1,12 @@
 import { App, Platform, TFile, WorkspaceLeaf, WorkspaceWindow } from 'obsidian'
 
 /**
- * Flash Memo hosts the quick memo panel: a small popout window that keeps one
+ * Glimmer Memo hosts the quick memo panel: a small popout window that keeps one
  * note (or drawing) and shows its own name bar. Blo only reads the public
  * pieces it needs -- the plugin id and the body class that marks the window.
  */
-export const MEMO_PANEL_PLUGIN_ID = 'flash-memo'
-const MEMO_PANEL_BODY_CLASS = 'flash-memo-window'
+export const MEMO_PANEL_PLUGIN_ID = 'glimmer-memo'
+const MEMO_PANEL_BODY_CLASS = 'glimmer-memo-window'
 const MEMO_PANEL_COMMAND_ID = `${MEMO_PANEL_PLUGIN_ID}:toggle`
 
 type MemoPanelPlugin = {

@@ -26,7 +26,7 @@ import { canInsertMath } from './wysimark/math-plugin';
 const INTEGRATION_SETTINGS = {
   imageViewer: { key: 'enableImageViewer', name: 'Image Toolkit' },
   drawings: { key: 'enableDrawings', name: 'Excalidraw' },
-  memoPanel: { key: 'enableMemoPanel', name: 'Flash Memo' },
+  memoPanel: { key: 'enableMemoPanel', name: 'Glimmer Memo' },
 } as const;
 type IntegrationFeature = keyof typeof INTEGRATION_SETTINGS;
 
@@ -237,7 +237,7 @@ export default class BloEditorPlugin extends Plugin {
       if (leaf?.view instanceof MarkdownView && leaf.view.file) void this.openRichByDefault(leaf, leaf.view.file);
     });
   }
-  /** Flash Memo marks its window after the initial Markdown view opens. */
+  /** Glimmer Memo marks its window after the initial Markdown view opens. */
   private watchMemoWindow(doc: Document) {
     if (this.disposed || this.memoWindows.has(doc) || !doc.body) return;
     const Observer = doc.defaultView?.MutationObserver;
@@ -264,10 +264,10 @@ export default class BloEditorPlugin extends Plugin {
   }
   private async toggleMemoPanelWindow(): Promise<void> {
     try {
-      if (!await toggleMemoPanel(this.app)) new Notice(ui('未检测到 Flash Memo，请先安装并启用速记面板插件'));
+      if (!await toggleMemoPanel(this.app)) new Notice(ui('未检测到 Glimmer Memo，请先安装并启用速记面板插件'));
     } catch (error) {
       console.error('Blo Editor: could not toggle the quick memo panel', error);
-      new Notice(ui('无法打开速记面板，请检查 Flash Memo 插件'));
+      new Notice(ui('无法打开速记面板，请检查 Glimmer Memo 插件'));
     }
   }
   private syncIntegrations() {
@@ -311,7 +311,7 @@ export default class BloEditorPlugin extends Plugin {
     try {
       if (enabled && feature === 'memoPanel') {
         if (memoPanelStatus(this.app) === 'unsupported') {
-          new Notice(ui('Flash Memo 仅支持桌面端'));
+          new Notice(ui('Glimmer Memo 仅支持桌面端'));
           return previous;
         }
         if (!memoPanelEnabled(this.app)) {
@@ -420,7 +420,7 @@ export default class BloEditorPlugin extends Plugin {
   }
   private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
     const memoPanel = this.isMemoPanelLeaf(leaf, file);
-    // Flash Memo owns its popout; use Blo there only while the integration is on.
+    // Glimmer Memo owns its popout; use Blo there only while the integration is on.
     if (this.disposed || memoPanel && (!this.settings.enableMemoPanel || !memoPanelEnabled(this.app))) return;
     // The memo panel is an explicit choice, so it opens with Blo outside the editing scope.
     const outsideScope = !memoPanel && !this.isFileInEditingScope(file);

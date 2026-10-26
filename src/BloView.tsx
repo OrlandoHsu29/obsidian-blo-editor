@@ -381,7 +381,7 @@ function KnowledgeSpaceEditorComponent({
     const drawing = exact instanceof TFile ? exact : plugin.app.metadataCache.getFirstLinkpathDest(target, file.path);
     return drawing instanceof TFile && isDrawingFile(plugin.app, drawing);
   };
-  // Flash Memo's popout already shows the file name and owns renaming there.
+  // Glimmer Memo's popout already shows the file name and owns renaming there.
   editor.wysimark.documentTitle = memoPanel ? undefined : <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
     onEnterEnd={readOnly ? undefined : () => insertDocumentStartParagraph(editor)} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
@@ -489,7 +489,7 @@ export class BloView extends FileView {
   private reloadKey: number = 0;  // Used to force React component remount on reload
   editor: Editor | null = null;
   readOnly = false;
-  /** True while this view lives in Flash Memo's quick memo popout. */
+  /** True while this view lives in Glimmer Memo's quick memo popout. */
   memoPanel = false;
   private memoPanelObserver: MutationObserver | null = null;
   private windowFocusHandler: (() => void) | null = null;
@@ -674,7 +674,7 @@ export class BloView extends FileView {
 
   async onLoadFile(file: TFile) { await this.loadContent(file); }
   async onUnloadFile(_file: TFile) { await this.saveFile(); this.currentFile = null; this.renderEditor(); }
-  /** Flash Memo asks the hosted view to flush before it hides or closes the popout. */
+  /** Glimmer Memo asks the hosted view to flush before it hides or closes the popout. */
   async save(): Promise<void> { await this.saveFile(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
   onPaneMenu(menu: Menu, source: string) {
@@ -890,10 +890,10 @@ export class BloView extends FileView {
   }
 
   /**
-   * Flash Memo marks its popout body when the window attaches, which can happen
+   * Glimmer Memo marks its popout body when the window attaches, which can happen
    * after this view opens, so follow that class instead of sampling it once.
    * The plugin also watches new windows to adopt their initial Markdown view
-   * after Flash Memo has attached its marker.
+   * after Glimmer Memo has attached its marker.
    */
   private watchMemoPanel() {
     const doc = this.containerEl.ownerDocument;

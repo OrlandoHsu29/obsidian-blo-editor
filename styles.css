@@ -143,7 +143,7 @@
 }
 
 /*
- * Flash Memo's quick memo popout is a small window that draws its own name bar.
+ * Glimmer Memo's quick memo popout is a small window that draws its own name bar.
  * The file name is therefore redundant there, and a compact toolbar at the top
  * leaves more room for the note. Only the chrome changes; the editing surface
  * keeps the same layout and behaviour.

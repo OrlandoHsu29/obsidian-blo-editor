@@ -2,12 +2,12 @@
 
 ## 0.1.20 — 2026-10-26
 
-- Show quick memo notes from Flash Memo with Blo Editor: hide the duplicated
+- Show quick memo notes from Glimmer Memo with Blo Editor: hide the duplicated
   file name, keep a compact toolbar at the top, save before the panel hides, and
   focus the editor so typing starts immediately. Turning the integration off
   returns the memo note to the native editor.
 - Enable optional integrations automatically when Image Toolkit, Excalidraw or
-  Flash Memo is already enabled, and remember switches turned off manually.
+  Glimmer Memo is already enabled, and remember switches turned off manually.
 - Fix focus, the slash menu, table menus, link/image dialogs and find highlights
   inside popout windows by measuring against the editor's own window.
 - Fix the blank editor caused by conditional block quote hooks when the

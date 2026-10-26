@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.21 — 2026-10-26
+
+- Connect to Glimmer Memo using its renamed plugin ID, window marker and GitHub
+  repository, avoiding the unrelated Flash Memo plugin in the community directory.
+- Guide manual installation of the complete Glimmer Memo ZIP, detect an installed
+  but disabled plugin, and offer to enable it before turning on the integration.
+- Identify quick memo windows by their explicit marker instead of their file path;
+  adopt newly attached windows and respect integration changes during pending saves
+  without stealing focus from another tab.
+- Press Backspace on an indented empty text block to remove one indentation level
+  before deleting the line, with undo/redo and the same subtree rules as Shift+Tab.
+- Refresh both READMEs with optional integration setup, slash-command search and
+  empty-block indentation shortcuts.
+
 ## 0.1.20 — 2026-10-26
 
 - Show quick memo notes from Glimmer Memo with Blo Editor: hide the duplicated

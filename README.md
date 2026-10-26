@@ -30,7 +30,8 @@ Alongside Obsidian's native Markdown editor, Blo offers:
 
 **Parent and child blocks.** Drag a parent together with its text, lists, quotes,
 tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
-adjust indentation. Repeating the active paragraph-style shortcut restores body text.
+adjust indentation. On an indented empty text block, Backspace removes one level
+of indentation before deleting the line. Repeating the active paragraph-style shortcut restores body text.
 
 <details>
 <summary>View block dragging and indentation</summary>
@@ -124,7 +125,9 @@ setting moves unreferenced files to trash only within the attachment folder and
 its subfolders. Other folders keep originals; an empty path covers root-level
 files only. Undo restores attachments and refreshes previews automatically.
 
-Slash commands include 3×3 tables, checkboxes, links, and images; link/image
+Slash commands support Chinese and English names, common aliases, and Chinese
+pinyin initials, such as `/bg` for a table or `/math` for a formula.
+Commands include 3×3 tables, checkboxes, links, and images; link/image
 commands reuse the toolbar insertion dialogs. In **Toolbar configuration**, shared
 icons and checkboxes control visibility immediately. Paragraph style, clear
 formatting, undo, redo, text color, find/replace, table, link, and image stay
@@ -147,7 +150,12 @@ Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
-Turn on **Enable drawings** under **Optional integrations** in Blo Editor settings to install and activate [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin), or reuse an existing installation.
+## Optional integrations
+
+Blo Editor works on its own. Enable the following integrations in its settings
+when needed; turning them off keeps their dependency plugins and attachments.
+
+Turn on **Enable drawings** to install and activate [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin), or reuse an existing installation.
 Use `/drawing`, the drawing toolbar button, or **Insert drawing** to create an attachment
 and embed its preview. Click the preview to select and resize it; use its top-right
 **Open drawing editor** button to draw in a full-size Excalidraw tab;
@@ -157,12 +165,24 @@ the full drawing view. Save a vault-relative copy; the current embed stays uncha
 unless **Replace current reference after saving** is checked. Reference updates
 support undo. Attachment deletion follows the settings described above.
 
-**Enable image viewer** installs and activates Image Toolkit for enlarged image previews, with adapted toolbar icons and theme styling. Turning either integration off keeps its dependency plugin and attachments. The editor uses Slate; third-party editing extensions
-that require CodeMirror do not automatically apply to this view.
+**Enable image viewer** installs and activates Image Toolkit for enlarged image previews, with adapted toolbar icons and theme styling.
 
-**Enable quick memo panel** connects the desktop-only [Flash Memo](https://github.com/OrlandoHsu29/obsidian-flash-memo). If missing, Blo provides instructions for installing the complete ZIP from GitHub; if installed but disabled, it offers an enable button. After extracting the ZIP, click **Check again and enable**; if it is still not detected, restart Obsidian and try again. Keep all files from the ZIP, including the Windows global hotkey helper. **Show/hide quick memo panel** opens its small floating window, where notes are edited with Blo Editor. The panel skips the file name header, keeps a compact toolbar at the top, and saves before Flash Memo hides the window. New memo windows connect automatically; opening the same file in an ordinary popout has no effect on that popout. Turning it off returns the memo note to the native editor.
+**Enable quick memo panel** connects the desktop-only [Glimmer Memo](https://github.com/OrlandoHsu29/obsidian-glimmer-memo).
+Use **Show/hide quick memo panel** to open a floating note with Blo editing,
+a compact toolbar, and no duplicate file title. Notes save before the panel hides.
+New memo windows connect automatically; turning the integration off returns
+the memo note to the native editor.
 
-When a dependency plugin (Image Toolkit, Excalidraw, Flash Memo) is already enabled, its integration turns on automatically at startup or when the settings open. Switches you turn off yourself are remembered and stay off.
+If Glimmer Memo is missing, the switch opens GitHub installation instructions;
+if installed but disabled, it offers an enable button. Extract the complete ZIP
+into the current vault's `.obsidian/plugins/`, keeping all files, including the
+Windows global hotkey helper. Click **Check again and enable**; if it is still
+not detected, restart Obsidian and try again.
+
+When a dependency plugin (Image Toolkit, Excalidraw, Glimmer Memo) is already enabled, its integration turns on automatically at startup or when the settings open. Switches you turn off yourself are remembered and stay off.
+
+Blo uses Slate. Third-party editing extensions that require Obsidian's native
+CodeMirror editor do not automatically apply to this view.
 
 ## Development
 

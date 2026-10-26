@@ -1,17 +1,15 @@
-import { App, TFile, WorkspaceLeaf, WorkspaceWindow } from 'obsidian'
+import { App, Platform, TFile, WorkspaceLeaf, WorkspaceWindow } from 'obsidian'
 
 /**
  * Flash Memo hosts the quick memo panel: a small popout window that keeps one
  * note (or drawing) and shows its own name bar. Blo only reads the public
- * pieces it needs -- the plugin id, the body class that marks the window and
- * the current memo file -- so neither plugin has to depend on the other.
+ * pieces it needs -- the plugin id and the body class that marks the window.
  */
 export const MEMO_PANEL_PLUGIN_ID = 'flash-memo'
 const MEMO_PANEL_BODY_CLASS = 'flash-memo-window'
 const MEMO_PANEL_COMMAND_ID = `${MEMO_PANEL_PLUGIN_ID}:toggle`
 
 type MemoPanelPlugin = {
-  settings?: { file?: string }
   toggle?: () => Promise<void>
 }
 
@@ -20,8 +18,17 @@ function memoPanelPlugin(app: App): MemoPanelPlugin | undefined {
   return registry?.[MEMO_PANEL_PLUGIN_ID] as MemoPanelPlugin | undefined
 }
 
-export function memoPanelInstalled(app: App): boolean {
-  return !!memoPanelPlugin(app)
+export function memoPanelEnabled(app: App): boolean {
+  return Platform.isDesktop && !!memoPanelPlugin(app)
+}
+
+export type MemoPanelStatus = 'unsupported' | 'missing' | 'disabled' | 'enabled'
+
+export function memoPanelStatus(app: App): MemoPanelStatus {
+  if (!Platform.isDesktop) return 'unsupported'
+  if (memoPanelEnabled(app)) return 'enabled'
+  const manager = (app as App & { plugins?: { manifests?: Record<string, unknown> } }).plugins
+  return manager?.manifests?.[MEMO_PANEL_PLUGIN_ID] ? 'disabled' : 'missing'
 }
 
 /** The document of a desktop popout window, or null for main-window leaves. */
@@ -36,16 +43,12 @@ export function isMemoPanelDocument(doc: Document): boolean {
 }
 
 /**
- * The body class is added once the popout attaches, which happens after the
- * first view state is set. The current memo file covers that first note, and
- * works for file switches made before the class is available.
+ * Only the host's explicit window marker identifies a memo panel. Opening the
+ * same file in another popout must not give that window memo-panel behavior.
  */
-export function isMemoPanelLeaf(app: App, leaf: WorkspaceLeaf, file?: TFile | null): boolean {
+export function isMemoPanelLeaf(_app: App, leaf: WorkspaceLeaf, _file?: TFile | null): boolean {
   const doc = popoutDocument(leaf)
-  if (!doc) return false
-  if (isMemoPanelDocument(doc)) return true
-  const current = memoPanelPlugin(app)?.settings?.file
-  return !!file && !!current && current === file.path
+  return !!doc && isMemoPanelDocument(doc)
 }
 
 /** Open or hide the quick memo panel without depending on its internal state. */

@@ -892,8 +892,8 @@ export class BloView extends FileView {
   /**
    * Flash Memo marks its popout body when the window attaches, which can happen
    * after this view opens, so follow that class instead of sampling it once.
-   * Its own settings name the memo file, which covers the first note opened in
-   * a fresh window before the class exists.
+   * The plugin also watches new windows to adopt their initial Markdown view
+   * after Flash Memo has attached its marker.
    */
   private watchMemoPanel() {
     const doc = this.containerEl.ownerDocument;

@@ -9,6 +9,7 @@ import { DEFAULT_TEXT_COLOR } from './wysimark/marks-plugin/methods/text-color'
 import { DEFAULT_ATTACHMENT_FOLDER, normalizeAttachmentFolder } from './attachments'
 import { toolbarGroups } from './wysimark/toolbar-plugin/items'
 import { isFixedToolbarButton } from './toolbar-preferences'
+import { memoPanelStatus } from './memo-panel'
 
 export type EditorSettings = {
   preferRichEditing: boolean
@@ -109,7 +110,6 @@ export class BloSettingsTab extends PluginSettingTab {
     for (const [feature, key, name, description] of [
       ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；已启用时自动开启，未安装时会自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],
       ['drawings', 'enableDrawings', '启用画板', '依赖 Excalidraw；已启用时自动开启，未安装时会自动安装并启用。支持内嵌预览、缩放及放大绘制。'],
-      ['memoPanel', 'enableMemoPanel', '启用速记面板', '依赖 Flash Memo；已启用时自动开启。速记面板中的笔记改用 Blo 编辑：隐藏顶部文件名、使用紧凑工具栏，并在面板隐藏前保存。'],
     ] as const) {
       new Setting(integrationGroup).setName(ui(name)).setDesc(ui(description)).addToggle(toggle => toggle
         .setValue(plugin.settings[key]).onChange(async value => {
@@ -118,6 +118,20 @@ export class BloSettingsTab extends PluginSettingTab {
           finally { toggle.setDisabled(false) }
         }))
     }
+    const memoStatus = memoPanelStatus(plugin.app)
+    const memoDescription = {
+      unsupported: 'Flash Memo 仅支持桌面端',
+      missing: '依赖 Flash Memo，尚未安装。开启后可查看 GitHub 安装指引。',
+      disabled: 'Flash Memo 已安装但尚未启用。开启后可启用插件并接入 Blo。',
+      enabled: 'Flash Memo 已启用。速记笔记使用 Blo 编辑，隐藏重复标题、使用紧凑工具栏，并在面板隐藏前保存。',
+    } as const
+    new Setting(integrationGroup).setName(ui('启用速记面板')).setDesc(ui(memoDescription[memoStatus]))
+      .addToggle(toggle => toggle.setValue(memoStatus === 'enabled' && plugin.settings.enableMemoPanel)
+        .setDisabled(memoStatus === 'unsupported').onChange(async value => {
+          toggle.setDisabled(true)
+          try { await plugin.setOptionalIntegration('memoPanel', value) }
+          finally { this.display() }
+        }))
     new Setting(scopeGroup)
       .setName(ui('编辑范围'))
       .setDesc(ui('控制哪些笔记自动使用 Blo；留空应用于整个库。'))

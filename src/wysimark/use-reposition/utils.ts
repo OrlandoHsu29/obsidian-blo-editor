@@ -1,7 +1,34 @@
 import mapValues from "just-map-values"
 import { RefObject } from "react"
 
+import { isDomElement } from "../../dom-guards"
+
 import { MapHTMLElementLikeRecordToRectRecord, Rect } from "./types"
+
+/**
+ * The document that owns a positioned element. Overlays in a popout window (the
+ * quick memo panel) must be measured against that window, not the main one.
+ */
+export function documentForHost(host?: Element | Document | null): Document {
+  if (!host) return typeof activeDocument === "undefined" ? document : activeDocument
+  // `instanceof` compares against the main realm, so check the node type instead.
+  if (host.nodeType === 9) return host as Document
+  return (host as Element).ownerDocument ?? document
+}
+
+/** First attached element in the record; it decides which window to measure. */
+export function firstHostElement<
+  T extends Record<string, HTMLElement | RefObject<HTMLElement>>
+>(elementLikeRecord: T): HTMLElement | null {
+  for (const value of Object.values(elementLikeRecord) as (
+    | HTMLElement
+    | RefObject<HTMLElement>
+  )[]) {
+    const element = isDomElement(value) ? value : value?.current
+    if (element) return element
+  }
+  return null
+}
 
 /**
  * Tries to convert an `HTMLElement` to a `Rect` using the supplied
@@ -23,8 +50,7 @@ export function mapHTMLElementLikeRecordToRectRecord<
   converElementToRect: (element: HTMLElement) => Rect
 ): MapHTMLElementLikeRecordToRectRecord<T> {
   const rectRecord = mapValues(elementLikeRecord, (value) => {
-    const maybeHTMLElement =
-      value instanceof HTMLElement ? value : value.current
+    const maybeHTMLElement = isDomElement(value) ? value : value.current
     const nextValue = maybeHTMLElement
       ? converElementToRect(maybeHTMLElement)
       : null

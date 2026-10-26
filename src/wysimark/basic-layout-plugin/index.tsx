@@ -1,7 +1,8 @@
 import { clsx } from "clsx"
-import { useFocused } from "slate-react"
+import { useSlateStatic } from "slate-react"
 
 import { createPlugin, RenderEditable } from "../sink"
+import { useEditorFocused } from "../entry/use-editor-focused"
 
 import { $Editable } from "./styles"
 
@@ -26,7 +27,7 @@ export const BasicLayoutPlugin = () =>
   })
 
 const renderEditable: RenderEditable = ({ attributes, Editable }) => {
-  const focused = useFocused()
+  const focused = useEditorFocused(useSlateStatic())
   return (
     <Editable
       className={clsx({ "--focused": focused })}

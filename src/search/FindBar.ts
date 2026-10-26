@@ -41,7 +41,10 @@ export class FindBar {
       if(event.key==='Escape'){event.preventDefault();event.stopPropagation();this.close(true)}
       else if(event.key==='Enter'&&!event.isComposing){event.preventDefault();event.stopPropagation();if(event.target===this.replacement)this.replace(false);else this.navigate(event.shiftKey?-1:1)}
     })
-    this.style=document.head.createEl('style');this.style.textContent=`::highlight(${this.name}){background-color:var(--text-highlight-bg);color:inherit}::highlight(${this.name}-active){background-color:var(--interactive-accent);color:var(--text-on-accent)}`
+    // Highlight rules and the registry belong to this view's window, so a
+    // popout (the quick memo panel) highlights its own text.
+    const doc = host.ownerDocument
+    this.style=doc.head.createEl('style');this.style.textContent=`::highlight(${this.name}){background-color:var(--text-highlight-bg);color:inherit}::highlight(${this.name}-active){background-color:var(--interactive-accent);color:var(--text-on-accent)}`
     this.resize=new ResizeObserver(()=>this.updateHeight());this.resize.observe(host)
   }
   private button(row:HTMLElement,title:string,icon:string,action:()=>void) {
@@ -73,7 +76,8 @@ export class FindBar {
   }
   private highlight(scroll=false) {
     const editor=this.getEditor();if(!editor||this.panel.hidden)return
-    const highlights=(CSS as any).highlights,Highlight=(window as any).Highlight
+    const view=this.host.ownerDocument.defaultView as any
+    const highlights=view?.CSS?.highlights,Highlight=view?.Highlight
     const domRanges=this.results.slice(0,1000).flatMap(range=>{try{return [ReactEditor.toDOMRange(editor,range)]}catch{return []}})
     let active:globalThis.Range|undefined
     try {if(this.results[this.index])active=ReactEditor.toDOMRange(editor,this.results[this.index])}catch {/* Render may still be updating. */}
@@ -92,6 +96,6 @@ export class FindBar {
     const current=this.results[Math.min(this.index,this.results.length-1)]
     replaceMatches(editor,all?this.results:(current?[current]:[]),this.replacement.value);this.refresh(false)
   }
-  close(focus=false){this.panel.hidden=true;this.host.style.removeProperty('--wysimark-find-height');cancelAnimationFrame(this.frame);(CSS as any).highlights?.delete(this.name);(CSS as any).highlights?.delete(this.name+'-active');const editor=this.getEditor();if(focus&&editor&&!this.readonlyMode())ReactEditor.focus(editor)}
+  close(focus=false){this.panel.hidden=true;this.host.style.removeProperty('--wysimark-find-height');cancelAnimationFrame(this.frame);const highlights=(this.host.ownerDocument.defaultView?.CSS as any)?.highlights;highlights?.delete(this.name);highlights?.delete(this.name+'-active');const editor=this.getEditor();if(focus&&editor&&!this.readonlyMode())ReactEditor.focus(editor)}
   destroy(){this.resize.disconnect();this.close();this.panel.remove();this.style.remove();this.host.style.removeProperty('--wysimark-toolbar-height')}
 }

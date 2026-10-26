@@ -3,7 +3,7 @@ import { RefObject } from "react"
 import { getFixedRect } from "../get-methods/get-fixed-rect"
 import { getFixedViewport } from "../get-methods/get-fixed-viewport"
 import { MapHTMLElementLikeRecordToRectRecord, Rect } from "../types"
-import { mapHTMLElementLikeRecordToRectRecord } from "../utils"
+import { firstHostElement, mapHTMLElementLikeRecordToRectRecord } from "../utils"
 import { useReposition } from "./use-reposition"
 
 /**
@@ -47,10 +47,11 @@ export function useFixedReposition<
     refresh: () => void
   ) => R
 ) {
-  const refresh = useReposition()
+  const host = firstHostElement(elementLikeRecord)
+  const refresh = useReposition(host)
   const rectRecord = mapHTMLElementLikeRecordToRectRecord(
     elementLikeRecord,
     (element) => getFixedRect(element)
   )
-  return fn(rectRecord, getFixedViewport(), refresh)
+  return fn(rectRecord, getFixedViewport(host), refresh)
 }

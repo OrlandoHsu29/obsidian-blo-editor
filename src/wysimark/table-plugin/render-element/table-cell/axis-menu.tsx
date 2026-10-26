@@ -38,6 +38,8 @@ export function AxisMenu({cellElement,axis}:{cellElement:TableCellElement;axis:'
     selectTableAxis(editor,ReactEditor.findPath(editor,cellElement),axis)
     ReactEditor.focus(editor)
   }
+  // Portal into the window that owns this cell; the quick memo panel is a popout.
+  const hostDocument=ref.current?.ownerDocument??document
   return <Container ref={ref} data-table-axis={axis} contentEditable={false} onMouseDown={event=>{event.preventDefault();event.stopPropagation();select()}}>
     <Tile className="--tile"><BarsIcon /></Tile>
     {active&&position&&createPortal(<div className="wysimark-overlay wysimark-table-actions" data-table-action-axis={axis} style={{position:'fixed',...position}}>
@@ -47,6 +49,6 @@ export function AxisMenu({cellElement,axis}:{cellElement:TableCellElement;axis:'
         onMouseDown={event=>{event.preventDefault();event.stopPropagation();select();deleteSelectedTableAxis(editor);setDeletePreview?.(null)}}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg>
       </button>
-    </div>,document.body)}
+    </div>,hostDocument.body)}
   </Container>
 }

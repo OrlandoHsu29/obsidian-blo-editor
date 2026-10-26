@@ -1,7 +1,9 @@
 import type { MouseEvent } from "react"
 import { selectionHasHeading } from '../../blocks/heading-policy'
 import { Descendant, Editor, Element, Node, Transforms } from "slate"
-import { ReactEditor, useFocused, useSlateStatic } from "slate-react"
+import { ReactEditor, useSlateStatic } from "slate-react"
+import { useEditorFocused } from "../entry/use-editor-focused"
+import { isDomElement } from "../../dom-guards"
 
 import {
   createHotkeyHandler,
@@ -24,11 +26,15 @@ function BlockQuote({
 }: ConstrainedRenderElementProps<BlockQuoteElement>) {
   const editor = useSlateStatic()
   const callout = getCalloutInfo(element)
-  const isEditing = useFocused() && useIsElementSelectionInside(element)
+  // Both are hooks, so they must run on every render; `&&` would change the
+  // hook order when focus or the selection changes (#310).
+  const focused = useEditorFocused(editor)
+  const selectionInside = useIsElementSelectionInside(element)
+  const isEditing = focused && selectionInside
 
   function editBlock(event: MouseEvent) {
     const target = event.target
-    if (target instanceof HTMLElement && target.closest(".wysimark-callout-body")) return
+    if (isDomElement(target) && (target as HTMLElement).closest(".wysimark-callout-body")) return
     event.preventDefault()
     const path = ReactEditor.findPath(editor, element)
     Transforms.select(editor, Editor.start(editor, path))

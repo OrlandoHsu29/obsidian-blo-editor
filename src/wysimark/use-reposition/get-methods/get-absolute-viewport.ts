@@ -1,16 +1,18 @@
 import { Rect } from "../types"
+import { documentForHost } from "../utils"
 import { getFixedViewport } from "./get-fixed-viewport"
 
 /**
  * Returns a `Rect` representing the `absolute` positioning coordinates of
- * the window viewport.
+ * the hosting window's viewport.
  *
- * NOTE: we add `window.scrollY` to get the `absolute` position.
+ * NOTE: we add the window's `scrollY` to get the `absolute` position.
  */
-export function getAbsoluteViewport(): Rect {
-  const rect = getFixedViewport()
+export function getAbsoluteViewport(host?: Element | Document | null): Rect {
+  const rect = getFixedViewport(host)
+  const scrollY = documentForHost(host)?.defaultView?.scrollY ?? 0
   return Object.assign(rect, {
-    top: window.scrollY,
-    bottom: window.scrollY + rect.height,
+    top: scrollY,
+    bottom: scrollY + rect.height,
   })
 }

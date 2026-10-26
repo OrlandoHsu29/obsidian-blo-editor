@@ -1,7 +1,8 @@
 import { ui } from "../../utils/translations"
 import { useCallback, useRef } from "react"
 import { Editor, Node, Transforms } from "slate"
-import { ReactEditor, useFocused, useSelected, useSlateStatic, useReadOnly } from "slate-react"
+import { ReactEditor, useSelected, useSlateStatic, useReadOnly } from "slate-react"
+import { useEditorFocused } from "../../entry/use-editor-focused"
 
 import { ConstrainedRenderElementProps } from "../../sink"
 import { useLayer } from "../../use-layer"
@@ -21,7 +22,7 @@ export function CodeBlock({
   const editor = useSlateStatic()
   const selected = useSelected()
   const blockSelected = useBlockSelection(element)
-  const focused = useFocused()
+  const focused = useEditorFocused(editor)
   const readOnly = useReadOnly()
   const dropdown = useLayer("code-block-dropdown")
   const onClick = useCallback(() => {

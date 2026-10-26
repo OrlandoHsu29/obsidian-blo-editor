@@ -1,10 +1,11 @@
 import { clsx } from "clsx"
 import { useCallback, useRef } from "react"
 import { Editor, Transforms } from "slate"
-import { ReactEditor, useFocused, useSlateStatic } from "slate-react"
+import { ReactEditor, useSlateStatic } from "slate-react"
 
 import { RenderEditableProps } from "../../sink"
 import { Layers } from "../../use-layer"
+import { useEditorFocused } from "../../entry/use-editor-focused"
 
 import { Toolbar } from "../components"
 import { $Editable, $OuterContainer } from "../styles"
@@ -13,7 +14,7 @@ export function renderEditable({ attributes, Editable }: RenderEditableProps) {
   const outerContainerRef = useRef<HTMLDivElement>(null)
 
   const editor = useSlateStatic()
-  const focused = useFocused()
+  const focused = useEditorFocused(editor)
 
   /**
    * When the user clicks inside the outer container but outside of the content

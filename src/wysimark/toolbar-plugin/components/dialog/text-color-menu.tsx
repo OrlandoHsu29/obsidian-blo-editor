@@ -6,6 +6,7 @@ import { $Panel, CloseMask } from '../../../shared-overlays'
 import { useAbsoluteReposition } from '../../../use-reposition'
 import { DEFAULT_TEXT_COLOR } from '../../../marks-plugin/methods/text-color'
 import { TEXT_COLORS } from '../../../../blocks/colors'
+import { isDomElement } from '../../../../dom-guards'
 
 export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => void}) {
   const labelId=useId()
@@ -18,12 +19,13 @@ export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => vo
   }))
   useEffect(() => () => { selection?.unref() }, [selection])
   useEffect(() => {
+    const doc = dest.ownerDocument ?? document
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); ReactEditor.focus(editor) }
     }
-    document.addEventListener('keydown', onKey, true)
-    return () => document.removeEventListener('keydown', onKey, true)
-  }, [close, editor])
+    doc.addEventListener('keydown', onKey, true)
+    return () => doc.removeEventListener('keydown', onKey, true)
+  }, [close, editor, dest])
   const apply = (color: string | null) => {
     if (selection?.current) Transforms.select(editor, selection.current)
     editor.wysimark.setTextColor?.(color)
@@ -34,7 +36,7 @@ export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => vo
   return <>
     <CloseMask close={close} />
     <$Panel ref={ref} style={style} className="wysimark-text-color-menu" role="dialog" aria-labelledby={labelId} onMouseDown={event => {
-      if (!(event.target instanceof HTMLInputElement)) event.preventDefault()
+      if (!(isDomElement(event.target) && event.target.tagName === 'INPUT')) event.preventDefault()
     }}>
       <span id={labelId} hidden>{ui("字体颜色")}</span>
       <div className="wysimark-color-palette" role="group" aria-labelledby={labelId+'-group'}>

@@ -4,6 +4,7 @@ import { Editor, Element, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { ui } from '../../utils/translations'
+import { isDomElement } from '../../../dom-guards'
 import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, tableCellSelection } from '../cell-selection'
 import type { TableColumnAlign, TableElement } from '../types'
 
@@ -56,8 +57,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     }
     hideInsertions()
     const cellAt = (target: EventTarget | null) => {
-      if (!(target instanceof HTMLElement)) return
-      const cell = target.closest('td')
+      if (!isDomElement(target)) return
+      const cell = (target as HTMLElement).closest('td')
       if (!cell || cell.closest('table') !== table) return
       const node = ReactEditor.toSlateNode(editor, cell)
       return Element.isElement(node) && node.type === 'table-cell' ? ReactEditor.findPath(editor, node) : undefined
@@ -222,6 +223,10 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     setInsertions([]); ReactEditor.focus(editor)
   }
   if (readOnly) return null
+  // Menus belong to the table's window, which may be a popout window.
+  const hostDocument = () => {
+    try { return (ReactEditor.toDOMNode(editor, element) as HTMLElement).ownerDocument } catch { return document }
+  }
   return <>
     {menu && createPortal(<div ref={menuRef} className="wysimark-overlay wysimark-table-actions" data-table-align-menu contentEditable={false} style={{ position: 'fixed', ...menu }}>
       {(['left', 'center', 'right'] as const).map(value => <button key={value} aria-label={ui(value === 'left' ? '列左对齐' : value === 'center' ? '列居中对齐' : '列右对齐')}
@@ -245,13 +250,13 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
           <path d={key === 'headerRow' ? 'M3 3h18v6H3z' : 'M3 3h6v18H3z'} fill="currentColor" stroke="none" />
         </svg>
       </button>)}
-    </div>, document.body)}
+    </div>, hostDocument().body)}
     {insertions.length > 0 && createPortal(<div ref={insertRef} contentEditable={false}>
       {insertions.map(insertion => <div key={insertion.axis} className="wysimark-overlay wysimark-table-actions wysimark-table-insert" data-table-insert={insertion.axis} data-insert-index={insertion.index} style={{ position: 'fixed', left: insertion.left, top: insertion.top }}>
       <button aria-label={ui(insertion.axis === 'row' ? insertion.index === element.children.length ? '下方插入行' : '上方插入行' : insertion.index === element.columns.length ? '右侧插入列' : '左侧插入列')} onMouseDown={event => { event.preventDefault(); event.stopPropagation(); insert(insertion) }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 12h14M12 5v14" /></svg>
       </button>
       </div>)}
-    </div>, document.body)}
+    </div>, hostDocument().body)}
   </>
 }

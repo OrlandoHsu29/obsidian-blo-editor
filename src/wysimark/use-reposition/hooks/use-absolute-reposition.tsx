@@ -3,7 +3,7 @@ import { RefObject } from "react"
 import { getAbsoluteRect } from "../get-methods/get-absolute-rect"
 import { getAbsoluteViewport } from "../get-methods/get-absolute-viewport"
 import { MapHTMLElementLikeRecordToRectRecord, Rect } from "../types"
-import { mapHTMLElementLikeRecordToRectRecord } from "../utils"
+import { firstHostElement, mapHTMLElementLikeRecordToRectRecord } from "../utils"
 import { useReposition } from "./use-reposition"
 
 /**
@@ -47,10 +47,11 @@ export function useAbsoluteReposition<
     refresh: () => void
   ) => NV
 ) {
-  const refresh = useReposition()
+  const host = firstHostElement(elementLikeRecord)
+  const refresh = useReposition(host)
   const rectRecord = mapHTMLElementLikeRecordToRectRecord(
     elementLikeRecord,
     (element) => getAbsoluteRect(element)
   )
-  return fn(rectRecord, getAbsoluteViewport(), refresh)
+  return fn(rectRecord, getAbsoluteViewport(host), refresh)
 }

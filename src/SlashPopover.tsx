@@ -3,13 +3,18 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { getDefaultIntegrations, subscribeDefaultIntegrations } from './integration-preferences'
 import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
-import { ReactEditor, useFocused, useSlate } from 'slate-react'
+import { ReactEditor, useSlate } from 'slate-react'
+import { useEditorFocused } from './wysimark/entry/use-editor-focused'
 import { getSlashContext, filterSlashCommands } from './slash-menu'
 import { AnchorDialog } from './wysimark/toolbar-plugin/components/dialog/anchor-dialog'
 import { ImageUrlDialog } from './wysimark/toolbar-plugin/components/dialog/image-url-dialog'
 
 export function SlashPopover() {
-  const editor = useSlate(), focused = useFocused()
+  const editor = useSlate(), focused = useEditorFocused(editor)
+  /** The editor's own document; a popout such as the quick memo panel is separate. */
+  const editorDocument = () => {
+    try { return ReactEditor.toDOMNode(editor, editor).ownerDocument } catch { return document }
+  }
   const preferences = editor.wysimark.integrationPreferences
   const integrations = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations)
   const [dialog, setDialog] = useState<{kind: 'link' | 'image'; left: number; top: number; height: number} | null>(null)
@@ -47,6 +52,8 @@ export function SlashPopover() {
   }, [dialog, editor])
   useLayoutEffect(() => {
     if (!visible || !editor.selection) return
+    const doc = editorDocument()
+    const win = doc.defaultView ?? window
     const update = () => {
       try {
         if (!popup.current || !editor.selection) return
@@ -57,22 +64,23 @@ export function SlashPopover() {
         // a below-caret menu upward through the current line.
         const naturalHeight = Math.min(menu.scrollHeight + menu.offsetHeight - menu.clientHeight, 280)
         const above = Math.max(0, rect.top - gap - edge)
-        const below = Math.max(0, window.innerHeight - rect.bottom - gap - edge)
+        const below = Math.max(0, win.innerHeight - rect.bottom - gap - edge)
         const placeAbove = above >= naturalHeight || above >= below
         const maxHeight = Math.min(naturalHeight, placeAbove ? above : below)
         const width = menu.getBoundingClientRect().width
-        const left = Math.max(edge, Math.min(rect.left, window.innerWidth - width - edge))
+        const left = Math.max(edge, Math.min(rect.left, win.innerWidth - width - edge))
         const top = placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap
         setPosition({left, top, maxHeight})
       } catch { /* Wait for Slate's DOM selection to update. */ }
     }
     update()
-    document.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
-    return () => { document.removeEventListener('scroll', update, true); window.removeEventListener('resize', update) }
+    doc.addEventListener('scroll', update, true)
+    win.addEventListener('resize', update)
+    return () => { doc.removeEventListener('scroll', update, true); win.removeEventListener('resize', update) }
   }, [visible, context?.key])
   useEffect(() => {
     if (!visible) return
+    const doc = editorDocument()
     const onKey = (event: KeyboardEvent) => {
       if (event.isComposing || !ReactEditor.toDOMNode(editor, editor).contains(event.target as globalThis.Node)) return
       if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return
@@ -81,8 +89,8 @@ export function SlashPopover() {
       else if (event.key === 'Enter') choose(selected)
       else setChoice({key: context!.key, index: (selected + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length})
     }
-    document.addEventListener('keydown', onKey, true)
-    return () => document.removeEventListener('keydown', onKey, true)
+    doc.addEventListener('keydown', onKey, true)
+    return () => doc.removeEventListener('keydown', onKey, true)
   }, [visible, context?.key, selected])
   if (dialog) {
     const Dialog = dialog.kind === 'link' ? AnchorDialog : ImageUrlDialog
@@ -94,5 +102,5 @@ export function SlashPopover() {
   if (!visible) return null
   return createPortal(<div ref={popup} className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', boxSizing:'border-box', maxWidth:'calc(100vw - 16px)', ...position}} onMouseDown={event => event.preventDefault()}>
     {matches.map((command, index) => <div key={command.title} role="option" aria-selected={index === selected} className={index === selected ? 'is-selected' : ''} onMouseEnter={() => setChoice({key:context!.key,index})} onClick={() => choose(index)}>{command.title}</div>)}
-  </div>, document.body)
+  </div>, editorDocument().body)
 }

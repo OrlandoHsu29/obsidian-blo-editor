@@ -1,5 +1,5 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
-import { deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from './model'
+import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from './model'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
@@ -45,6 +45,12 @@ export function deleteWholeBlockSelection(editor:Editor):boolean {
 export function deleteAtBlockBoundary(editor:Editor):boolean {
  if(deleteWholeBlockSelection(editor))return true
  if(editor.wysimark.readOnly)return false
+ if(editor.selection&&Range.isCollapsed(editor.selection)) {
+  const index=editor.selection.anchor.path[0],node=editor.children[index]
+  // Match Shift+Tab on an empty text block before Backspace can merge/delete it.
+  if(Element.isElement(node)&&!isEditorSpacer(node)&&!isStructuredBlock(node)&&
+   blockDepth(node)>0&&Editor.isEmpty(editor,node))return changeBlockIndent(editor,index,-1)
+ }
  const index=boundaryBlockIndex(editor)
  return index===undefined?false:selectBlockContents(editor,index)
 }

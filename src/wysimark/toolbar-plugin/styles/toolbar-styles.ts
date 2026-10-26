@@ -25,8 +25,9 @@ export const $ToolbarContainer = styled("div")`
   border-radius: 12px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, .16);
   align-self: center;
+  /* Fit every enabled button; only a genuinely narrow pane scrolls. */
   width: max-content;
-  max-width: min(880px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
   /**
    * Prevent clicks from stealing focus from the editor
    */

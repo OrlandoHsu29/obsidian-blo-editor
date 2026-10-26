@@ -24,8 +24,8 @@ function entry(id: string, item: MenuItemData, settingsIcon?: ToolbarIcon): Tool
 /** Stable IDs keep preferences independent of language and button order. */
 export const toolbarGroups: ToolbarEntry[][] = [
   [entry('paragraph-style',pick(compactBlockItems,t('paragraphStyle')),Normal),
-    entry('clear-formatting',clearStyleItem),
-    entry('undo',historyItems[0]),entry('redo',historyItems[1])],
+    entry('clear-formatting',clearStyleItem)],
+  [entry('undo',historyItems[0]),entry('redo',historyItems[1])],
   [entry('text-color',expandedMarkItems[0],TextColorPreview),entry('bold',pick(expandedMarkItems,t('bold'))),
     entry('italic',pick(expandedMarkItems,t('italic'))),entry('underline',pick(expandedMarkItems,t('underline'))),
     entry('strike',pick(expandedMarkItems,t('strike'))),entry('check-list',pick(listItems,t('checkList'))),

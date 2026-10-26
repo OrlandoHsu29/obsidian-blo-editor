@@ -1,5 +1,8 @@
 /** Shared across open views; updating the toolbar never edits the document. */
-const fixedButtons = new Set(['paragraph-style', 'clear-formatting', 'undo', 'redo', 'text-color', 'find-replace']);
+const fixedButtons = new Set([
+  'paragraph-style', 'clear-formatting', 'undo', 'redo', 'text-color', 'find-replace',
+  'table', 'link', 'image',
+]);
 export const isFixedToolbarButton = (id: string) => fixedButtons.has(id);
 
 export class ToolbarPreferences {

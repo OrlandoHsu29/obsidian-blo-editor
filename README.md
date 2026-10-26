@@ -127,8 +127,8 @@ files only. Undo restores attachments and refreshes previews automatically.
 Slash commands include 3×3 tables, checkboxes, links, and images; link/image
 commands reuse the toolbar insertion dialogs. In **Toolbar configuration**, shared
 icons and checkboxes control visibility immediately. Paragraph style, clear
-formatting, undo, redo, text color, and find/replace stay visible; their settings
-remain checked, gray, and disabled.
+formatting, undo, redo, text color, find/replace, table, link, and image stay
+visible; their settings remain checked, gray, and disabled.
 
 Pasted/imported media and new drawings share the vault-root `附件` folder by default. **Attachment
 folder** accepts a vault-relative path such as `Attachments/Media`; leave empty

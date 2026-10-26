@@ -19,6 +19,9 @@ export type EditorSettings = {
   deleteEmbeddedAttachments: boolean
   enableImageViewer: boolean
   enableDrawings: boolean
+  enableMemoPanel: boolean
+  /** Integrations the user turned off on purpose; detection leaves them off. */
+  integrationOptOut: string[]
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   hiddenToolbarButtons: string[]
 }
@@ -32,6 +35,8 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   deleteEmbeddedAttachments: false,
   enableImageViewer: false,
   enableDrawings: false,
+  enableMemoPanel: false,
+  integrationOptOut: [],
   tableDefaults: { headerRow: true, headerColumn: false },
   hiddenToolbarButtons: [],
 }
@@ -51,6 +56,10 @@ export class BloSettingsTab extends PluginSettingTab {
     this.clearIcons()
     this.containerEl.empty()
     this.containerEl.addClass('blo-settings')
+    // A dependency enabled during this session should show up as already on.
+    void plugin.enableDetectedIntegrations().then(changed => {
+      if (changed && this.containerEl.isConnected) this.display()
+    })
     const group = (title: string): HTMLElement => {
       if (typeof SettingGroup === 'function') {
         return new SettingGroup(this.containerEl).setHeading(title).listEl
@@ -98,8 +107,9 @@ export class BloSettingsTab extends PluginSettingTab {
           await plugin.saveData(plugin.settings)
         }))
     for (const [feature, key, name, description] of [
-      ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；开启后自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],
-      ['drawings', 'enableDrawings', '启用画板', '依赖 Excalidraw；开启后自动安装并启用。支持内嵌预览、缩放及放大绘制。'],
+      ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；已启用时自动开启，未安装时会自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],
+      ['drawings', 'enableDrawings', '启用画板', '依赖 Excalidraw；已启用时自动开启，未安装时会自动安装并启用。支持内嵌预览、缩放及放大绘制。'],
+      ['memoPanel', 'enableMemoPanel', '启用速记面板', '依赖 Flash Memo；已启用时自动开启。速记面板中的笔记改用 Blo 编辑：隐藏顶部文件名、使用紧凑工具栏，并在面板隐藏前保存。'],
     ] as const) {
       new Setting(integrationGroup).setName(ui(name)).setDesc(ui(description)).addToggle(toggle => toggle
         .setValue(plugin.settings[key]).onChange(async value => {

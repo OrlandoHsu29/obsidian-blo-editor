@@ -142,6 +142,22 @@
     background-color: var(--background-primary);
 }
 
+/*
+ * Flash Memo's quick memo popout is a small window that draws its own name bar.
+ * The file name is therefore redundant there, and a compact toolbar at the top
+ * leaves more room for the note. Only the chrome changes; the editing surface
+ * keeps the same layout and behaviour.
+ */
+.wysimark-container.blo-memo-panel .wysimark-document-title { display: none; }
+.wysimark-container.blo-memo-panel [data-wysimark-toolbar] {
+    font-size: 0.8125em;
+    margin: 8px 6px 4px;
+    padding: 0 4px;
+    max-width: calc(100% - 12px);
+    border-radius: 10px;
+    top: 8px;
+}
+
 /* React root container */
 .wysimark-react-root {
     display: flex;

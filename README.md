@@ -160,6 +160,10 @@ support undo. Attachment deletion follows the settings described above.
 **Enable image viewer** installs and activates Image Toolkit for enlarged image previews, with adapted toolbar icons and theme styling. Turning either integration off keeps its dependency plugin and attachments. The editor uses Slate; third-party editing extensions
 that require CodeMirror do not automatically apply to this view.
 
+**Enable quick memo panel** connects [Flash Memo](https://github.com/OrlandoHsu29/obsidian-flash-memo), installed and enabled separately: **Show/hide quick memo panel** opens its small floating window, where notes are edited with Blo Editor. The panel skips the file name header, keeps a compact toolbar at the top, and saves before Flash Memo hides the window. Turning it off returns the memo note to the native editor.
+
+When a dependency plugin (Image Toolkit, Excalidraw, Flash Memo) is already enabled, its integration turns on automatically at startup or when the settings open. Switches you turn off yourself are remembered and stay off.
+
 ## Development
 
 ```sh

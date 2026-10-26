@@ -17,9 +17,17 @@ import { installDrawingNavigation } from './drawing-navigation';
 import { PdfExportModal } from './pdf-export';
 import { ToolbarPreferences } from './toolbar-preferences';
 import { parseBlockDocument } from './blocks/persistence';
-import { IntegrationPreferences, IntegrationFlags } from './integration-preferences';
+import { IntegrationPreferences } from './integration-preferences';
 import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from './optional-integrations';
+import { isMemoPanelLeaf, memoPanelInstalled, toggleMemoPanel } from './memo-panel';
 import { canInsertMath } from './wysimark/math-plugin';
+
+const INTEGRATION_SETTINGS = {
+  imageViewer: { key: 'enableImageViewer', name: 'Image Toolkit' },
+  drawings: { key: 'enableDrawings', name: 'Excalidraw' },
+  memoPanel: { key: 'enableMemoPanel', name: 'Flash Memo' },
+} as const;
+type IntegrationFeature = keyof typeof INTEGRATION_SETTINGS;
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
@@ -33,7 +41,7 @@ export default class BloEditorPlugin extends Plugin {
   private bloFormatCache = new WeakMap<TFile, { mtime: number; size: number; result: Promise<boolean> }>();
   async onload(): Promise<void> {
     await super.onload();
-    this.register(()=>this.styleCache.sheet.flush());
+    this.register(()=>this.styleCache.cache.sheet.flush());
     installOutlineFilter(this,file=>{
       const active=this.app.workspace.getActiveViewOfType(BloView);
       if(active?.currentFile===file)return active.editor??undefined;
@@ -55,10 +63,7 @@ export default class BloEditorPlugin extends Plugin {
     if (typeof savedSettings?.deleteEmbeddedAttachments !== 'boolean') this.settings.deleteEmbeddedAttachments = false;
     delete (this.settings as any).deleteImageAttachments;
     delete (this.settings as any).deleteDrawingAttachments;
-    // Keep integrations already in use; a fresh setup without dependencies is opt-in.
-    const manager = optionalPluginManager(this.app), dependencies = manager.plugins;
-    if (typeof savedSettings?.enableImageViewer !== 'boolean') this.settings.enableImageViewer = !!dependencies[OPTIONAL_PLUGINS.imageViewer] || manager.enabledPlugins.has(OPTIONAL_PLUGINS.imageViewer);
-    if (typeof savedSettings?.enableDrawings !== 'boolean') this.settings.enableDrawings = !!dependencies[OPTIONAL_PLUGINS.drawings] || manager.enabledPlugins.has(OPTIONAL_PLUGINS.drawings);
+    if (!Array.isArray(this.settings.integrationOptOut)) this.settings.integrationOptOut = [];
     this.syncIntegrations();
     this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
@@ -120,6 +125,11 @@ export default class BloEditorPlugin extends Plugin {
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!view?.editor || !view.currentFile || view.readOnly) return false;
       if (!checking) void view.editor.wysimark.insertDrawing?.();
+      return true;
+    }});
+    this.addCommand({ id: 'toggle-memo-panel', name: ui('打开/关闭速记面板'), checkCallback: checking => {
+      if (!this.settings.enableMemoPanel || !memoPanelInstalled(this.app)) return false;
+      if (!checking) void this.toggleMemoPanelWindow();
       return true;
     }});
     this.addCommand({ id: 'text-color', name: ui("应用上次字体颜色"), hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'C' }], checkCallback: checking => {
@@ -204,6 +214,11 @@ export default class BloEditorPlugin extends Plugin {
       }
     }));
     this.app.workspace.onLayoutReady(() => {
+      // Dependencies load in any order, so detect them once the workspace is up.
+      void this.enableDetectedIntegrations().then(() => {
+        // A reload keeps the quick memo popout; put Blo back into it.
+        if (this.settings.enableMemoPanel) void this.adoptMemoPanelViews();
+      });
       void this.enforceEditingScope();
       const leaf = this.app.workspace.activeLeaf;
       if (leaf?.view instanceof MarkdownView && leaf.view.file) void this.openRichByDefault(leaf, leaf.view.file);
@@ -212,24 +227,96 @@ export default class BloEditorPlugin extends Plugin {
   isFileInEditingScope(file: TFile): boolean {
     return file.extension === 'md' && isPathInEditingScope(file.path, this.settings.richEditingFolder);
   }
+  /** The quick memo popout keeps its own single note; only Blo-owned tabs are scoped. */
+  isMemoPanelLeaf(leaf: WorkspaceLeaf, file?: TFile | null): boolean {
+    return isMemoPanelLeaf(this.app, leaf, file);
+  }
+  private async toggleMemoPanelWindow(): Promise<void> {
+    try {
+      if (!await toggleMemoPanel(this.app)) new Notice(ui('未检测到 Flash Memo，请先安装并启用速记面板插件'));
+    } catch (error) {
+      console.error('Blo Editor: could not toggle the quick memo panel', error);
+      new Notice(ui('无法打开速记面板，请检查 Flash Memo 插件'));
+    }
+  }
   private syncIntegrations() {
     this.integrationPreferences.set({ imageViewer: this.settings.enableImageViewer, drawings: this.settings.enableDrawings });
   }
-  async setOptionalIntegration(feature: keyof IntegrationFlags, enabled: boolean): Promise<boolean> {
-    const key = feature === 'imageViewer' ? 'enableImageViewer' : 'enableDrawings';
+  private integrationDependencyEnabled(feature: IntegrationFeature): boolean {
+    if (feature === 'memoPanel') return memoPanelInstalled(this.app);
+    const manager = optionalPluginManager(this.app), id = OPTIONAL_PLUGINS[feature];
+    return !!manager.plugins[id] || manager.enabledPlugins.has(id);
+  }
+  /**
+   * An enabled dependency turns its integration on by itself, so a plugin the
+   * user already runs needs no setup in Blo. Manually turning an integration off
+   * records an opt-out that detection respects.
+   */
+  async enableDetectedIntegrations(): Promise<boolean> {
+    if (this.disposed) return false;
+    const optOut = new Set(this.settings.integrationOptOut);
+    let changed = false;
+    for (const feature of Object.keys(INTEGRATION_SETTINGS) as IntegrationFeature[]) {
+      const { key } = INTEGRATION_SETTINGS[feature];
+      if (this.settings[key] || optOut.has(feature) || !this.integrationDependencyEnabled(feature)) continue;
+      this.settings[key] = true;
+      changed = true;
+    }
+    if (!changed) return false;
+    this.syncIntegrations();
+    await this.saveData(this.settings);
+    if (this.settings.enableMemoPanel) await this.adoptMemoPanelViews();
+    return true;
+  }
+  private recordIntegrationChoice(feature: IntegrationFeature, enabled: boolean) {
+    const choices = new Set(this.settings.integrationOptOut);
+    if (enabled) choices.delete(feature); else choices.add(feature);
+    this.settings.integrationOptOut = [...choices];
+  }
+  async setOptionalIntegration(feature: IntegrationFeature, enabled: boolean): Promise<boolean> {
+    const { key, name } = INTEGRATION_SETTINGS[feature];
     const previous = this.settings[key];
+    // Flash Memo is installed manually; its id is not resolved from the store.
+    if (enabled && feature === 'memoPanel' && !memoPanelInstalled(this.app)) {
+      new Notice(ui('未检测到 Flash Memo，请先安装并启用速记面板插件'));
+      return previous;
+    }
     try {
-      if (enabled) await ensureOptionalPlugin(this.app, feature);
+      if (enabled && feature !== 'memoPanel') await ensureOptionalPlugin(this.app, feature);
       if (this.disposed) return previous;
       this.settings[key] = enabled;
+      this.recordIntegrationChoice(feature, enabled);
       this.syncIntegrations();
       await this.saveData(this.settings);
     } catch (error) {
       this.settings[key] = previous; this.syncIntegrations();
       console.error('Blo Editor: optional integration failed', error);
-      new Notice(ui('无法启用 {name}，请检查网络或在第三方插件中手动安装并启用。', { name: feature === 'imageViewer' ? 'Image Toolkit' : 'Excalidraw' }));
+      new Notice(ui('无法启用 {name}，请检查网络或在第三方插件中手动安装并启用。', { name }));
     }
+    // Turning the memo panel off returns its note to the native editor.
+    if (feature === 'memoPanel' && this.settings[key] === enabled) await (enabled ? this.adoptMemoPanelViews() : this.releaseMemoPanelViews());
     return this.settings[key];
+  }
+  private async adoptMemoPanelViews(): Promise<void> {
+    for (const leaf of this.allLeaves()) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file && this.isMemoPanelLeaf(leaf, view.file)) await this.openRichByDefault(leaf, view.file);
+    }
+  }
+  private allLeaves(): WorkspaceLeaf[] {
+    const leaves: WorkspaceLeaf[] = [];
+    this.app.workspace.iterateAllLeaves(leaf => leaves.push(leaf));
+    return leaves;
+  }
+  private async releaseMemoPanelViews(): Promise<void> {
+    for (const leaf of this.allLeaves()) {
+      const view = leaf.view;
+      if (!(view instanceof BloView) || !view.currentFile || !this.isMemoPanelLeaf(leaf, view.currentFile)) continue;
+      const file = view.currentFile, mode = view.getMode();
+      await view.saveFile();
+      if (leaf.view !== view || view.currentFile !== file) continue;
+      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode, source: false }, active: leaf === this.app.workspace.activeLeaf });
+    }
   }
   isPdfExportLeaf(leaf: WorkspaceLeaf) { return this.pdfExportLeaves.has(leaf); }
   private async exportFileToPdf(file: TFile) {
@@ -271,25 +358,30 @@ export default class BloEditorPlugin extends Plugin {
     if (!this.settings.restrictExistingBloTabs) return;
     for (const leaf of onlyLeaf ? [onlyLeaf] : this.app.workspace.getLeavesOfType(VIEW_TYPE_BLO)) {
       const view = leaf.view;
-      if (!(view instanceof BloView) || !view.currentFile || this.isFileInEditingScope(view.currentFile) || isDrawingFile(this.app, view.currentFile) || this.openingLeaves.has(leaf) || this.pdfExportLeaves.has(leaf)) continue;
+      if (!(view instanceof BloView) || !view.currentFile || this.isFileInEditingScope(view.currentFile) || this.isMemoPanelLeaf(leaf, view.currentFile) || isDrawingFile(this.app, view.currentFile) || this.openingLeaves.has(leaf) || this.pdfExportLeaves.has(leaf)) continue;
       const file = view.currentFile, mode = view.getMode();
       this.openingLeaves.add(leaf);
       try {
         await view.saveFile();
-        if (!this.settings.restrictExistingBloTabs || leaf.view !== view || view.currentFile !== file || this.isFileInEditingScope(file)) continue;
+        if (!this.settings.restrictExistingBloTabs || leaf.view !== view || view.currentFile !== file || this.isFileInEditingScope(file) || this.isMemoPanelLeaf(leaf, file)) continue;
         await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode }, active: leaf === this.app.workspace.activeLeaf });
       } finally { this.openingLeaves.delete(leaf); }
     }
   }
   private async openRichByDefault(leaf: WorkspaceLeaf, file: TFile) {
-    if (file.extension !== 'md' || isDrawingFile(this.app, file) || !this.settings.preferRichEditing || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) ||
-      (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) ||
+    const memoPanel = this.isMemoPanelLeaf(leaf, file);
+    // Flash Memo owns its popout; use Blo there only while the integration is on.
+    if (memoPanel && !this.settings.enableMemoPanel) return;
+    // The memo panel is an explicit choice, so it opens with Blo outside the editing scope.
+    const outsideScope = !memoPanel && !this.isFileInEditingScope(file);
+    if (file.extension !== 'md' || isDrawingFile(this.app, file) || (!this.settings.preferRichEditing && !memoPanel) || this.nativeLeaves.has(leaf) || this.openingLeaves.has(leaf) ||
+      (this.settings.restrictExistingBloTabs && outsideScope) ||
       !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
     const mode = leaf.view.getMode();
     this.openingLeaves.add(leaf);
     try {
       await leaf.view.save();
-      if (!this.isFileInEditingScope(file)) {
+      if (outsideScope) {
         if (this.settings.restrictExistingBloTabs) return;
         let cached = this.bloFormatCache.get(file);
         if (!cached || cached.mtime !== file.stat.mtime || cached.size !== file.stat.size) {
@@ -299,7 +391,7 @@ export default class BloEditorPlugin extends Plugin {
         }
         if (!await cached.result) return;
       }
-      if (!this.settings.preferRichEditing || (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) || this.nativeLeaves.has(leaf) || isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
+      if ((!this.settings.preferRichEditing && !memoPanel) || (this.settings.restrictExistingBloTabs && outsideScope) || this.nativeLeaves.has(leaf) || isDrawingFile(this.app, file) || !(leaf.view instanceof MarkdownView) || leaf.view.file?.path !== file.path) return;
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode }, active: true });
     } catch (error) {
       this.bloFormatCache.delete(file);

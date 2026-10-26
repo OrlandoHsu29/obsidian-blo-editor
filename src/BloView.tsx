@@ -15,6 +15,7 @@ import { insertDocumentStartParagraph } from './blocks/document-start';
 import { rootCache } from './blocks/model';
 import { FindBar } from './search/FindBar';
 import { DocumentTitle } from './DocumentTitle';
+import { isMemoPanelDocument, popoutDocument } from './memo-panel';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
 import { VideoEmbed, VIDEO_FILE_PATTERN } from './VideoEmbed';
 import { attachmentPath, isAttachmentPath } from './attachments';
@@ -26,7 +27,6 @@ import { watchRemoteImages } from './remote-images';
 import { PdfExportModal } from './pdf-export';
 import type { Menu } from 'obsidian';
 import { CacheProvider } from '@emotion/react';
-import type { EmotionCache } from '@emotion/cache';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 
@@ -294,6 +294,7 @@ function KnowledgeSpaceEditorComponent({
   onImageSave,
   connectEditor,
   readOnly,
+  memoPanel,
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
@@ -304,6 +305,7 @@ function KnowledgeSpaceEditorComponent({
   onImageSave?: OnImageSaveHandler;
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
+  memoPanel: boolean;
 }) {
   const openInternalLink = React.useCallback(async (target: string, newLeaf = false) => {
     const normalized = normalizeVaultLinkInput(plugin.app, target).target;
@@ -379,7 +381,8 @@ function KnowledgeSpaceEditorComponent({
     const drawing = exact instanceof TFile ? exact : plugin.app.metadataCache.getFirstLinkpathDest(target, file.path);
     return drawing instanceof TFile && isDrawingFile(plugin.app, drawing);
   };
-  editor.wysimark.documentTitle = <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
+  // Flash Memo's popout already shows the file name and owns renaming there.
+  editor.wysimark.documentTitle = memoPanel ? undefined : <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
     onEnterEnd={readOnly ? undefined : () => insertDocumentStartParagraph(editor)} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
     if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) return url;
@@ -433,6 +436,7 @@ function KnowledgeSpaceContainer({
   plugin,
   connectEditor,
   readOnly,
+  memoPanel,
 }: {
   file: TFile | null;
   loading: boolean;
@@ -445,6 +449,7 @@ function KnowledgeSpaceContainer({
   plugin: BloEditorPlugin;
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
+  memoPanel: boolean;
 }) {
   if (!file) {
     return <EmptyState loading={loading} fileName={openingFileName} />;
@@ -462,6 +467,7 @@ function KnowledgeSpaceContainer({
       onReload={onReload}
       onImageSave={onImageSave}
       readOnly={readOnly}
+      memoPanel={memoPanel}
     />
   );
 }
@@ -483,6 +489,10 @@ export class BloView extends FileView {
   private reloadKey: number = 0;  // Used to force React component remount on reload
   editor: Editor | null = null;
   readOnly = false;
+  /** True while this view lives in Flash Memo's quick memo popout. */
+  memoPanel = false;
+  private memoPanelObserver: MutationObserver | null = null;
+  private windowFocusHandler: (() => void) | null = null;
   private lastEditorMarkdown = '';
   private modeAction: HTMLElement;
   private findBar: FindBar | null = null;
@@ -512,6 +522,12 @@ export class BloView extends FileView {
       (this.plugin as any).settings.tableDefaults = defaults;
       void this.plugin.saveData((this.plugin as any).settings);
     };
+    // A popout such as the quick memo panel focuses its window, not the editor,
+    // so the caret must be placed here for typing to start right away.
+    const panelDocument = popoutDocument(this.leaf);
+    if (panelDocument?.hasFocus()) window.setTimeout(() => {
+      if (this.editor === editor) this.focusPanelEditor();
+    }, 0);
     const source = this.currentFile;
     const stopRemoteImages = source ? watchRemoteImages(this.app, source.path, editor, () => {
       const folder = this.plugin.settings.attachmentFolder;
@@ -549,6 +565,27 @@ export class BloView extends FileView {
 
   getViewType(): string {
     return VIEW_TYPE_BLO;
+  }
+
+  /** Obsidian focuses a view through this hook; keep the editor usable. */
+  focus(): void {
+    this.focusEditor();
+  }
+
+  /** Put the caret back into the note when its popout window becomes active. */
+  private focusPanelEditor() {
+    if (!popoutDocument(this.leaf)) return;
+    if (this.app.workspace.activeLeaf !== this.leaf) return;
+    this.focusEditor();
+  }
+
+  private focusEditor() {
+    const editor = this.editor;
+    if (!editor || this.readOnly) return;
+    try {
+      if (!editor.selection) Transforms.select(editor, Editor.end(editor, []));
+      ReactEditor.focus(editor);
+    } catch { /* The editable may still be mounting. */ }
   }
 
   getDisplayText(): string {
@@ -597,6 +634,12 @@ export class BloView extends FileView {
 
     // Create React root
     this.root = createRoot(this.reactContainer);
+    this.watchMemoPanel();
+    const panelWindow = popoutDocument(this.leaf)?.defaultView;
+    if (panelWindow) {
+      this.windowFocusHandler = () => this.focusPanelEditor();
+      panelWindow.addEventListener('focus', this.windowFocusHandler);
+    }
     this.renderEditor();
   }
 
@@ -604,6 +647,12 @@ export class BloView extends FileView {
     if (this.viewRedirect !== null) {
       window.clearTimeout(this.viewRedirect);
       this.viewRedirect = null;
+    }
+    this.memoPanelObserver?.disconnect();
+    this.memoPanelObserver = null;
+    if (this.windowFocusHandler) {
+      popoutDocument(this.leaf)?.defaultView?.removeEventListener('focus', this.windowFocusHandler);
+      this.windowFocusHandler = null;
     }
     this.findBar?.destroy(); this.findBar = null;
     // Clear any pending save timeout
@@ -625,6 +674,8 @@ export class BloView extends FileView {
 
   async onLoadFile(file: TFile) { await this.loadContent(file); }
   async onUnloadFile(_file: TFile) { await this.saveFile(); this.currentFile = null; this.renderEditor(); }
+  /** Flash Memo asks the hosted view to flush before it hides or closes the popout. */
+  async save(): Promise<void> { await this.saveFile(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
   onPaneMenu(menu: Menu, source: string) {
     super.onPaneMenu(menu, source);
@@ -643,7 +694,7 @@ export class BloView extends FileView {
     this.stateReady = true;
     this.openingFile = file instanceof TFile && file.path !== this.currentFile?.path ? file : null;
     if (!this.currentFile) this.renderEditor();
-    if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file) && !this.plugin.isPdfExportLeaf(this.leaf)))) {
+    if (file instanceof TFile && (isDrawingFile(this.app, file) || (this.plugin.settings.restrictExistingBloTabs && !this.plugin.isFileInEditingScope(file) && !this.plugin.isMemoPanelLeaf(this.leaf, file) && !this.plugin.isPdfExportLeaf(this.leaf)))) {
       // Finish Obsidian's current view assignment first; a nested switch is
       // otherwise overwritten when the outer setViewState call completes.
       this.viewRedirect = window.setTimeout(() => {
@@ -838,17 +889,49 @@ export class BloView extends FileView {
     return encodeURI('../'.repeat(sourceDir.length) + targetParts.join('/'));
   }
 
+  /**
+   * Flash Memo marks its popout body when the window attaches, which can happen
+   * after this view opens, so follow that class instead of sampling it once.
+   * Its own settings name the memo file, which covers the first note opened in
+   * a fresh window before the class exists.
+   */
+  private watchMemoPanel() {
+    const doc = this.containerEl.ownerDocument;
+    if (this.memoPanelObserver || !doc.body) return;
+    // Use the target window's constructor: a popout document is observed from
+    // the main renderer, and that window may load its own globals.
+    const Observer = doc.defaultView?.MutationObserver ?? (typeof MutationObserver === 'undefined' ? null : MutationObserver);
+    if (!Observer) return;
+    this.memoPanelObserver = new Observer(() => this.syncMemoPanel());
+    this.memoPanelObserver.observe(doc.body, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  private memoPanelState() {
+    if (isMemoPanelDocument(this.containerEl.ownerDocument)) return true;
+    return !!this.currentFile && this.plugin.isMemoPanelLeaf(this.leaf, this.currentFile);
+  }
+
+  private syncMemoPanel() {
+    if (this.root && this.memoPanelState() !== this.memoPanel) this.renderEditor();
+  }
+
   handleReload = () => {
     void this.reloadFile();
   }
 
   renderEditor() {
     if (!this.root) return;
+    const memoPanel = this.memoPanelState();
+    if (memoPanel !== this.memoPanel) {
+      this.memoPanel = memoPanel;
+      this.contentEl.toggleClass('blo-memo-panel', memoPanel);
+    }
 
     this.root.render(
-      <CacheProvider value={(this.plugin as Plugin & {styleCache:EmotionCache}).styleCache}>
+      <CacheProvider value={this.plugin.styleCache.forDocument(this.containerEl.ownerDocument)}>
       <KnowledgeSpaceContainer
         readOnly={this.readOnly}
+        memoPanel={this.memoPanel}
         file={this.currentFile}
         loading={!this.stateReady||!!this.openingFile}
         openingFileName={this.openingFile?.basename}

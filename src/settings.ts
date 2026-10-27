@@ -25,6 +25,7 @@ export type EditorSettings = {
   integrationOptOut: string[]
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   hiddenToolbarButtons: string[]
+  autoLinkTitle: boolean
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   integrationOptOut: [],
   tableDefaults: { headerRow: true, headerColumn: false },
   hiddenToolbarButtons: [],
+  autoLinkTitle: true,
 }
 
 export class BloSettingsTab extends PluginSettingTab {

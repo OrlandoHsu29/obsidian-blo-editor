@@ -39,6 +39,7 @@ export function createWebUrlPaste(editor: Editor, url: string, doc: Document, la
   return {
     path: ref,
     kind: 'web' as const,
+    get choice() { return mode === 'title' && title ? 'title' as const : 'url' as const },
     current,
     choose(value: 'url' | 'title') {
       if (disposed) return Promise.resolve()

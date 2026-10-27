@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Editor, Range, Transforms } from 'slate'
 import type { RangeRef } from 'slate'
 import { HistoryEditor } from 'slate-history'
@@ -15,6 +15,7 @@ import { DraggableHeader } from './DraggableHeader'
 
 type DialogProps = { dest: HTMLElement; close: () => void }
 type Source = 'url' | 'vault' | 'computer'
+const subscribeNoop = () => () => {}
 
 export function AnchorDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment={false} /> }
 export function AttachmentInsertDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment /> }
@@ -34,7 +35,9 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
   const [url, setUrl] = useState('')
   const [target, setTarget] = useState('')
   const [text, setText] = useState(initialText)
-  const [autoTitle, setAutoTitle] = useState(true)
+  const [fallbackAutoTitle, setFallbackAutoTitle] = useState(true)
+  const titlePreferences = editor.wysimark.linkTitlePreferences
+  const autoTitle = useSyncExternalStore(titlePreferences?.subscribe ?? subscribeNoop, titlePreferences?.getSnapshot ?? (() => fallbackAutoTitle))
   const [description, setDescription] = useState(initialText)
   const [title, setTitle] = useState('')
   const [selectedFile, setSelectedFile] = useState<File>()
@@ -149,7 +152,8 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
       <DraggableHeader onDrag={handleDrag} />
       <form onSubmit={event => { event.preventDefault(); void insert() }}>
         <fieldset disabled={saving}>
-          <div className="wysimark-menu-tabs" role="group" aria-label={ui('插入来源')}>
+          <span id={labelId + '-sources'} hidden>{ui('插入来源')}</span>
+          <div className="wysimark-menu-tabs" role="group" aria-labelledby={labelId + '-sources'}>
             {sources.map(value => <button key={value} type="button" aria-pressed={source === value} onClick={() => changeSource(value)}
               disabled={value === 'computer' && !editor.wysimark.onImageSave || attachment && value === 'url' && (!editor.wysimark.onImageSave || !editor.wysimark.downloadAttachment)}>
               {value === 'vault' ? t('linkTypeInternal') : value === 'computer' ? ui('电脑导入') : attachment ? ui('网址导入') : ui('网址')}
@@ -184,7 +188,10 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
         {error && <div role="alert" className="wysimark-reference-error">{error}</div>}
         <div className="wysimark-reference-actions">
           {footerHint && <$DialogHint className="wysimark-reference-footer-hint" title={footerHint}>{footerHint}</$DialogHint>}
-          {!attachment && source === 'url' && <label className="wysimark-reference-auto-title"><input type="checkbox" checked={autoTitle} disabled={saving} onChange={event => setAutoTitle(event.target.checked)} />{ui('自动获取链接标题')}</label>}
+          {!attachment && source === 'url' && <label className="wysimark-reference-auto-title"><input type="checkbox" checked={autoTitle} disabled={saving} onChange={event => {
+            if (editor.wysimark.setAutoLinkTitle) editor.wysimark.setAutoLinkTitle(event.target.checked)
+            else setFallbackAutoTitle(event.target.checked)
+          }} /><span>{ui('插入链接时自动获取链接标题')}</span></label>}
           <button type="submit" disabled={!valid || saving}>{saving ? t('saving') : t('insert')}</button>
         </div>
       </form>

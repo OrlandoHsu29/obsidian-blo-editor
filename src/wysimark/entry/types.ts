@@ -1,6 +1,7 @@
 import { Descendant } from "slate"
 import type { ReactNode } from "react"
 import type { ToolbarPreferences } from '../../toolbar-preferences'
+import type { LinkTitlePreferences } from '../../link-title-preferences'
 import type { IntegrationPreferences } from '../../integration-preferences'
 
 /**
@@ -28,6 +29,8 @@ export type WysimarkEditor = {
     resolveInternalMedia?: (target: string) => string | undefined
     getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined
     toolbarPreferences?: ToolbarPreferences
+    linkTitlePreferences?: LinkTitlePreferences
+    setAutoLinkTitle?: (enabled: boolean) => void
     memoPanel?: boolean
     integrationPreferences?: IntegrationPreferences
     resolveImageUrl?: (url: string) => string

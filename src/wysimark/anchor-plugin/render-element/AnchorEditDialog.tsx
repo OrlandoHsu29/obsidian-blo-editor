@@ -69,12 +69,14 @@ export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEm
   }
   return <>
     <CloseMask close={close} />
-    <$AnchorDialog ref={ref} contentEditable={false} style={style} className="wysimark-reference-dialog" data-reference-kind={initialEmbed ? 'attachment' : 'link'} role="dialog" aria-label={initialEmbed ? ui('附件') : ui('链接')}
+    <$AnchorDialog ref={ref} contentEditable={false} style={style} className="wysimark-reference-dialog" data-reference-kind={initialEmbed ? 'attachment' : 'link'} role="dialog" aria-labelledby={id + '-label'}
       onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() } }}>
+      <span id={id + '-label'} hidden>{initialEmbed ? ui('附件') : ui('链接')}</span>
+      <span id={id + '-sources'} hidden>{ui('插入来源')}</span>
       <DraggableHeader onDrag={(x, y) => setDragOffset(previous => ({ x: previous.x + x, y: previous.y + y }))} />
       <form onSubmit={event => { event.preventDefault(); submit() }}>
         <fieldset>
-          {!initialEmbed && <div className="wysimark-menu-tabs" role="group" aria-label={ui('插入来源')}>
+          {!initialEmbed && <div className="wysimark-menu-tabs" role="group" aria-labelledby={id + '-sources'}>
             <button type="button" aria-pressed={mode === 'external'} onClick={() => setMode('external')}>{ui('网址')}</button>
             <button type="button" aria-pressed={mode === 'internal'} onClick={() => setMode('internal')}>{t('linkTypeInternal')}</button>
           </div>}

@@ -16,6 +16,7 @@ import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
 import { PdfExportModal } from './pdf-export';
 import { ToolbarPreferences } from './toolbar-preferences';
+import { LinkTitlePreferences } from './link-title-preferences';
 import { parseBlockDocument } from './blocks/persistence';
 import { IntegrationPreferences } from './integration-preferences';
 import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from './optional-integrations';
@@ -33,6 +34,7 @@ type IntegrationFeature = keyof typeof INTEGRATION_SETTINGS;
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
   readonly toolbarPreferences = new ToolbarPreferences();
+  readonly linkTitlePreferences = new LinkTitlePreferences();
   readonly integrationPreferences = new IntegrationPreferences();
   private disposed = false;
   private memoSetup: MemoPanelSetupModal | null = null;
@@ -78,6 +80,8 @@ export default class BloEditorPlugin extends Plugin {
     },true);
     const savedSettings = await this.loadData();
     this.settings = Object.assign(this.settings, savedSettings);
+    this.settings.autoLinkTitle = this.settings.autoLinkTitle !== false;
+    this.linkTitlePreferences.setEnabled(this.settings.autoLinkTitle);
     // Do not broaden an old per-type deletion opt-in to every embedded medium.
     if (typeof savedSettings?.deleteEmbeddedAttachments !== 'boolean') this.settings.deleteEmbeddedAttachments = false;
     delete (this.settings as any).deleteImageAttachments;

@@ -115,8 +115,8 @@ function MediaPasteMenu({ session, host, close }: { session: PasteSession; host:
         }
       }}>
       {isWebSession(session) ? <div className="wysimark-media-import-actions">
-        <button type="button" role="menuitemradio" aria-checked={true} onClick={() => { void session.choose('url'); dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>
-        <button type="button" role="menuitemradio" aria-checked={false} onClick={() => { const request = session.choose('title'); dismiss(); ReactEditor.focus(editor); void request.catch(cause => { console.error('Blo Editor: pasted link title failed', cause); new Notice(ui('无法获取网页标题，已保留原链接。')) }) }}><PageTitleIcon /><span>{ui('显示链接标题')}</span></button>
+        <button type="button" role="menuitemradio" aria-checked={session.choice === 'url'} onClick={() => { void session.choose('url'); dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>
+        <button type="button" role="menuitemradio" aria-checked={session.choice === 'title'} onClick={() => { const request = session.choose('title'); dismiss(); ReactEditor.focus(editor); void request.catch(cause => { console.error('Blo Editor: pasted link title failed', cause); new Notice(ui('无法获取网页标题，已保留原链接。')) }) }}><PageTitleIcon /><span>{ui('显示链接标题')}</span></button>
       </div> : <MediaImportActions session={session} close={dismiss} />}
     </$Panel>
 }
@@ -125,6 +125,7 @@ function MediaPasteMenu({ session, host, close }: { session: PasteSession; host:
 export function MediaPasteController({ host }: { host: RefObject<HTMLElement> }) {
   const editor = useSlateStatic(), dialog = useLayer('dialog'), dialogRef = useRef(dialog)
   const pending = useRef<PasteSession | undefined>(undefined)
+  const cancelPendingMenu = useRef<(() => void) | undefined>(undefined)
   dialogRef.current = dialog
   useEffect(() => {
     const shell = host.current
@@ -139,13 +140,58 @@ export function MediaPasteController({ host }: { host: RefObject<HTMLElement> })
       if (!link || Node.leaf(editor, editor.selection.anchor.path).code || Editor.marks(editor)?.code ||
         Editor.above(editor, { match: node => Element.isElement(node) && node.type === 'code-block' })) return
       event.preventDefault(); event.stopPropagation()
+      cancelPendingMenu.current?.()
       pending.current?.dispose()
+      dialogRef.current.close()
       const session = media ? createMediaUrlPaste(editor, link.url, link.label, link.fragment) : createWebUrlPaste(editor, link.url, shell.ownerDocument, link.label, link.fragment)
       pending.current = session
-      if (session) dialogRef.current.open(() => <MediaPasteMenu session={session} host={shell} close={dialogRef.current.close} />)
+      if (!session) return
+      const openMenu = () => {
+        if (pending.current === session && session.current()) dialogRef.current.open(() => <MediaPasteMenu session={session} host={shell} close={dialogRef.current.close} />)
+      }
+      if (!isWebSession(session) || editor.wysimark.linkTitlePreferences?.getSnapshot() === false) { openMenu(); return }
+      const doc = shell.ownerDocument, win = doc.defaultView!
+      let active = true, frame = 0
+      const removeListeners = () => {
+        doc.removeEventListener('pointerdown', cancel, true)
+        doc.removeEventListener('keydown', cancel, true)
+        doc.removeEventListener('wheel', cancel, true)
+        doc.removeEventListener('touchmove', cancel, true)
+        doc.removeEventListener('focusin', onFocus, true)
+        win.removeEventListener('blur', cancel)
+      }
+      const cancel = () => {
+        active = false
+        removeListeners()
+        if (frame) win.cancelAnimationFrame(frame)
+        session.dispose()
+        if (cancelPendingMenu.current === cancel) cancelPendingMenu.current = undefined
+      }
+      const onFocus = (event: Event) => { if (!shell.contains(event.target as globalThis.Node)) cancel() }
+      cancelPendingMenu.current = cancel
+      doc.addEventListener('pointerdown', cancel, true)
+      doc.addEventListener('keydown', cancel, true)
+      doc.addEventListener('wheel', cancel, { capture: true, passive: true })
+      doc.addEventListener('touchmove', cancel, { capture: true, passive: true })
+      doc.addEventListener('focusin', onFocus, true)
+      win.addEventListener('blur', cancel)
+      const showAfterTitle = () => {
+        if (!active) return
+        // Wait for Slate to commit the new link text before measuring its end.
+        frame = win.requestAnimationFrame(() => {
+          frame = 0
+          removeListeners()
+          if (cancelPendingMenu.current === cancel) cancelPendingMenu.current = undefined
+          if (active) openMenu()
+        })
+      }
+      void session.choose('title').then(showAfterTitle, cause => {
+        console.error('Blo Editor: pasted link title failed', cause)
+        showAfterTitle()
+      })
     }
     shell.addEventListener('paste', onPaste, true)
-    return () => { shell.removeEventListener('paste', onPaste, true); pending.current?.dispose() }
+    return () => { shell.removeEventListener('paste', onPaste, true); cancelPendingMenu.current?.(); pending.current?.dispose() }
   }, [editor, host])
   return null
 }

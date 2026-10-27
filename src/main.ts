@@ -55,10 +55,25 @@ export default class BloEditorPlugin extends Plugin {
     });
     // Set native tooltip options before Obsidian's delegated hover handler runs.
     this.registerDomEvent(document,'mouseover',event=>{
-      const control=(event.target as Element|null)?.closest<HTMLElement>('[aria-label]');
+      const target = event.target as Element | null;
+      const viewerTooltip = {delay:150,placement:'top' as const,gap:8,classes:['blo-image-viewer-tooltip']};
+      const caption = target?.closest<HTMLElement>('.oit-normal .oit-img-title');
+      if (caption) {
+        const label = caption.querySelector<HTMLElement>('.oit-img-title-name') || caption;
+        caption.removeAttribute('title');
+        label.removeAttribute('title');
+        const text = label.textContent?.trim();
+        if (!caption.querySelector('input') && text) setTooltip(caption,text,viewerTooltip);
+        else caption.removeAttribute('aria-label');
+        return;
+      }
+      const control=target?.closest<HTMLElement>('[aria-label]');
       if(!control?.closest('.wysimark-container, .wysimark-overlay, .oit-img-toolbar'))return;
       const placement=control.dataset.tooltipPosition;
-      setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
+      const viewerToolbar = control.closest('.oit-img-toolbar');
+      setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(viewerToolbar
+        ? viewerTooltip
+        : ['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});
     },true);
     const savedSettings = await this.loadData();
     this.settings = Object.assign(this.settings, savedSettings);
@@ -71,7 +86,13 @@ export default class BloEditorPlugin extends Plugin {
     this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
     installDrawingNavigation(this);
-    installImageViewerIntegration(this);
+    installImageViewerIntegration(this, () => {
+      const editors: Editor[] = [];
+      this.app.workspace.iterateAllLeaves(leaf => {
+        if (leaf.view instanceof BloView && leaf.view.editor) editors.push(leaf.view.editor);
+      });
+      return editors;
+    });
 
     // Reuse Image Toolkit's viewer without intercepting Slate's single-click selection.
     const previewImage = (event: MouseEvent) => {

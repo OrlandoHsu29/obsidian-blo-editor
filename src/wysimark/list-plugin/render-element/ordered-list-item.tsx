@@ -32,13 +32,12 @@ export function OrderedListItem({
     label=resolved.numberLabels.get(element)
   }
   label??=`${number}.`
-  const markerWidth=`max(1.5em, ${label.length}ch)`
   useEffect(() => {
     const path = ReactEditor.findPath(editor, element)
     normalizeOrderedFirstAtDepth(editor, [element, path])
   }, [])
   const style = {
-    marginLeft: `${2 + element.depth * 2}em`,
+    marginLeft: `${element.depth * 2}em`,
     "--list-item-var": `list-item-depth-${element.depth}`,
     counterReset: element.start != null ? `list-item-depth-${element.depth} ${element.start - 1}` : undefined,
   } as React.CSSProperties
@@ -51,7 +50,7 @@ export function OrderedListItem({
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))
         menu.addItem(item=>item.setTitle(ui("重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
         menu.showAtMouseEvent(event.nativeEvent)
-      }} style={{width:markerWidth,minWidth:markerWidth,whiteSpace:'nowrap'}}>{label}</button>
+      }}>{label}</button>
       <div className="wysimark-list-content">{children}</div>
     </$OrderedListItem>
   )

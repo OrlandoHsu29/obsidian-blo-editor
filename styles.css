@@ -16,11 +16,11 @@
 .blo-toolbar-setting:has(input:disabled) .blo-toolbar-setting-icon { color:var(--text-faint); }
 .blo-toolbar-setting input[type="checkbox"]:disabled { filter:grayscale(1); opacity:.65; cursor:default; }
 .blo-toolbar-setting:has(input:not(:checked)) .blo-toolbar-setting-icon { color:var(--text-faint); }
-.blo-toolbar-settings-divider { flex:0 0 1px; margin:8px 3px; background:var(--background-modifier-border); }
+.blo-toolbar-settings-divider { flex:0 0 1px; margin:8px 3px; background:var(--background-modifier-border); opacity:.35; }
 .wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:30; height:0; flex:0 0 0; overflow:visible; }
 .wysimark-reading .wysimark-find-slot { top:8px; }
 .wysimark-find-panel { position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--font-ui-small) var(--font-interface); }
-.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 clamp(16px,4vw,48px); }
+.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 var(--blo-document-gutter); }
 .wysimark-accessible-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .wysimark-container .wysimark-document-title input { display:block; width:100%; height:auto; min-height:1.4em; padding:0; margin:0; text-align:left; font-family:var(--font-text); font-size:36px; font-weight:700; line-height:1.35; letter-spacing:normal; color:var(--text-normal); background:transparent; border:0; border-radius:0; box-shadow:none; }
 .wysimark-container .wysimark-document-title input:focus { outline:none; box-shadow:none; }
@@ -246,9 +246,10 @@
 }
 
 /* Editor styling */
+.wysimark-container { --blo-document-gutter: 48px; }
 .wysimark-editor {
     min-height: 100%;
-    padding: 1rem;
+    padding: 1.25em var(--blo-document-gutter) 3em;
     --wysimark-block-spacing: var(--p-spacing, 1rem);
     font-family: var(--font-text);
     font-size: var(--font-text-size);
@@ -273,7 +274,7 @@
 /* Chunks may nest after paste/delete. Vertical padding with negative margins
    lets a later chunk intercept clicks on the preceding line. Keep only the
    horizontal gutter needed by block handles and list markers. */
-.ks-editor-chunk-leaf { margin: 0 calc(-1 * clamp(16px,4vw,48px)); padding:0 clamp(16px,4vw,48px); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
+.ks-editor-chunk-leaf { margin: 0 calc(-1 * var(--blo-document-gutter)); padding:0 var(--blo-document-gutter); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
 .wysimark-editor :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,table,hr,[data-wysimark-code-block]) { margin-block: 0 !important; }
 .wysimark-editor :is(p,li) { line-height: 1.65 !important; }
 .wysimark-editor :is(p,li,[data-wysimark-block])[data-subtitle="true"] { font-weight:var(--font-bold,700); }

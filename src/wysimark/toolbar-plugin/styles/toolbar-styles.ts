@@ -65,8 +65,8 @@ export const $ToolbarDividerContainer = styled("div")`
 
 export const $ToolbarDivider = styled("div")`
   display: inline-block;
-  background: var(--shade-300);
-  opacity: 50%;
+  background: var(--background-modifier-border);
+  opacity: 35%;
   width: 1px;
   height: 3em;
 `

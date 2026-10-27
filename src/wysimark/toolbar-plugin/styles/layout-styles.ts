@@ -7,7 +7,7 @@ export const $Editable = styled("div")`
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 1.25em clamp(16px, 4vw, 48px) 3em;
+  padding: 1.25em var(--blo-document-gutter, 48px) 3em;
   flex: 1;
   min-height: 0;
 `

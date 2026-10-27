@@ -37,7 +37,7 @@ export function Toolbar() {
   useSyncExternalStore(integrations?.subscribe ?? subscribeDefaultIntegrations, integrations?.getSnapshot ?? getDefaultIntegrations)
   const preferences = editor.wysimark.toolbarPreferences
   const hidden = useSyncExternalStore(preferences?.subscribe ?? subscribeEmpty, preferences?.getSnapshot ?? getEmptyHidden, getEmptyHidden)
-  const items = visibleToolbarItems(hidden, item => !item.show || item.show(editor))
+  const items = visibleToolbarItems(hidden, item => !item.show || item.show(editor), editor.wysimark.memoPanel)
   if(editor.wysimark.readOnly)return null
   return <$ToolbarContainer ref={toolbar} data-wysimark-toolbar><$Toolbar>{items.map((item,index)=><ToolbarItem key={item==='divider'?index:item.title} item={item}/>)}</$Toolbar></$ToolbarContainer>
 }

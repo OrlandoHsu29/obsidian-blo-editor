@@ -40,11 +40,11 @@ export const toolbarGroups: ToolbarEntry[][] = [
     entry('drawing',{ title: ui('插入画板'), icon: Drawing, show: editor => editor.wysimark.integrationPreferences?.getSnapshot().drawings ?? true, action: editor => { void editor.wysimark.insertDrawing?.() } })],
   [entry('find-replace',utilityItems[0])],
 ];
-export function visibleToolbarItems(hidden: readonly string[], show: (item: ToolbarEntry['item']) => boolean = () => true): MenuItemData[] {
+export function visibleToolbarItems(hidden: readonly string[], show: (item: ToolbarEntry['item']) => boolean = () => true, fixedOnly = false): MenuItemData[] {
   const excluded = new Set(hidden);
   const result: MenuItemData[] = [];
   for (const group of toolbarGroups) {
-    const visible = group.filter(entry => (isFixedToolbarButton(entry.id) || !excluded.has(entry.id)) && show(entry.item));
+    const visible = group.filter(entry => (isFixedToolbarButton(entry.id) || (!fixedOnly && !excluded.has(entry.id))) && show(entry.item));
     if (!visible.length) continue;
     if (result.length) result.push('divider');
     result.push(...visible.map(entry => entry.item));

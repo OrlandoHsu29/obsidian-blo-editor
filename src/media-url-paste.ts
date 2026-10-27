@@ -27,6 +27,10 @@ export function remoteMediaUrl(value: string): string | undefined {
 
 /** Browser copies can expose a display label as plain text and the actual URL only in HTML. */
 export function clipboardMediaLink(data: Pick<DataTransfer, 'getData'>): { url: string; label?: string; fragment?: Descendant[] } | undefined {
+  return clipboardUrlLink(data, remoteMediaUrl)
+}
+
+export function clipboardUrlLink(data: Pick<DataTransfer, 'getData'>, recognize: (value: string) => string | undefined): { url: string; label?: string; fragment?: Descendant[] } | undefined {
   const html = data.getData('text/html')
   const encoded = data.getData('application/x-slate-fragment') || /\bdata-slate-fragment\s*=\s*["']([^"']+)["']/i.exec(html)?.[1]
   if (encoded) {
@@ -39,28 +43,34 @@ export function clipboardMediaLink(data: Pick<DataTransfer, 'getData'>): { url: 
       const content = nodes.filter(node => Text.isText(node) ? node.text !== '' :
         !(Element.isElement(node) && node.type === 'anchor' && node.children.every(Text.isText) && Node.string(node) === ''))
       if (content.length !== 1 || !Element.isElement(content[0]) || content[0].type !== 'anchor' || !content[0].children.every(Text.isText)) return
-      const url = remoteMediaUrl(content[0].href)
+      const url = recognize(content[0].href)
       if (url) return { url, label: Node.string(content[0]), fragment: paragraph ? [{ ...paragraph, children: [content[0]] }] : [content[0]] }
     } catch { /* Invalid internal fragments follow Slate's normal paste handling. */ }
     return
   }
-  const plain = remoteMediaUrl(data.getData('text/plain'))
+  const plain = recognize(data.getData('text/plain'))
   if (plain) return { url: plain }
   const uri = data.getData('text/uri-list').split(/\r?\n/).filter(line => line.trim() && !line.startsWith('#'))
   if (uri.length === 1) {
-    const url = remoteMediaUrl(uri[0])
+    const url = recognize(uri[0])
     if (url) return { url }
   }
   if (!html || /<(?:img|video|audio|iframe|object|embed)\b/i.test(html)) return
   const body = new DOMParser().parseFromString(html, 'text/html').body
   const anchors = body.querySelectorAll('a[href]')
   if (anchors.length !== 1 || body.textContent?.trim() !== anchors[0].textContent?.trim()) return
-  const url = remoteMediaUrl(anchors[0].getAttribute('href') || '')
+  const url = recognize(anchors[0].getAttribute('href') || '')
   if (url) return { url, label: anchors[0].textContent?.trim() || undefined }
 }
 
 /** Paste as a link first. Dismissal or an import error never loses the pasted content. */
 export function createMediaUrlPaste(editor: Editor, url: string, label = url, fragment?: Descendant[]) {
+  const path = insertPastedLink(editor, url, label, fragment)
+  return path ? createMediaLinkImport(editor, path, url) : undefined
+}
+
+/** Shared insertion keeps copied Slate links and normal URLs on the same path. */
+export function insertPastedLink(editor: Editor, url: string, label = url, fragment?: Descendant[]): Path | undefined {
   if (editor.wysimark.readOnly || !editor.selection) return
   const insert = () => Editor.withoutNormalizing(editor, () => {
     if (Range.isExpanded(editor.selection!)) Transforms.delete(editor)
@@ -78,7 +88,7 @@ export function createMediaUrlPaste(editor: Editor, url: string, label = url, fr
   if (!entry) return
   const after = Editor.after(editor, entry[1])
   if (after) Transforms.select(editor, after)
-  return createMediaLinkImport(editor, entry[1], url)
+  return entry[1]
 }
 
 /** The same importer works for a newly pasted URL and an existing selected link. */

@@ -4,6 +4,8 @@ import { Editor, Element, Node } from 'slate'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { clipboardMediaLink, createMediaLinkImport, createMediaUrlPaste } from './media-url-paste'
 import type { MediaUrlPaste } from './media-url-paste'
+import { clipboardWebLink, createWebUrlPaste } from './web-link-paste'
+import type { WebUrlPaste } from './web-link-paste'
 import type { AnchorElement } from './wysimark/anchor-plugin'
 import { Notice, setTooltip } from 'obsidian'
 import { Link, ImportEmbed } from './wysimark/toolbar-plugin/icons'
@@ -11,6 +13,10 @@ import { useLayer } from './wysimark/use-layer'
 import { $Panel } from './wysimark/shared-overlays'
 import { positionInside, useFixedReposition } from './wysimark/use-reposition'
 import { ui } from './wysimark/utils/translations'
+import { PageTitleIcon } from './wysimark/anchor-plugin/render-element/icons'
+
+type PasteSession = MediaUrlPaste | WebUrlPaste
+const isWebSession = (session: PasteSession): session is WebUrlPaste => 'kind' in session && session.kind === 'web'
 
 function MediaImportActions({ session, close, compact = false }: { session: MediaUrlPaste; close: () => void; compact?: boolean }) {
   const editor = useSlateStatic()
@@ -32,7 +38,7 @@ function MediaImportActions({ session, close, compact = false }: { session: Medi
     })
   }
   return <div className={`wysimark-media-import-actions${compact ? ' is-compact' : ''}`}>
-    {!compact && <button type="button" role="menuitem" onClick={() => { dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>}
+    {!compact && <button type="button" role="menuitemradio" aria-checked={true} onClick={() => { dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>}
     <button ref={embedButton} type="button" role={compact ? undefined : 'menuitem'} disabled={!session.canEmbed}
       className={compact ? 'wysimark-media-import-icon' : undefined}
       aria-label={compact ? embedLabel : undefined} data-tooltip-position={compact ? 'top' : undefined}
@@ -52,13 +58,14 @@ export function MediaLinkActions({ element, close }: { element: AnchorElement; c
   </div> : null
 }
 
-function MediaPasteMenu({ session, host, close }: { session: MediaUrlPaste; host: HTMLElement; close: () => void }) {
+function MediaPasteMenu({ session, host, close }: { session: PasteSession; host: HTMLElement; close: () => void }) {
   const editor = useSlateStatic(), ref = useRef<HTMLDivElement>(null)
   const dismissed = useRef(false)
   const refreshPosition = useRef<(() => void) | undefined>(undefined)
   const dismiss = () => { if (!dismissed.current) { dismissed.current = true; session.dispose(); close() } }
   useEffect(() => {
-    ref.current?.querySelector('button')?.focus({ preventScroll: true })
+    const initial = ref.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]') ?? ref.current?.querySelector('button')
+    initial?.focus({ preventScroll: true })
     const win = host.ownerDocument.defaultView
     const doc = host.ownerDocument
     const outside = (event: Event) => { if (!ref.current?.contains(event.target as globalThis.Node)) dismiss() }
@@ -107,29 +114,33 @@ function MediaPasteMenu({ session, host, close }: { session: MediaUrlPaste; host
           buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus()
         }
       }}>
-      <MediaImportActions session={session} close={dismiss} />
+      {isWebSession(session) ? <div className="wysimark-media-import-actions">
+        <button type="button" role="menuitemradio" aria-checked={true} onClick={() => { void session.choose('url'); dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>
+        <button type="button" role="menuitemradio" aria-checked={false} onClick={() => { const request = session.choose('title'); dismiss(); ReactEditor.focus(editor); void request.catch(cause => { console.error('Blo Editor: pasted link title failed', cause); new Notice(ui('无法获取网页标题，已保留原链接。')) }) }}><PageTitleIcon /><span>{ui('显示链接标题')}</span></button>
+      </div> : <MediaImportActions session={session} close={dismiss} />}
     </$Panel>
 }
 
 /** Runs before Slate's automatic URL conversion, after the host's file-transfer handlers. */
 export function MediaPasteController({ host }: { host: RefObject<HTMLElement> }) {
   const editor = useSlateStatic(), dialog = useLayer('dialog'), dialogRef = useRef(dialog)
-  const pending = useRef<MediaUrlPaste | undefined>(undefined)
+  const pending = useRef<PasteSession | undefined>(undefined)
   dialogRef.current = dialog
   useEffect(() => {
     const shell = host.current
     if (!shell) return
     const onPaste = (event: ClipboardEvent) => {
       const data = event.clipboardData
-      if (event.defaultPrevented || !data || editor.wysimark.readOnly || !editor.selection || !editor.wysimark.onImageSave || !editor.wysimark.downloadAttachment) return
+      if (event.defaultPrevented || !data || editor.wysimark.readOnly || !editor.selection) return
       if (!(event.target as HTMLElement).closest('[data-slate-editor="true"]') || data.files.length ||
         Array.from(data.items ?? []).some(item => item.kind === 'file')) return
-      const link = clipboardMediaLink(data)
+      const media = editor.wysimark.onImageSave && editor.wysimark.downloadAttachment ? clipboardMediaLink(data) : undefined
+      const link = media ?? clipboardWebLink(data)
       if (!link || Node.leaf(editor, editor.selection.anchor.path).code || Editor.marks(editor)?.code ||
         Editor.above(editor, { match: node => Element.isElement(node) && node.type === 'code-block' })) return
       event.preventDefault(); event.stopPropagation()
       pending.current?.dispose()
-      const session = createMediaUrlPaste(editor, link.url, link.label, link.fragment)
+      const session = media ? createMediaUrlPaste(editor, link.url, link.label, link.fragment) : createWebUrlPaste(editor, link.url, shell.ownerDocument, link.label, link.fragment)
       pending.current = session
       if (session) dialogRef.current.open(() => <MediaPasteMenu session={session} host={shell} close={dialogRef.current.close} />)
     }

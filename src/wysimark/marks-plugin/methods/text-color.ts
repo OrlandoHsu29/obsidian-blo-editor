@@ -1,12 +1,14 @@
 import { Editor, Node, Range, Text, Transforms } from "slate"
 import { cleanInlineStyle, isDefaultTextColor } from '../../../blocks/typography'
 import { TEXT_COLORS } from '../../../blocks/colors'
+import { formatSelectedTableCells, selectedCellTextEntries, tableCellSelection } from '../../table-plugin/cell-selection'
 
 export const DEFAULT_TEXT_COLOR = TEXT_COLORS.red
 
 export function toggleTextColor(editor: Editor, color: string) {
   if (!editor.selection || editor.wysimark.readOnly) return
-  const leaves = Range.isExpanded(editor.selection)
+  const cells = tableCellSelection(editor)
+  const leaves = cells ? selectedCellTextEntries(editor, cells).map(([leaf]) => leaf).filter(leaf => leaf.text.length) : Range.isExpanded(editor.selection)
     ? Editor.fragment(editor, editor.selection).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length)
     : [Editor.marks(editor) || {}]
   const active = leaves.length > 0 && leaves.every(leaf =>
@@ -31,6 +33,13 @@ export function withTextColor(style: string | undefined, color: string | null): 
 
 export function applyTextColor(editor: Editor, color: string | null) {
   if (!editor.selection || editor.wysimark.readOnly) return
+  if (formatSelectedTableCells(editor, selected => {
+    for (const [leaf, path] of selectedCellTextEntries(editor, selected)) {
+      const style = withTextColor(leaf.inlineStyle, color)
+      if (style) Transforms.setNodes(editor, { inlineStyle: style }, { at: path })
+      else Transforms.unsetNodes(editor, 'inlineStyle', { at: path })
+    }
+  })) return
   if (Range.isCollapsed(editor.selection)) {
     const style = withTextColor(Editor.marks(editor)?.inlineStyle, color)
     if (style) Editor.addMark(editor, "inlineStyle", style)

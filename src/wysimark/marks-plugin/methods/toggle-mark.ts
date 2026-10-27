@@ -1,4 +1,5 @@
-import { Editor, Location, Node, Point, Range, Text } from "slate"
+import { Editor, Location, Node, Point, Range, Text, Transforms } from "slate"
+import { formatSelectedTableCells, selectedCellTextEntries } from '../../table-plugin/cell-selection'
 
 /**
  * Toggles a mark.
@@ -17,6 +18,17 @@ export function toggleMark(
   { at = editor.selection }: { at?: Location | null } = {}
 ) {
   if (at == null) return
+
+  if (at === editor.selection && formatSelectedTableCells(editor, selected => {
+    const leaves = selectedCellTextEntries(editor, selected)
+    const nonempty = leaves.filter(([leaf]) => leaf.text.length > 0)
+    const active = nonempty.length > 0 && nonempty.every(([leaf]) => leaf[markKey] === true)
+    for (const [, path] of leaves) {
+      if (active) Transforms.unsetNodes(editor, markKey, { at: path })
+      else Transforms.setNodes(editor, { [markKey]: true }, { at: path })
+      if (typeof unsetKey === 'string') Transforms.unsetNodes(editor, unsetKey, { at: path })
+    }
+  })) return
 
   // Check if selection is at end of line
   const point = Range.isRange(at) ? at.focus : at

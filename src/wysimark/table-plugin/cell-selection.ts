@@ -1,4 +1,4 @@
-import { Editor, Element, Node, Path, PathRef, Range, Transforms } from 'slate'
+import { Editor, Element, Node, Path, PathRef, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { clearBlockSelection, isWholeBlockSelected } from '../../blocks/selection'
 import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../blocks/model'
@@ -17,6 +17,7 @@ export type TableCellSelection = {
 const editingCells = new WeakMap<Editor, PathRef>()
 const compositionEdits = new WeakMap<Editor, {path:Path;awaitingDelete:boolean;batch?:object}>()
 const controlledSelections = new WeakSet<Editor>()
+const formattingCells = new WeakSet<Editor>()
 const cellNavigationKeys = new Set(['Tab','Escape','Enter',' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'])
 function withoutAutomaticCellSelection<T>(editor: Editor, run: () => T): T {
   const nested=controlledSelections.has(editor);controlledSelections.add(editor)
@@ -181,6 +182,40 @@ export function tableCellSelection(editor: Editor): TableCellSelection | undefin
     top: Math.min(y(anchor[1]), y(focus[1])), bottom: Math.max(y(anchor[1]), y(focus[1])) }
 }
 
+/** Text leaves within the selected cells, excluding inline void contents. */
+export function selectedCellTextEntries(editor: Editor, selected: TableCellSelection): [Text, Path][] {
+  const leaves: [Text, Path][] = []
+  for (let y = selected.top; y <= selected.bottom; y++) for (let x = selected.left; x <= selected.right; x++) {
+    const path = [...selected.path, y, x]
+    for (const [leaf, relative] of Node.texts(Node.get(editor, path))) {
+      const at = [...path, ...relative]
+      if (!Editor.void(editor, { at })) leaves.push([leaf, at])
+    }
+  }
+  return leaves
+}
+
+/** Apply formatting to a rectangular cell selection as one undo step. */
+export function formatSelectedTableCells(editor: Editor, run: (selected: TableCellSelection) => void): boolean {
+  const selected = tableCellSelection(editor)
+  if (!selected || editor.wysimark.readOnly) return false
+  const axis = axisSelections.get(editor)
+  const format = () => {
+    formattingCells.add(editor)
+    try { Editor.withoutNormalizing(editor, () => run(selected)) }
+    finally {
+      formattingCells.delete(editor)
+      if (axis && editor.selection && Node.has(editor, selected.path)) {
+        axisSelections.set(editor, { cells: { ...selected, table: Node.get(editor, selected.path) as TableElement }, range: editor.selection })
+        notifyAxis(editor)
+      }
+    }
+  }
+  if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, format)
+  else format()
+  return true
+}
+
 export function replaceSelectedCells(editor: Editor, insert?: () => void): boolean {
   if (editor.wysimark.readOnly) return false
   const selected = tableCellSelection(editor)
@@ -235,8 +270,9 @@ export function installTableCellClipboard(editor: Editor): void {
   editor.apply = operation => {
     const previousSelection = editor.selection
     const axis = axisSelections.get(editor)
-    const preserve = axis && operation.type === 'set_node' && (Path.equals(operation.path, axis.cells.path) ||
+    const preserve = axis && (formattingCells.has(editor) || operation.type === 'set_node' && (Path.equals(operation.path, axis.cells.path) ||
       (axis.cells.kind === 'cell' && Path.isAncestor([...axis.cells.path,axis.cells.top,axis.cells.left],operation.path)))
+    )
     if (!preserve && (operation.type !== 'set_selection' || !editor.selection || !operation.newProperties ||
       !Range.equals(editor.selection, { ...editor.selection, ...operation.newProperties }))) clearTableAxisSelection(editor)
     apply(operation)

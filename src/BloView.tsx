@@ -495,6 +495,7 @@ export class BloView extends FileView {
   memoPanel = false;
   private memoPanelObserver: MutationObserver | null = null;
   private windowFocusHandler: (() => void) | null = null;
+  private windowFocusFrame: number | null = null;
   private lastEditorMarkdown = '';
   private modeAction: HTMLElement;
   private findBar: FindBar | null = null;
@@ -526,10 +527,7 @@ export class BloView extends FileView {
     };
     // A popout such as the quick memo panel focuses its window, not the editor,
     // so the caret must be placed here for typing to start right away.
-    const panelDocument = popoutDocument(this.leaf);
-    if (panelDocument?.hasFocus()) window.setTimeout(() => {
-      if (this.editor === editor) this.focusPanelEditor();
-    }, 0);
+    this.queuePanelFocus();
     const source = this.currentFile;
     const stopRemoteImages = source ? watchRemoteImages(this.app, source.path, editor, () => {
       const folder = this.plugin.settings.attachmentFolder;
@@ -571,13 +569,27 @@ export class BloView extends FileView {
 
   /** Obsidian focuses a view through this hook; keep the editor usable. */
   focus(): void {
-    this.focusEditor();
+    if (popoutDocument(this.leaf)) this.queuePanelFocus();
+    else this.focusEditor();
+  }
+
+  private queuePanelFocus() {
+    const win = popoutDocument(this.leaf)?.defaultView;
+    if (!win || this.windowFocusFrame !== null) return;
+    this.windowFocusFrame = win.requestAnimationFrame(() => {
+      this.windowFocusFrame = null;
+      this.focusPanelEditor();
+    });
   }
 
   /** Put the caret back into the note when its popout window becomes active. */
   private focusPanelEditor() {
-    if (!popoutDocument(this.leaf)) return;
+    const doc = popoutDocument(this.leaf);
+    if (!doc?.hasFocus()) return;
     if (this.app.workspace.activeLeaf !== this.leaf) return;
+    const active = doc.activeElement;
+    if (active?.closest('input, textarea, select, .wysimark-overlay, .modal-container') &&
+      !active.closest('[data-slate-editor="true"]')) return;
     this.focusEditor();
   }
 
@@ -639,8 +651,11 @@ export class BloView extends FileView {
     this.watchMemoPanel();
     const panelWindow = popoutDocument(this.leaf)?.defaultView;
     if (panelWindow) {
-      this.windowFocusHandler = () => this.focusPanelEditor();
+      this.windowFocusHandler = () => this.queuePanelFocus();
       panelWindow.addEventListener('focus', this.windowFocusHandler);
+      this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => {
+        if (leaf === this.leaf) this.queuePanelFocus();
+      }));
     }
     this.renderEditor();
   }
@@ -652,6 +667,10 @@ export class BloView extends FileView {
     }
     this.memoPanelObserver?.disconnect();
     this.memoPanelObserver = null;
+    if (this.windowFocusFrame !== null) {
+      popoutDocument(this.leaf)?.defaultView?.cancelAnimationFrame(this.windowFocusFrame);
+      this.windowFocusFrame = null;
+    }
     if (this.windowFocusHandler) {
       popoutDocument(this.leaf)?.defaultView?.removeEventListener('focus', this.windowFocusHandler);
       this.windowFocusHandler = null;

@@ -130,7 +130,7 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
   const sources: Source[] = attachment ? ['vault', 'url', 'computer'] : ['url', 'vault']
   const footerHint = attachment
     ? ui(source === 'vault' ? '直接引用库内文件' : '保存到附件目录并预览')
-    : source === 'vault' ? t('internalLinkTargetHint') : ''
+    : ''
   return <>
     <CloseMask close={dismiss} />
     <$AnchorDialog ref={ref} style={style} className="wysimark-reference-dialog" data-reference-kind={attachment ? 'attachment' : 'link'} role="dialog" aria-labelledby={labelId}>

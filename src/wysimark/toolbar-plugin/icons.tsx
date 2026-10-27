@@ -92,8 +92,8 @@ export const ParagraphStyle = () => {
   return <CurrentIcon />
 }
 export const Normal = () => (
-  <TablerIcon>
-    <path d="M8 18V6h2l6 9V6h2v12h-2l-6-9v9H8z" />
+  <TablerIcon data-wysimark-paragraph-icon>
+    <path d="M5 21V3h3l8 13V3h3v18h-3L8 8v13H5z" transform="translate(12 12) scale(.9) translate(-12 -12)" />
   </TablerIcon>
 )
 

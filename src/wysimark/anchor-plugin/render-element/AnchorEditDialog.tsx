@@ -10,7 +10,6 @@ import { positionInside, useAbsoluteReposition } from '../../use-reposition'
 import type { AnchorElement } from '../index'
 import { DraggableHeader } from '../../toolbar-plugin/components/dialog/DraggableHeader'
 import { $AnchorDialog } from '../../toolbar-plugin/styles/anchor-dialog-styles'
-import { $DialogHint } from '../../toolbar-plugin/styles/dialog-shared-styles'
 import { isWikiLinkHref, normalizeWikiLinkInput, splitWikiSpec, wikiLinkDisplayText, wikiLinkHref, wikiLinkSpecFromHref } from '../../convert/obsidian-links'
 
 export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEmbed = false, onCancel }: {
@@ -102,7 +101,6 @@ export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEm
         </fieldset>
         {error && <div role="alert" className="wysimark-reference-error">{error}</div>}
         <div className="wysimark-reference-actions">
-          {mode === 'internal' && <$DialogHint className="wysimark-reference-footer-hint" title={t('internalLinkTargetHint')}>{t('internalLinkTargetHint')}</$DialogHint>}
           <button type="submit" disabled={!valid}>{t('apply')}</button>
         </div>
       </form>

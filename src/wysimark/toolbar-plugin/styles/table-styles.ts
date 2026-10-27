@@ -3,6 +3,7 @@ import styled from "@emotion/styled"
 import { $Panel } from "../../shared-overlays"
 
 export const $TableDialog = styled($Panel)`
+  font-size: calc(var(--blo-popup-font-size, var(--font-ui-small)) / .875);
   padding: 12px;
 `
 export const $TableDialogGrid = styled("div")`

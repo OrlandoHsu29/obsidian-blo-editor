@@ -15,7 +15,7 @@ export const $Panel = styled(SinkReset)`
   position: absolute;
   z-index: var(--layer-menu, 65);
   font-family: var(--font-interface);
-  font-size: var(--font-ui-small);
+  font-size: var(--blo-popup-font-size, var(--font-ui-small));
   line-height: 1.5;
   padding: 12px;
   border: 1px solid var(--background-modifier-border);
@@ -26,6 +26,8 @@ export const $Panel = styled(SinkReset)`
   color: var(--text-normal);
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
+  transform: scale(var(--blo-popup-scale, 1));
+  transform-origin: top left;
   /**
    * If you are tempted to add the transitions back in, here's why we left
    * them off:

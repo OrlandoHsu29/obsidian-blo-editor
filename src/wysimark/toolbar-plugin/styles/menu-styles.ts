@@ -7,6 +7,7 @@ import { $Panel } from "../../shared-overlays/styles/$Panel"
  */
 export const $Menu = styled($Panel)`
   position: absolute;
+  font-size: calc(var(--blo-popup-font-size, var(--font-ui-small)) / .875);
   padding: 6px;
   transition: all 200ms;
   min-width: 12em;
@@ -24,7 +25,7 @@ export const $Menu = styled($Panel)`
 export const $MenuItem = styled("div")`
   display: flex;
   z-index: 10;
-  padding: 0 1em 0 1.5em;
+  padding: 0 .75em 0 .5em;
   height: 2em;
   align-items: center;
   /**
@@ -33,15 +34,26 @@ export const $MenuItem = styled("div")`
    * to set this up.
    */
   .--icon {
-    flex: 0 0;
-    display: block;
+    flex: 0 0 1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.25em;
+    width: 1em;
     height: 1em;
-    padding-right: 0.75em;
+    margin-right: .5em;
+    line-height: 1;
     color: var(--text-muted);
     svg {
-      position: relative;
+      display: block;
+      position: static;
+      flex-shrink: 0;
       stroke-width: 1.5px;
+    }
+    svg[data-wysimark-paragraph-icon] {
+      width: .9em;
+      height: .9em;
+      transform: translateX(-.1em);
     }
   }
   .--title {

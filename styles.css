@@ -33,7 +33,7 @@
 .wysimark-find-panel button:disabled { opacity:.4; cursor:default; }
 .wysimark-find-panel svg { width:18px; height:18px; }
 .wysimark-find-count { white-space:nowrap; font-size:11px; color:var(--text-muted); }
-.wysimark-container button.wysimark-block-handle { position:absolute; display:flex; align-items:center; justify-content:center; left:-26px; top:var(--wysimark-handle-center,15px); transform:translateY(-50%); width:22px; height:24px; min-height:0; padding:2px; border:0; box-shadow:none; border-radius:4px; color:var(--text-faint); background:transparent; cursor:grab; opacity:0; z-index:1; }
+.wysimark-container button.wysimark-block-handle { position:absolute; display:flex; align-items:center; justify-content:center; left:-31px; top:var(--wysimark-handle-center,15px); transform:translateY(-50%); width:22px; height:24px; min-height:0; padding:2px; border:0; box-shadow:none; border-radius:4px; color:var(--text-faint); background:transparent; cursor:grab; opacity:0; z-index:1; }
 .wysimark-block:hover > button.wysimark-block-handle, .wysimark-block:focus-within > button.wysimark-block-handle { opacity:1; }
 .wysimark-container button.wysimark-block-handle:hover { color:var(--text-normal); background:var(--background-modifier-hover); box-shadow:inset 0 0 0 1px var(--background-modifier-border); }
 .wysimark-container button.wysimark-block-handle:active { cursor:grabbing; }
@@ -63,7 +63,8 @@
 .wysimark-container button.wysimark-list-number { position:static; flex:0 0 auto; align-self:baseline; margin:0 8px 0 calc(-1.5em - 15px); transform:none; font-size:calc(var(--wysimark-list-number-size,1em) - 2px); line-height:var(--wysimark-list-number-line,1.65); font-weight:var(--wysimark-list-number-weight,inherit); }
 .wysimark-container .wysimark-block[data-block-type="ordered-list-item"] { anchor-scope:--blo-list-number; }
 .wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > li > button.wysimark-list-number { anchor-name:--blo-list-number; }
-.wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > button.wysimark-block-handle { position-anchor:--blo-list-number; left:calc(anchor(left) - 26px); }
+.wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > button.wysimark-block-handle { position-anchor:--blo-list-number; left:calc(anchor(left) - 31px); }
+.wysimark-container .wysimark-block[data-block-type="ordered-list-item"]:has(> li[data-list-heading-level="1"]) > button.wysimark-block-handle { left:calc(anchor(left) - 24px); }
 .wysimark-editor li[data-list-heading-level] { --wysimark-list-number-weight:var(--font-bold,700); }
 
 .wysimark-editor li[data-list-heading-level="1"] { --wysimark-list-number-size:1.75em; --wysimark-list-number-line:1.4; }
@@ -83,6 +84,7 @@
 .wysimark-overlay .wysimark-menu-tabs { --blo-tabs-inset:5px; --blo-tabs-radius:8px; --blo-tabs-button-radius:4px; display:flex; align-items:stretch; gap:4px; box-sizing:border-box; padding:0; width:100%; border:var(--blo-tabs-inset) solid var(--background-modifier-hover); border-radius:var(--blo-tabs-radius); background:var(--background-modifier-hover); background-clip:padding-box; }
 .wysimark-overlay .wysimark-menu-tabs button { display:flex; align-items:center; justify-content:center; flex:1 1 0; box-sizing:border-box; min-width:0; height:auto; min-height:30px; margin:0; padding:5px 12px; border:0; border-radius:var(--blo-tabs-button-radius); font:inherit; line-height:1.25; box-shadow:none; background:transparent; color:var(--text-muted); }
 .wysimark-overlay .wysimark-menu-tabs button[aria-pressed="true"] { background:var(--interactive-normal); color:var(--text-normal); box-shadow:none; }
+.theme-dark .wysimark-overlay .wysimark-menu-tabs button[aria-pressed="true"] { background:color-mix(in srgb,var(--background-secondary) 82%,var(--text-normal) 18%); box-shadow:inset 0 0 0 1px var(--background-modifier-border-hover); }
 .wysimark-overlay .wysimark-menu-tabs button:hover { color:var(--text-normal); background:var(--interactive-hover); }
 
 /* Image Toolkit uses raster sprite icons upstream; the plugin replaces them with native SVGs. */
@@ -137,8 +139,9 @@
 .wysimark-reference-dialog[data-reference-kind="link"] .wysimark-reference-actions { margin-top:8px; }
 .wysimark-reference-dialog[data-reference-kind="attachment"] .wysimark-reference-actions { margin-top:10px; }
 .wysimark-reference-actions > button { flex-shrink:0; }
-.wysimark-reference-auto-title { display:flex; flex:1; align-items:center; gap:6px; min-width:0; transform:translateX(3px); cursor:pointer; }
-.wysimark-reference-auto-title input { margin:0; flex:0 0 auto; }
+.wysimark-reference-auto-title { display:flex; flex:1; align-items:center; gap:6px; min-width:0; transform:translateX(3px); font-size:calc(var(--blo-popup-font-size) - 1px); cursor:pointer; }
+.wysimark-reference-auto-title input { --checkbox-size:14px; margin:0; flex:0 0 auto; width:var(--checkbox-size); height:var(--checkbox-size); }
+.wysimark-reference-auto-title > span { transform:translateY(1px); }
 .wysimark-reference-actions .wysimark-reference-footer-hint { flex:1; min-width:0; margin:0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-faint); }
 .wysimark-reference-dialog .wysimark-reference-footer-hint { font-size:inherit; }
 .wysimark-reference-error { margin-top:8px; color:var(--text-error); }

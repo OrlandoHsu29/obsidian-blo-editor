@@ -1,8 +1,7 @@
 import { MenuItemData } from "../../shared-overlays"
 
 import { TableDialog } from "../components"
-import { ImageUrlDialog } from "../components/dialog/image-url-dialog"
-import { AnchorDialog } from "../components/dialog/anchor-dialog"
+import { AnchorDialog, AttachmentInsertDialog } from "../components/dialog/anchor-dialog"
 import * as Icon from "../icons"
 import { t } from "../../utils/translations"
 
@@ -15,10 +14,10 @@ export const dialogItems: MenuItemData[] = [
     Component: AnchorDialog,
   },
   {
-    icon: Icon.Image,
-    title: t("insertImageFromUrl"),
+    icon: Icon.Attachment,
+    title: t('insertAttachment'),
     more: true,
-    Component: ImageUrlDialog,
+    Component: AttachmentInsertDialog,
   },
   {
     icon: Icon.Table,

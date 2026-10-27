@@ -3,9 +3,10 @@ import { Descendant, Editor, Element, Node, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor } from 'slate-react'
 import type { OnImageSaveHandler } from './wysimark/entry'
-import { wikiEmbedUrl, wikiLinkHref } from './wysimark/convert/obsidian-links'
+import { wikiLinkHref } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
-import { IMAGE_FILE_PATTERN as IMAGES, MEDIA_FILE_PATTERN as MEDIA, vaultMediaUrl, vaultTransferReferences } from './vault-media'
+import { vaultMediaUrl, vaultTransferReferences } from './vault-media'
+import { attachmentPreviewUrl } from './attachment-preview'
 
 /** Reference existing vault files directly; never copy them into attachments. */
 export function handleVaultMediaTransfer(app: App, sourcePath: string, editor: Editor,
@@ -65,10 +66,9 @@ export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | Drag
       if (!current()) break
       try {
         const url = await save(file, file.name)
-        if (file.type.startsWith('image/') || IMAGES.test(file.name)) {
-          fragment.push({ type: 'image-block', url, alt: file.name, children: [{ text: '' }] })
-        } else if (/^(?:audio|video)\//.test(file.type) || MEDIA.test(file.name)) {
-          fragment.push({ type: 'image-block', url: wikiEmbedUrl(decodeURI(url)), alt: file.name, children: [{ text: '' }] })
+        const preview = attachmentPreviewUrl(file, url)
+        if (preview) {
+          fragment.push({ type: 'image-block', url: preview, alt: file.name, children: [{ text: '' }] })
         } else {
           fragment.push({ type: 'paragraph', children: [{ type: 'anchor', href: url, children: [{ text: file.name }] }] })
         }

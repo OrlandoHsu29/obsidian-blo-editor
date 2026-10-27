@@ -36,7 +36,7 @@ export const toolbarGroups: ToolbarEntry[][] = [
   [entry('outdent',blockIndentItems[0]),entry('indent',blockIndentItems[1])],
   [entry('table',pick(dialogItems,t('insertTable'))),
     entry('link',pick(dialogItems,t('insertLink'))),
-    entry('image',pick(dialogItems,t('insertImageFromUrl'))),
+    entry('attachment',pick(dialogItems,t('insertAttachment'))),
     entry('drawing',{ title: ui('插入画板'), icon: Drawing, show: editor => editor.wysimark.integrationPreferences?.getSnapshot().drawings ?? true, action: editor => { void editor.wysimark.insertDrawing?.() } })],
   [entry('find-replace',utilityItems[0])],
 ];

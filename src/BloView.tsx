@@ -24,6 +24,7 @@ import { watchAttachments } from './attachment-cleanup';
 import { handleMediaTransfer, handleVaultMediaTransfer } from './media-paste';
 import { normalizeVaultLinkInput, resolveVaultReference, vaultMediaUrl, vaultTransferReferences } from './vault-media';
 import { watchRemoteImages } from './remote-images';
+import { downloadAttachment } from './remote-attachments';
 import { PdfExportModal } from './pdf-export';
 import type { Menu } from 'obsidian';
 import { CacheProvider } from '@emotion/react';
@@ -364,6 +365,7 @@ function KnowledgeSpaceEditorComponent({
   editor.wysimark.toolbarPreferences = plugin.toolbarPreferences;
   editor.wysimark.integrationPreferences = plugin.integrationPreferences;
   editor.wysimark.normalizeInternalLink = value => normalizeVaultLinkInput(plugin.app, value);
+  editor.wysimark.downloadAttachment = downloadAttachment;
   editor.wysimark.resolveInternalMedia = target => {
     const reference = resolveVaultReference(plugin.app, file.path, target);
     return reference ? vaultMediaUrl(plugin.app, file.path, reference) : undefined;

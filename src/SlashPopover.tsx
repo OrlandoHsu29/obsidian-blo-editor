@@ -6,8 +6,7 @@ import { Editor, Transforms } from 'slate'
 import { ReactEditor, useSlate } from 'slate-react'
 import { useEditorFocused } from './wysimark/entry/use-editor-focused'
 import { getSlashContext, filterSlashCommands } from './slash-menu'
-import { AnchorDialog } from './wysimark/toolbar-plugin/components/dialog/anchor-dialog'
-import { ImageUrlDialog } from './wysimark/toolbar-plugin/components/dialog/image-url-dialog'
+import { AnchorDialog, AttachmentInsertDialog } from './wysimark/toolbar-plugin/components/dialog/anchor-dialog'
 
 export function SlashPopover() {
   const editor = useSlate(), focused = useEditorFocused(editor)
@@ -17,7 +16,7 @@ export function SlashPopover() {
   }
   const preferences = editor.wysimark.integrationPreferences
   const integrations = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations)
-  const [dialog, setDialog] = useState<{kind: 'link' | 'image'; left: number; top: number; height: number} | null>(null)
+  const [dialog, setDialog] = useState<{kind: 'link' | 'attachment'; left: number; top: number; height: number} | null>(null)
   const [dialogAnchor, setDialogAnchor] = useState<HTMLSpanElement | null>(null)
   const context = focused && !dialog ? getSlashContext(editor) : null
   const [dismissed, setDismissed] = useState('')
@@ -93,7 +92,7 @@ export function SlashPopover() {
     return () => doc.removeEventListener('keydown', onKey, true)
   }, [visible, context?.key, selected])
   if (dialog) {
-    const Dialog = dialog.kind === 'link' ? AnchorDialog : ImageUrlDialog
+    const Dialog = dialog.kind === 'attachment' ? AttachmentInsertDialog : AnchorDialog
     return createPortal(<div className="wysimark-overlay">
       <span ref={setDialogAnchor} aria-hidden="true" style={{position:'fixed',left:dialog.left,top:dialog.top,width:0,height:dialog.height,pointerEvents:'none'}} />
       {dialogAnchor && <Dialog dest={dialogAnchor} close={closeDialog} />}

@@ -4,7 +4,9 @@ import { $Panel } from "../../shared-overlays/styles/$Panel"
 
 export const $AnchorDialog = styled($Panel)`
   width: 360px;
-  overflow: hidden;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 `
 export const $AnchorDialogInputLine = styled("div")`
   display: flex;

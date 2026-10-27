@@ -3,7 +3,7 @@ import { Fragment, useCallback, useEffect, useRef } from "react"
 import { Transforms } from "slate"
 import { ReactEditor, useSelected, useSlate } from "slate-react"
 
-import { wikiEmbedSpecFromUrl, wikiLinkTarget } from "../../convert/obsidian-links"
+import { splitWikiSpec, wikiEmbedSpecFromUrl, wikiLinkTarget } from "../../convert/obsidian-links"
 import { AnchorDialog } from "../../anchor-plugin/render-element/AnchorDialog"
 import { AnchorEditDialog } from "../../anchor-plugin/render-element/AnchorEditDialog"
 import { useLayer } from "../../use-layer"
@@ -35,6 +35,8 @@ export function WikiEmbedView({
   const startEdgeRef = useRef<HTMLSpanElement>(null)
   const renderInternalEmbed = editor.wysimark.renderInternalEmbed
   const spec = wikiEmbedSpecFromUrl(element.url)
+  const display = splitWikiSpec(spec).display
+  const description = display && !/^\d+(?:x\d+)?$/.test(display) ? display : undefined
 
   const handleEdit = useCallback(() => {
     const fallbackAnchor = embedRef.current
@@ -104,7 +106,7 @@ export function WikiEmbedView({
   }, [selected, spec])
 
   return (
-    <$WikiEmbed ref={embedRef} contentEditable={false} data-wysimark-embed-block={element.type === 'image-block' || undefined}>
+    <$WikiEmbed ref={embedRef} contentEditable={false} role="group" aria-label={description} data-wysimark-embed-block={element.type === 'image-block' || undefined}>
       <span ref={startEdgeRef} style={{ display: "none" }} />
       <Fragment key={revision}>{renderInternalEmbed?.(spec)}</Fragment>
     </$WikiEmbed>

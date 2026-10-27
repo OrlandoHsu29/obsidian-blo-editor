@@ -23,7 +23,7 @@ type SlashCommand = {
   searchTerms: string[]
   icon: string
   run?: (editor: Editor) => void
-  dialog?: 'link' | 'image'
+  dialog?: 'link' | 'attachment'
   feature?: 'drawings'
 }
 
@@ -55,8 +55,8 @@ export const slashCommands: SlashCommand[] = [
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
   command('表格', 'table', editor => { editor.tablePlugin.insertTable(3, 3) }, {}, ['bg', 'grid', 'spreadsheet']),
   command('插入行内公式', 'sigma', editor => { editor.math.insertInline() }, {}, ['公式', '数学公式', 'LaTeX', 'math', 'equation', 'formula', 'hngs', 'crhngs', 'gs', 'sxgs']),
-  command('链接', 'link', undefined, {}, ['lj', 'url', 'hyperlink'], 'link'),
-  command('图片', 'image', undefined, {}, ['照片', 'photo', 'picture', 'tp', 'zp'], 'image'),
+  command('链接', 'link', undefined, {}, ['link', 'lj', 'url', 'hyperlink'], 'link'),
+  command('附件', 'paperclip', undefined, {}, ['attachment', 'file', 'fj', '上传', 'upload', '导入', 'import', 'dr'], 'attachment'),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),
   {...command('画板', 'pencil-ruler', editor => { void editor.wysimark.insertDrawing?.() }, {}, ['drawing', 'whiteboard', 'canvas', 'excalidraw', 'hb', 'ht']), feature: 'drawings'},
   command('分割线', 'minus', editor => editor.horizontalRule.insertHorizontalRule(), {}, ['Divider', 'Separator', '分隔线', 'fgx']),

@@ -17,16 +17,6 @@ export type OpenInternalLinkHandler = (target: string, newLeaf?: boolean) => voi
 export type GetVaultImagePathsHandler = () => string[]
 export type GetVaultFilePathsHandler = () => string[]
 
-export type ImageDialogState = {
-  imageSource: "file" | "url" | "vault"
-  url: string
-  alt: string
-  title: string
-  vaultPath: string
-  vaultImagePath: string
-  selectedFile?: File
-}
-
 export type WysimarkEditor = {
   /**
    * Private state for the wysimark editor.
@@ -63,6 +53,8 @@ export type WysimarkEditor = {
      * Handler for saving image to vault
      */
     onImageSave?: OnImageSaveHandler
+    /** Download a remote file for an explicit attachment import. Saving is a separate step. */
+    downloadAttachment?: (url: string) => Promise<File>
 
     /**
      * Get the current image paths available in the host vault.
@@ -78,11 +70,6 @@ export type WysimarkEditor = {
      * Handler for image change (drag/drop)
      */
     onImageChange?: (file: File) => Promise<string>
-
-    /**
-     * Persisted state for the image dialog
-     */
-    imageDialogState?: ImageDialogState
 
     /**
      * Render preview content for an internal link target.

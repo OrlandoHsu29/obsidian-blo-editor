@@ -28,6 +28,6 @@ export const CloseIcon = (props: SVGProps<SVGSVGElement>) => (
 
 export const PageTitleIcon = (props: SVGProps<SVGSVGElement>) => (
   <TablerIcon {...props}>
-    <path d="M5 4h11l3 3v13H5zM16 4v4h3M8 12h8M8 16h6" />
+    <path d="M3 7V5h12v2M9 5v14M6 19h6M19 9v10m-3-3 3 3 3-3" />
   </TablerIcon>
 )

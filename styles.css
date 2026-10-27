@@ -192,6 +192,7 @@
  * keeps the same layout and behaviour.
  */
 .glimmer-memo-window { --blo-memo-toolbar-scale:.9; --blo-popup-scale:.8125; }
+.workspace-leaf-content .wysimark-container.blo-memo-panel { padding-right: 0; }
 .wysimark-container.blo-memo-panel .wysimark-document-title { display: none; }
 .wysimark-container.blo-memo-panel [data-wysimark-toolbar] {
     font-size: calc(1em * var(--blo-memo-toolbar-scale, .9));

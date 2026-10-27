@@ -87,9 +87,18 @@ press Left to select the drawing. The top-right editor button opens Excalidraw;
 **Back to note** saves, closes that drawing tab, and returns to the original note.
 Pasted or dropped images, audio, video, PDFs, and other files are saved as
 attachments before their previews or links are inserted at the original cursor.
+Pasting a recognized image, audio, video, or PDF URL opens a small menu: keep the
+text link, or download it to the attachment folder and embed it in the note.
+Dismissing the menu or a failed download keeps the original link.
+Paste-menu options include icons. The menu closes on focus loss or page scrolling
+and does not reopen automatically. Clicking embed closes it immediately while import
+continues in the background. Click an existing media link or select its full text to reveal a
+**Download as attachment and embed** icon on the right of its popover; hover for its description.
+Media detection supports query strings, common CDN suffixes, and media paths inside proxy URLs.
 Drag existing vault media from the file explorer to embed it without copying files,
-or enable embedding in the vault link dialog. Ctrl/Cmd-click internal links while
-editing; click them directly in reading mode.
+or reference them through **Attachment → Vault**. In editing mode, click a link to
+select it, then click again to open it, or Ctrl/Cmd-click to open it directly.
+In reading mode, a single click opens the link.
 
 <details>
 <summary>View inline drawings and attachments</summary>
@@ -127,10 +136,19 @@ files only. Undo restores attachments and refreshes previews automatically.
 
 Slash commands support Chinese and English names, common aliases, and Chinese
 pinyin initials, such as `/bg` for a table or `/math` for a formula.
-Commands include 3×3 tables, checkboxes, links, and images; link/image
-commands reuse the toolbar insertion dialogs. In **Toolbar configuration**, shared
+Commands include 3×3 tables, checkboxes, **Link**, and **Attachment**.
+Ctrl/Cmd+K or `/link` opens **Link**: choose a URL or a vault target, then set the
+display text and tooltip. This always inserts a text link and has no preview option.
+Use `/attachment` or the attachment button for **Vault**, **Import URL**, and
+**Computer** sources. Attachments are embedded by default. URL and computer
+imports save a local copy in the configured attachment folder; vault references
+reuse the existing file. **Content description** describes the attachment and
+is kept as image alt text or a preview description. Supported file types show
+their content; other files use Obsidian's file embed display.
+The separate image button and `/image` command have been removed.
+In **Toolbar configuration**, shared
 icons and checkboxes control visibility immediately. Paragraph style, clear
-formatting, undo, redo, text color, find/replace, table, link, and image stay
+formatting, undo, redo, text color, find/replace, table, link, and attachment stay
 visible; their settings remain checked, gray, and disabled.
 
 Pasted/imported media and new drawings share the vault-root `附件` folder by default. **Attachment
@@ -166,10 +184,14 @@ unless **Replace current reference after saving** is checked. Reference updates
 support undo. Attachment deletion follows the settings described above.
 
 **Enable image viewer** installs and activates Image Toolkit for enlarged image previews, with adapted toolbar icons and theme styling.
+Double-click the caption above the viewer toolbar to edit the current note's image description.
+Enter or focus loss saves; Escape cancels. Changes are saved in the note and support undo.
 
 **Enable quick memo panel** connects the desktop-only [Glimmer Memo](https://github.com/OrlandoHsu29/obsidian-glimmer-memo).
 Use **Show/hide quick memo panel** to open a floating note with Blo editing,
 a compact toolbar, and no duplicate file title. Notes save before the panel hides.
+Menus share the main editor's layout and scale together in the memo window.
+Activating the window restores editor focus while preserving focus in open dialog inputs.
 New memo windows connect automatically; turning the integration off returns
 the memo note to the native editor.
 

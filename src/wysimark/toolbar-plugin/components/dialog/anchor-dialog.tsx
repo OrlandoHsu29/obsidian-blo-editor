@@ -4,6 +4,7 @@ import type { RangeRef } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { attachmentPreviewUrl } from '../../../../attachment-preview'
+import { fetchLinkTitle } from '../../../../remote-link-title'
 import { isWikiEmbedUrl, normalizeWikiLinkInput, wikiLinkDisplayText, wikiLinkHref, wikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from '../../../convert/obsidian-links'
 import { CloseMask } from '../../../shared-overlays/components/CloseMask'
 import { positionInside, useAbsoluteReposition } from '../../../use-reposition'
@@ -33,6 +34,7 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
   const [url, setUrl] = useState('')
   const [target, setTarget] = useState('')
   const [text, setText] = useState(initialText)
+  const [autoTitle, setAutoTitle] = useState(true)
   const [description, setDescription] = useState(initialText)
   const [title, setTitle] = useState('')
   const [selectedFile, setSelectedFile] = useState<File>()
@@ -105,14 +107,23 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
           const spec = label && label !== wikiLinkDisplayText(href) ? `${href}|${label}` : href
           href = wikiLinkHref(spec)
         }
-      } else label ||= href
+      } else {
+        if (!label && autoTitle) {
+          setSaving(true)
+          label = await fetchLinkTitle(href, dest.ownerDocument) || ''
+        }
+        label ||= href
+      }
       if (!active.current || editor.wysimark.readOnly) return
       const selection = location.current?.current
       if (!selection) { setError(ui('附件已保存，原插入位置已失效')); return }
       const apply = () => Editor.withoutNormalizing(editor, () => {
         Transforms.select(editor, selection)
         if (attachment) editor.image.insertImageFromUrl(preview!, description.trim() || label, description.trim())
-        else editor.anchor.insertLink(href, label, { select: true, title: title.trim() || undefined })
+        else {
+          if (Range.isExpanded(selection) && Editor.string(editor, selection) !== label) Transforms.delete(editor)
+          editor.anchor.insertLink(href, label, { select: true, title: title.trim() || undefined })
+        }
       })
       if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, apply)
       else apply()
@@ -173,6 +184,7 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
         {error && <div role="alert" className="wysimark-reference-error">{error}</div>}
         <div className="wysimark-reference-actions">
           {footerHint && <$DialogHint className="wysimark-reference-footer-hint" title={footerHint}>{footerHint}</$DialogHint>}
+          {!attachment && source === 'url' && <label className="wysimark-reference-auto-title"><input type="checkbox" checked={autoTitle} disabled={saving} onChange={event => setAutoTitle(event.target.checked)} />{ui('自动获取链接标题')}</label>}
           <button type="submit" disabled={!valid || saving}>{saving ? t('saving') : t('insert')}</button>
         </div>
       </form>

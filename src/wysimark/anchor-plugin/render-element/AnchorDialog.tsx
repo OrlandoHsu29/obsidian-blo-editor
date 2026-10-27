@@ -1,7 +1,8 @@
 import { ui } from "../../utils/translations"
 import styled from "@emotion/styled"
-import { useCallback, useLayoutEffect, useRef, useState } from "react"
-import { useSlateStatic } from "slate-react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { ReactEditor, useSlateStatic } from "slate-react"
+import { Notice } from 'obsidian'
 
 import { $Panel } from "../../shared-overlays"
 import {
@@ -14,15 +15,16 @@ import { positionInside, useAbsoluteReposition } from "../../use-reposition"
 import { tooltipLabel } from "../../use-tooltip"
 import { AnchorElement } from "../index"
 import { AnchorEditDialog } from "./AnchorEditDialog"
-import { CloseIcon, ExternalLinkIcon, LinkOffIcon, PencilIcon } from "./icons"
+import { CloseIcon, ExternalLinkIcon, LinkOffIcon, PageTitleIcon, PencilIcon } from "./icons"
 import { DraggableHeader } from "../../toolbar-plugin/components/dialog/DraggableHeader"
 import { MediaLinkActions } from '../../../MediaPasteMenu'
 import { remoteMediaUrl } from '../../../media-url-paste'
+import { updateLinkTitle } from '../../../link-title-action'
 
 const $AnchorDialog = styled($Panel)`
   position: absolute;
   width: 20em;
-  z-index: 1000;
+  z-index: var(--layer-popover, 30);
   padding: 0;
   max-height: calc(100vh - 32px);
   overflow: auto;
@@ -49,7 +51,7 @@ const $AnchorDialog = styled($Panel)`
     &:hover {
       color: var(--blue-600);
     }
-    transition: all 200ms;
+    transition: none;
   }
 
   .--internal-link {
@@ -165,6 +167,7 @@ const $AnchorDialog = styled($Panel)`
 
   .--icon {
     cursor: pointer;
+    &[aria-disabled="true"] { opacity: 0.5; cursor: default; }
     &:hover {
       color: var(--blue-600);
     }
@@ -224,6 +227,14 @@ export function AnchorDialog({
     ? editor.wysimark.renderInternalLinkPreview?.(internalTarget)
     : null
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [visible, setVisible] = useState(true)
+  const [fetchingTitle, setFetchingTitle] = useState(false)
+  const titlePending = useRef(false)
+  const mounted = useRef(true)
+  const titleLabel = ui('获取网页标题并作为链接文字')
+  const mediaUrl = remoteMediaUrl(href)
+  const canFetchTitle = !!element && !isInternalLink && !mediaUrl && /^https?:\/\//i.test(href)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const [, refreshGeometry] = useState(0)
   useLayoutEffect(() => {
     const doc = destAnchor.ownerDocument
@@ -243,7 +254,7 @@ export function AnchorDialog({
     }
     const visibility = new win.IntersectionObserver(entries => {
       const entry = entries[0]
-      if (ref.current && entry && (!entry.isIntersecting || !entry.intersectionRect.width || !entry.intersectionRect.height)) dialog.close()
+      if (entry) setVisible(!!entry.isIntersecting && !!entry.intersectionRect.width && !!entry.intersectionRect.height)
     })
     visibility.observe(destAnchor)
     // Scroll events from nested editor panes do not reach the window listener
@@ -256,25 +267,31 @@ export function AnchorDialog({
     setDragOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
   }, [])
 
+  const editorViewport = destAnchor.closest<HTMLElement>('.wysimark-editor-container')
   const baseStyle = useAbsoluteReposition(
-    { src: ref, destAnchor, destStartEdge },
-    ({ src, destAnchor, destStartEdge }, viewport) => {
+    { src: ref, destAnchor, destStartEdge, editorViewport: editorViewport ?? destAnchor.ownerDocument.body },
+    ({ src, destAnchor, destStartEdge, editorViewport }, viewport) => {
+      const top = Math.max(viewport.top, editorViewport.top)
+      const bottom = Math.min(viewport.bottom, editorViewport.bottom)
+      const bounds = { ...viewport, top, bottom, height: Math.max(0, bottom - top) }
       const above = destAnchor.top - (src?.height ?? 0) - 8
       const position = positionInside(
         src,
-        viewport,
+        bounds,
         {
           left: destStartEdge.left + dragOffset.x,
-          top: (above >= viewport.top + 16 ? above : destAnchor.bottom + 8) + dragOffset.y,
+          top: (above >= bounds.top + 16 ? above : destAnchor.bottom + 8) + dragOffset.y,
         },
         { margin: 16 }
       )
-      return { ...position, top: Math.max(viewport.top + 16, Math.min(position.top, viewport.bottom - (src?.height ?? 0) - 16)) }
+      return { ...position, maxHeight: Math.max(0, bounds.height - 32), top: Math.max(bounds.top + 16, Math.min(position.top, bounds.bottom - (src?.height ?? 0) - 16)) }
     }
   )
 
   const style = {
     ...baseStyle,
+    visibility: visible ? 'visible' as const : 'hidden' as const,
+    pointerEvents: visible ? 'auto' as const : 'none' as const,
   }
 
   const removeTooltip = tooltipLabel({ title: ui("删除链接") })
@@ -285,6 +302,24 @@ export function AnchorDialog({
   const closeDialog = useCallback(() => {
     dialog.close()
   }, [dialog])
+
+  const applyTitle = async () => {
+    if (!element || titlePending.current) return
+    let path
+    try { path = ReactEditor.findPath(editor, element) } catch { return }
+    titlePending.current = true
+    setFetchingTitle(true)
+    try {
+      const result = await updateLinkTitle(editor, path, destAnchor.ownerDocument)
+      if (result === 'unavailable') new Notice(ui('无法获取网页标题，已保留原链接。'))
+    } catch (error) {
+      console.error('Blo Editor: link title update failed', error)
+      new Notice(ui('无法获取网页标题，已保留原链接。'))
+    } finally {
+      titlePending.current = false
+      if (mounted.current) setFetchingTitle(false)
+    }
+  }
 
   const openInternalLink = useCallback(() => {
     if (!isInternalLink) return
@@ -332,6 +367,8 @@ export function AnchorDialog({
           <ExternalLinkIcon />
         </span>
       ) : null}
+      {canFetchTitle && <span className="--icon" role="button" tabIndex={0} aria-label={titleLabel} aria-disabled={fetchingTitle} data-tooltip-position="top"
+        onClick={() => void applyTitle()} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void applyTitle() } }}><PageTitleIcon /></span>}
       <span
         className="--icon"
         onClick={removeLink}
@@ -407,7 +444,7 @@ export function AnchorDialog({
             </a>
             <span className="wysimark-link-controls">
               {iconButtons}
-              {element && remoteMediaUrl(href) && editor.wysimark.downloadAttachment && editor.wysimark.onImageSave &&
+              {element && mediaUrl && editor.wysimark.downloadAttachment && editor.wysimark.onImageSave &&
                 <MediaLinkActions element={element} close={closeDialog} />}
             </span>
           </div>

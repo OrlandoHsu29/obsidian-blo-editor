@@ -1,7 +1,7 @@
 {
   "id": "blo-editor",
   "name": "Blo Editor",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "minAppVersion": "1.8.7",
   "description": "Rich-text notes with block editing, tables, code highlighting, and find and replace. Based on Wysimark Editor.",
   "author": "OrlandoHsu29",

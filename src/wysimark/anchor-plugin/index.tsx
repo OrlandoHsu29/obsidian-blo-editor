@@ -7,6 +7,7 @@ import { onPaste } from "./editable/on-paste"
 import { createAnchorMethods } from "./methods"
 import { normalizeNode } from "./normalize-node"
 import { Anchor } from "./render-element/anchor"
+import { handleLinkKey } from "./link-keyboard"
 
 type AnchorMethods = ReturnType<typeof createAnchorMethods>
 
@@ -41,6 +42,12 @@ export const AnchorPlugin = createPlugin<AnchorPluginCustomTypes>(
         normalizeNode: curryOne(normalizeNode, editor),
       },
       editableProps: {
+        onKeyDown: event => {
+          if (editor.wysimark.readOnly || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
+          if (!handleLinkKey(editor, event.key)) return false
+          event.preventDefault()
+          return true
+        },
         onPaste: curryOne(onPaste, editor),
         renderElement: ({ element, attributes, children }) => {
           if (element.type === "anchor") {

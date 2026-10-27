@@ -21,6 +21,7 @@ export const $Anchor = styled("a")`
   transition: background-color 250ms;
   &.--selected {
     background: var(--blue-50);
+    caret-color: transparent;
   }
 `
 /**

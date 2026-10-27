@@ -16,13 +16,16 @@ import { AnchorElement } from "../index"
 import { AnchorEditDialog } from "./AnchorEditDialog"
 import { CloseIcon, ExternalLinkIcon, LinkOffIcon, PencilIcon } from "./icons"
 import { DraggableHeader } from "../../toolbar-plugin/components/dialog/DraggableHeader"
+import { MediaLinkActions } from '../../../MediaPasteMenu'
+import { remoteMediaUrl } from '../../../media-url-paste'
 
 const $AnchorDialog = styled($Panel)`
   position: absolute;
   width: 20em;
   z-index: 1000;
   padding: 0;
-  overflow: hidden;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
   color: var(--shade-400);
 
   .--icons {
@@ -238,10 +241,15 @@ export function AnchorDialog({
     for (const element of new Set([destAnchor, destStartEdge, ref.current])) {
       if (element) observer.observe(element)
     }
+    const visibility = new win.IntersectionObserver(entries => {
+      const entry = entries[0]
+      if (ref.current && entry && (!entry.isIntersecting || !entry.intersectionRect.width || !entry.intersectionRect.height)) dialog.close()
+    })
+    visibility.observe(destAnchor)
     // Scroll events from nested editor panes do not reach the window listener
     // used by useAbsoluteReposition. Capture them on the owner document too.
     doc.addEventListener('scroll', refresh, true)
-    return () => { doc.removeEventListener('scroll', refresh, true); observer.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
+    return () => { doc.removeEventListener('scroll', refresh, true); observer.disconnect(); visibility.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
   }, [destAnchor, destStartEdge])
 
   const handleDrag = useCallback((deltaX: number, deltaY: number) => {
@@ -251,22 +259,22 @@ export function AnchorDialog({
   const baseStyle = useAbsoluteReposition(
     { src: ref, destAnchor, destStartEdge },
     ({ src, destAnchor, destStartEdge }, viewport) => {
-      return positionInside(
+      const above = destAnchor.top - (src?.height ?? 0) - 8
+      const position = positionInside(
         src,
         viewport,
         {
-          left: destStartEdge.left,
-          top: destAnchor.top + destAnchor.height,
+          left: destStartEdge.left + dragOffset.x,
+          top: (above >= viewport.top + 16 ? above : destAnchor.bottom + 8) + dragOffset.y,
         },
         { margin: 16 }
       )
+      return { ...position, top: Math.max(viewport.top + 16, Math.min(position.top, viewport.bottom - (src?.height ?? 0) - 16)) }
     }
   )
 
   const style = {
     ...baseStyle,
-    left: baseStyle.left + dragOffset.x,
-    top: baseStyle.top + dragOffset.y,
   }
 
   const removeTooltip = tooltipLabel({ title: ui("删除链接") })
@@ -397,7 +405,11 @@ export function AnchorDialog({
                 )}
               </div>
             </a>
-            {iconButtons}
+            <span className="wysimark-link-controls">
+              {iconButtons}
+              {element && remoteMediaUrl(href) && editor.wysimark.downloadAttachment && editor.wysimark.onImageSave &&
+                <MediaLinkActions element={element} close={closeDialog} />}
+            </span>
           </div>
         )}
       </div>

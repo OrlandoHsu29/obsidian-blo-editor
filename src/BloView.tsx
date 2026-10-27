@@ -529,6 +529,7 @@ export class BloView extends FileView {
     // so the caret must be placed here for typing to start right away.
     this.queuePanelFocus();
     const source = this.currentFile;
+    editor.wysimark.isCurrentDocument = () => this.editor === editor && this.currentFile === source && !this.readOnly;
     const stopRemoteImages = source ? watchRemoteImages(this.app, source.path, editor, () => {
       const folder = this.plugin.settings.attachmentFolder;
       return file => this.saveAttachmentFile(file, source.path, folder);

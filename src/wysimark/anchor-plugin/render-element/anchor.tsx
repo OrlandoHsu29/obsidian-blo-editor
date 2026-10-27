@@ -1,5 +1,5 @@
 import { clsx } from "clsx"
-import React, { useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useRef } from "react"
 import { Editor, Element, Path, Range } from "slate"
 import { useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 
@@ -15,6 +15,8 @@ function isPreciseLinkSelection(editor: Editor): boolean {
   const selection = editor.selection
   if (!selection) return false
   if (Range.isCollapsed(selection)) return true
+  const link = Editor.above(editor, { at: selection.anchor, match: node => Element.isElement(node) && node.type === 'anchor' })
+  if (link && Range.equals(Editor.range(editor, link[1]), { anchor: Range.start(selection), focus: Range.end(selection) })) return true
   const anchorCell = Editor.above(editor, {
     at: selection.anchor, match: node => Element.isElement(node) && node.type === 'table-cell',
   })?.[1]
@@ -29,6 +31,11 @@ export function Anchor({
 }: ConstrainedRenderElementProps<AnchorElement>) {
   const startEdgeRef = useRef<HTMLSpanElement>(null)
   const anchorRef = useRef<HTMLAnchorElement>(null)
+  const setAnchorRef = useCallback((node: HTMLAnchorElement | null) => {
+    anchorRef.current = node
+    attributes.ref(node)
+  }, [attributes.ref])
+  const clickIntent = useRef<{ open: boolean; x: number; y: number } | null>(null)
   const selected = useSelected()
   const editor = useSlateStatic()
   const preciseSelection = useSlateSelector(isPreciseLinkSelection)
@@ -71,19 +78,27 @@ export function Anchor({
       href={isInternalLink ? undefined : element.href}
       target={isInternalLink ? undefined : element.target}
       data-internal-link={isInternalLink ? "true" : undefined}
-      onMouseDown={isInternalLink ? event => {
+      onMouseDown={event => {
+        // Remember selection before Slate moves the caret on this mousedown.
+        clickIntent.current = { open: readOnly || event.ctrlKey || event.metaKey || selected && preciseSelection, x: event.clientX, y: event.clientY }
         if (readOnly || event.ctrlKey || event.metaKey) { event.preventDefault(); event.stopPropagation() }
-      } : undefined}
-      onClick={isInternalLink ? (event) => {
+      }}
+      onClick={event => {
         event.preventDefault()
-        if (readOnly || event.ctrlKey || event.metaKey) {
-          event.stopPropagation()
-          dialog.close()
+        const intent = clickIntent.current
+        clickIntent.current = null
+        const clickWithoutDragging = intent?.open && Math.hypot(event.clientX - intent.x, event.clientY - intent.y) <= 4
+        if (!(readOnly || event.ctrlKey || event.metaKey || event.detail === 0 || clickWithoutDragging)) return
+        event.stopPropagation()
+        dialog.close()
+        if (isInternalLink) {
           void editor.wysimark.openInternalLink?.(wikiLinkTarget(wikiLinkSpecFromHref(element.href)), event.ctrlKey || event.metaKey)
+        } else if (!/^\s*(?:javascript|data|vbscript):/i.test(element.href)) {
+          event.currentTarget.ownerDocument.defaultView?.open(element.href, element.target || '_blank', 'noopener,noreferrer')
         }
-      } : undefined}
+      }}
       {...attributes}
-      ref={anchorRef}
+      ref={setAnchorRef}
     >
       {/* Edge allow Chrome to differentiate in/out of the link */}
       <$Edge ref={startEdgeRef} contentEditable={false} />

@@ -33,6 +33,8 @@ export type WysimarkEditor = {
     save?: () => Promise<void>
     toggleReading?: () => Promise<void>
     readOnly?: boolean
+    /** Captured by asynchronous imports so switching the view's file invalidates them. */
+    isCurrentDocument?: () => boolean
     openTextColor?: () => void
     insertDrawing?: () => void | Promise<void>
     getTextColor?: () => string | null

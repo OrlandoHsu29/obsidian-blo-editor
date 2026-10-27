@@ -9,6 +9,7 @@ import { useEditorFocused } from "../../entry/use-editor-focused"
 
 import { Toolbar } from "../components"
 import { $Editable, $OuterContainer } from "../styles"
+import { MediaPasteController } from '../../../MediaPasteMenu'
 
 export function renderEditable({ attributes, Editable }: RenderEditableProps) {
   const outerContainerRef = useRef<HTMLDivElement>(null)
@@ -73,6 +74,7 @@ export function renderEditable({ attributes, Editable }: RenderEditableProps) {
         onClick={onClickOuterContainer}
       >
         <Toolbar />
+        <MediaPasteController host={outerContainerRef} />
         <div className="wysimark-find-slot" data-wysimark-find-slot />
         {editor.wysimark.documentTitle}
         <Editable

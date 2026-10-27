@@ -131,6 +131,11 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "媒体链接": { zh: "媒体链接", en: "Media link" },
+  "保留文本链接": { zh: "保留文本链接", en: "Keep text link" },
+  "下载为附件并嵌入": { zh: "下载为附件并嵌入", en: "Download as attachment and embed" },
+  "正在导入…": { zh: "正在导入…", en: "Importing…" },
+  "导入失败，已保留原链接。": { zh: "导入失败，已保留原链接。", en: "Import failed. The original link was kept." },
   "网址": { zh: "网址", en: "URL" },
   "网址导入": { zh: "网址导入", en: "Import URL" },
   "电脑导入": { zh: "电脑导入", en: "Computer" },

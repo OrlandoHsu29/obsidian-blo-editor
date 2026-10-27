@@ -110,6 +110,15 @@
     background:transparent; border:0; border-radius:0; box-shadow:none;
 }
 .wysimark-text-color-menu { padding:12px; }
+.tooltip.blo-media-import-tooltip { z-index:max(1001,var(--layer-tooltip,70)); }
+.wysimark-overlay .wysimark-media-paste-menu { display:flex; flex-direction:column; gap:2px; width:max-content; max-height:calc(100vh - 32px); overflow:auto; padding:4px; border-radius:10px; }
+.wysimark-media-import-actions { display:flex; flex-direction:column; gap:4px; }
+.wysimark-overlay .wysimark-media-import-actions > button { display:flex; align-items:center; justify-content:flex-start; gap:6px; width:100%; min-height:32px; padding:6px 8px; text-align:left; white-space:nowrap; border:0; border-radius:6px; box-shadow:none; background:transparent; }
+.wysimark-overlay .wysimark-media-import-actions > button:hover { background:var(--background-modifier-hover); }
+.wysimark-media-import-actions > button > svg { flex:0 0 18px; width:18px; height:18px; pointer-events:none; }
+.wysimark-link-controls { display:flex; flex:0 0 auto; flex-direction:column; align-items:flex-end; gap:8px; }
+.wysimark-overlay .wysimark-media-import-actions.is-compact > button { justify-content:center; width:26px; height:26px; min-height:26px; padding:4px; color:var(--text-muted); }
+.wysimark-overlay .wysimark-media-import-actions.is-compact > button:hover { color:var(--text-normal); }
 .wysimark-reference-dialog form { margin:0; }
 .wysimark-reference-dialog fieldset { display:flex; flex-direction:column; gap:10px; min-width:0; margin:0; padding:0; border:0; }
 .wysimark-reference-field { display:flex; flex-direction:column; gap:4px; min-width:0; }

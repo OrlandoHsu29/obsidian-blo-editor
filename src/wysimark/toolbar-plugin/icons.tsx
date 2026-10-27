@@ -2,6 +2,9 @@ import { TablerIcon } from "../sink"
 import { useSlate } from "slate-react"
 import { Editor, Element } from "slate"
 import { DEFAULT_TEXT_COLOR } from '../marks-plugin/methods/text-color'
+export const ImportEmbed = () => <TablerIcon aria-hidden="true">
+  <path d="M7 7H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2M12 3v11m-4-4 4 4 4-4M8 18h8" />
+</TablerIcon>
 export const Undo = () => <TablerIcon><path d="M3 7v6h6M3 13l4.5-4.5a7 7 0 1 1 1 10" /></TablerIcon>
 export const Redo = () => <TablerIcon><path d="M21 7v6h-6M21 13l-4.5-4.5a7 7 0 1 0-1 10" /></TablerIcon>
 export const ClearFormatting = () => <TablerIcon><path d="m16 3 5 5-11 11H5l-3-3L16 3zM9 10l8 8M10 19h11" /></TablerIcon>

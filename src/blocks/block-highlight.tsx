@@ -13,14 +13,19 @@ function measureBlockHighlight(editor:Editor,index:number,root:HTMLElement) {
     const structured=structuredBlockContent(root)
     const rangeBounds=structured?.getBoundingClientRect()??ReactEditor.toDOMRange(editor,Editor.range(editor,[index])).getBoundingClientRect()
     const bounds=rangeBounds.height?rangeBounds:content.getBoundingClientRect()
+    const tableFrame=structured?.closest<HTMLElement>('.blo-table-frame')
+    const clip=tableFrame?.getBoundingClientRect()
+    const left=clip?Math.max(bounds.left,clip.left):bounds.left
+    const right=clip?Math.min(bounds.right,clip.right):bounds.right
+    const padding=clip?0:4
     const box=root.getBoundingClientRect(),scale=box.width&&root.offsetWidth?box.width/root.offsetWidth:1
     // Every background stays inside its own block, leaving a visible gap even
     // when adjacent list items have no paragraph spacing.
     const bottom=Math.max(1,box.height/scale-1)
     const top=Math.min(bottom,Math.max(1,(bounds.top-box.top)/scale-3))
-    root.style.setProperty('--blo-highlight-left',`${(bounds.left-box.left)/scale-4}px`)
+    root.style.setProperty('--blo-highlight-left',`${(left-box.left)/scale-padding}px`)
     root.style.setProperty('--blo-highlight-top',`${top}px`)
-    root.style.setProperty('--blo-highlight-width',`${Math.max(8,bounds.width/scale+8)}px`)
+    root.style.setProperty('--blo-highlight-width',`${Math.max(8,(right-left)/scale+padding*2)}px`)
     root.style.setProperty('--blo-highlight-height',`${Math.max(0,Math.min(bottom,(bounds.bottom-box.top)/scale+3)-top)}px`)
 }
 function clearBlockHighlight(root:HTMLElement) {

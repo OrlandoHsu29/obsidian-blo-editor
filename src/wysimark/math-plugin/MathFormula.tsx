@@ -94,7 +94,7 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
       {editing ? display
         ? <textarea {...sourceProps} ref={node => { input.current = node }} rows={3} />
         : <input {...sourceProps} ref={node => { input.current = node }} type="text" style={{ width: `${Math.min(48, Math.max(8, element.latex.length + 2))}ch` }} />
-        : <span ref={preview} className="blo-math-preview" aria-label={readOnly ? undefined : ui('双击编辑公式')} />}
+        : <span ref={preview} className="blo-math-preview" aria-label={display && !readOnly ? ui('双击编辑公式') : undefined} />}
     </span>
     {children}
   </Wrapper>

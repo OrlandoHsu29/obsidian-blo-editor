@@ -1,14 +1,18 @@
-import React, { useRef } from "react"
+import React, { useEffect, useRef } from "react"
 
-import { $CloseMask } from "../../styles/$CloseMask"
-
-/**
- * Add this `CloseMask` before the Component you want this `CloseMask` to be
- * the background for.
- *
- * When users click on the `CloseMask`, it will close the layer.
- */
+/** Close the sibling panel on outside pointer-down without blocking scrolling. */
 export function CloseMask({ close }: { close: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-  return <$CloseMask ref={ref} onClick={close} />
+  const ref = useRef<HTMLSpanElement>(null)
+  const current = useRef(close); current.current = close
+  useEffect(() => {
+    const marker = ref.current, doc = marker?.ownerDocument
+    if (!marker || !doc) return
+    const outside = (event: PointerEvent) => {
+      if (!marker.parentElement?.contains(event.target as Node)) current.current()
+    }
+    doc.addEventListener('pointerdown', outside, true)
+    return () => doc.removeEventListener('pointerdown', outside, true)
+  }, [])
+  // A fullscreen mask swallowed wheel events and stopped the editor scrolling.
+  return <span ref={ref} hidden aria-hidden="true" />
 }

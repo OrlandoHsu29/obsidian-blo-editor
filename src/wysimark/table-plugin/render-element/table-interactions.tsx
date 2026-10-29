@@ -25,7 +25,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     setTableAnchor(active && !readOnly ? ReactEditor.toDOMNode(editor, element) as HTMLTableElement : null)
   }, [active, editor, element, readOnly])
   // Leave room for the column handles and their delete action above the table.
-  const menu = useBlockToolbarPosition(tableAnchor, menuRef, { active: active && !readOnly, alignment: 'center', aboveGap: 62 })
+  const menu = useBlockToolbarPosition(tableAnchor, menuRef, { active: active && !readOnly, alignment: 'center', aboveGap: 62, belowGap: 16 })
 
   useEffect(() => {
     if (readOnly) return

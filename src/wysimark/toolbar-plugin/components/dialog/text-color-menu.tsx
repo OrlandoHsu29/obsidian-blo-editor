@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Editor, Transforms } from 'slate'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { $Panel, CloseMask } from '../../../shared-overlays'
-import { useAbsoluteReposition } from '../../../use-reposition'
+import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
 import { DEFAULT_TEXT_COLOR } from '../../../marks-plugin/methods/text-color'
 import { TEXT_COLORS } from '../../../../blocks/colors'
 import { isDomElement } from '../../../../dom-guards'
@@ -13,10 +13,7 @@ export function TextColorMenu({dest, close}: {dest: HTMLElement; close: () => vo
   const editor = useSlateStatic(), ref = useRef<HTMLDivElement>(null)
   const [selection] = useState(() => editor.selection ? Editor.rangeRef(editor, editor.selection) : null)
   const current = editor.wysimark.getTextColor ? editor.wysimark.getTextColor() : DEFAULT_TEXT_COLOR
-  const style = useAbsoluteReposition({src: ref, dest}, ({dest, src}, viewport) => ({
-    left: Math.max(viewport.left + 8, Math.min(dest.left, viewport.right - (src?.width || 300) - 8)),
-    top: dest.bottom + 8,
-  }))
+  const style = useAnchoredPanelPosition(dest, ref, { close })
   useEffect(() => () => { selection?.unref() }, [selection])
   useEffect(() => {
     const doc = dest.ownerDocument ?? document

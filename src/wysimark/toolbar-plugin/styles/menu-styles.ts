@@ -9,7 +9,7 @@ export const $Menu = styled($Panel)`
   position: absolute;
   font-size: calc(var(--blo-popup-font-size, var(--font-ui-small)) / .875);
   padding: 6px;
-  transition: all 200ms;
+  transition: none;
   min-width: 12em;
   max-height: min(420px, calc(100vh - 32px));
   overflow-y: auto;

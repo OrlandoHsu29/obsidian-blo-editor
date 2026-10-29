@@ -1,12 +1,14 @@
 import { ui } from "./wysimark/utils/translations"
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { getDefaultIntegrations, subscribeDefaultIntegrations } from './integration-preferences'
 import { createPortal } from 'react-dom'
 import { Editor, Transforms } from 'slate'
+import type { RangeRef } from 'slate'
 import { ReactEditor, useSlate } from 'slate-react'
 import { useEditorFocused } from './wysimark/entry/use-editor-focused'
 import { getSlashContext, filterSlashCommands } from './slash-menu'
 import { AnchorDialog, AttachmentInsertDialog } from './wysimark/toolbar-plugin/components/dialog/anchor-dialog'
+import { useBlockToolbarPosition } from './wysimark/use-reposition/hooks/use-block-toolbar-position'
 
 export function SlashPopover() {
   const editor = useSlate(), focused = useEditorFocused(editor)
@@ -16,29 +18,27 @@ export function SlashPopover() {
   }
   const preferences = editor.wysimark.integrationPreferences
   const integrations = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations)
-  const [dialog, setDialog] = useState<{kind: 'link' | 'attachment'; left: number; top: number; height: number} | null>(null)
-  const [dialogAnchor, setDialogAnchor] = useState<HTMLSpanElement | null>(null)
+  const [dialog, setDialog] = useState<{kind: 'link' | 'attachment'; range: RangeRef} | null>(null)
   const context = focused && !dialog ? getSlashContext(editor) : null
   const [dismissed, setDismissed] = useState('')
   const [choice, setChoice] = useState({key: '', index: 0})
   const popup = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({left: 0, top: 0, maxHeight: 280})
   const matches = filterSlashCommands(context?.query || '', integrations.drawings)
   const visible = !!context && context.key !== dismissed && matches.length > 0
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
   const choose = (index: number) => {
     if (!context || !matches[index]) return
     const command = matches[index]
-    const rect = command.dialog ? ReactEditor.toDOMRange(editor, editor.selection!).getBoundingClientRect() : null
     Editor.withoutNormalizing(editor, () => {
       Transforms.select(editor, context.range)
       Transforms.delete(editor)
       command.run?.(editor)
     })
-    if (command.dialog && rect) setDialog({kind: command.dialog, left: rect.left, top: rect.top, height: rect.height})
+    if (command.dialog && editor.selection) setDialog({kind: command.dialog, range: Editor.rangeRef(editor, editor.selection)})
     else ReactEditor.focus(editor)
   }
   const closeDialog = () => { setDialog(null); ReactEditor.focus(editor) }
+  useEffect(() => () => { dialog?.range.unref() }, [dialog])
   useEffect(() => {
     if (!dialog) return
     const doc = ReactEditor.toDOMNode(editor, editor).ownerDocument
@@ -49,34 +49,12 @@ export function SlashPopover() {
     doc.addEventListener('keydown', closeOnEscape, true)
     return () => doc.removeEventListener('keydown', closeOnEscape, true)
   }, [dialog, editor])
-  useLayoutEffect(() => {
-    if (!visible || !editor.selection) return
-    const doc = editorDocument()
-    const win = doc.defaultView ?? window
-    const update = () => {
-      try {
-        if (!popup.current || !editor.selection) return
-        const rect = ReactEditor.toDOMRange(editor, editor.selection).getBoundingClientRect()
-        const menu = popup.current
-        const gap = 12, edge = 8
-        // Measure rendered content instead of guessing option heights or shifting
-        // a below-caret menu upward through the current line.
-        const naturalHeight = Math.min(menu.scrollHeight + menu.offsetHeight - menu.clientHeight, 280)
-        const above = Math.max(0, rect.top - gap - edge)
-        const below = Math.max(0, win.innerHeight - rect.bottom - gap - edge)
-        const placeAbove = above >= naturalHeight || above >= below
-        const maxHeight = Math.min(naturalHeight, placeAbove ? above : below)
-        const width = menu.getBoundingClientRect().width
-        const left = Math.max(edge, Math.min(rect.left, win.innerWidth - width - edge))
-        const top = placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap
-        setPosition({left, top, maxHeight})
-      } catch { /* Wait for Slate's DOM selection to update. */ }
-    }
-    update()
-    doc.addEventListener('scroll', update, true)
-    win.addEventListener('resize', update)
-    return () => { doc.removeEventListener('scroll', update, true); win.removeEventListener('resize', update) }
-  }, [visible, context?.key])
+  let editable: HTMLElement | null = null
+  try { editable = ReactEditor.toDOMNode(editor, editor) } catch { /* The editor has not mounted yet. */ }
+  const caretRect = useCallback(() => ReactEditor.toDOMRange(editor, editor.selection!).getBoundingClientRect(), [editor])
+  const dialogRect = useCallback(() => ReactEditor.toDOMRange(editor, dialog!.range.current!).getBoundingClientRect(), [editor, dialog])
+  const position = useBlockToolbarPosition(editable, popup, { active: visible, getAnchorRect: caretRect, allowResize: true, maxHeight: 280, aboveGap: 12, belowGap: 12,
+    close: () => { if (context) setDismissed(context.key) } })
   useEffect(() => {
     if (!visible) return
     const doc = editorDocument()
@@ -94,12 +72,11 @@ export function SlashPopover() {
   if (dialog) {
     const Dialog = dialog.kind === 'attachment' ? AttachmentInsertDialog : AnchorDialog
     return createPortal(<div className="wysimark-overlay">
-      <span ref={setDialogAnchor} aria-hidden="true" style={{position:'fixed',left:dialog.left,top:dialog.top,width:0,height:dialog.height,pointerEvents:'none'}} />
-      {dialogAnchor && <Dialog dest={dialogAnchor} close={closeDialog} />}
+      {editable && <Dialog dest={editable} getAnchorRect={dialogRect} close={closeDialog} />}
     </div>, ReactEditor.toDOMNode(editor, editor).ownerDocument.body)
   }
   if (!visible) return null
-  return createPortal(<div ref={popup} className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', boxSizing:'border-box', maxWidth:'calc(100vw - 16px)', ...position}} onMouseDown={event => event.preventDefault()}>
+  return createPortal(<div ref={popup} className="wysimark-slash-popover" role="listbox" aria-label={ui("简洁命令菜单")} style={{position:'fixed', boxSizing:'border-box', left:position.left, top:position.top, maxWidth:position.maxWidth, maxHeight:position.maxHeight, visibility:position.visible?'visible':'hidden'}} onMouseDown={event => event.preventDefault()}>
     {matches.map((command, index) => <div key={command.title} role="option" aria-selected={index === selected} className={index === selected ? 'is-selected' : ''} onMouseEnter={() => setChoice({key:context!.key,index})} onClick={() => choose(index)}>{command.title}</div>)}
   </div>, editorDocument().body)
 }

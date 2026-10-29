@@ -4,7 +4,7 @@ import { useSlateStatic } from "slate-react"
 
 import { CloseMask } from "../../../shared-overlays"
 import { stopEvent } from "../../../sink"
-import { positionInside, useAbsoluteReposition } from "../../../use-reposition"
+import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
 
 import * as Icon from "../../icons"
 import { $DialogButton, $DialogHint } from "../../styles/dialog-shared-styles"
@@ -32,26 +32,7 @@ export function FileDialog({
     setDragOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
   }, [])
 
-  const baseStyle = useAbsoluteReposition(
-    { src: ref, dest },
-    ({ src, dest }, viewport) => {
-      return positionInside(
-        src,
-        viewport,
-        {
-          left: dest.left - 16,
-          top: dest.top + dest.height,
-        },
-        { margin: 16 }
-      )
-    }
-  )
-
-  const style = {
-    ...baseStyle,
-    left: baseStyle.left + dragOffset.x,
-    top: baseStyle.top + dragOffset.y,
-  }
+  const style = useAnchoredPanelPosition(dest, ref, { offsetX: dragOffset.x - 16, offsetY: dragOffset.y })
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files == null || e.target.files.length === 0) return

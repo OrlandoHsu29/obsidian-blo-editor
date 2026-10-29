@@ -7,6 +7,8 @@ import { ui } from '../../utils/translations'
 import { isDomElement } from '../../../dom-guards'
 import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, tableCellSelection } from '../cell-selection'
 import type { TableColumnAlign, TableElement } from '../types'
+import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
+import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
 
 type Position = { left: number; top: number }
 type Insertion = Position & { axis: 'row' | 'column'; index: number }
@@ -14,33 +16,16 @@ type Insertion = Position & { axis: 'row' | 'column'; index: number }
 /** Single clicks select cells; explicit editing restores native text selection. */
 export function TableInteractions({ element, readOnly, active }: { element: TableElement; readOnly: boolean; active: boolean }) {
   const editor = useSlateStatic()
-  const [menu, setMenu] = useState<Position | null>(null)
+  const [tableAnchor, setTableAnchor] = useState<HTMLTableElement | null>(null)
   const [insertions, setInsertions] = useState<Insertion[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
   const insertRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
-    if (!active || readOnly) { setMenu(null); return }
-    const table = ReactEditor.toDOMNode(editor, element) as HTMLTableElement
-    const doc = table.ownerDocument, win = doc.defaultView!
-    const place = () => {
-      const rect = table.getBoundingClientRect()
-      const width = menuRef.current?.offsetWidth || 168, height = menuRef.current?.offsetHeight || 38
-      const left = Math.max(8, Math.min(win.innerWidth - width - 8, rect.left + (rect.width - width) / 2))
-      // Reserve a separate row for the column delete button above the handles.
-      let top = rect.top - 20 - 34 - height - 8
-      const toolbar = table.closest('[data-wysimark-shell]')?.querySelector('[data-wysimark-toolbar]')?.getBoundingClientRect()
-      const obstacle = doc.elementFromPoint(left + width / 2, Math.max(0, top + height / 2))
-      if (top < Math.max(8, (toolbar?.bottom ?? 0) + 8) || obstacle?.closest('[data-wysimark-toolbar]')) top = rect.bottom + 8
-      setMenu(rect.bottom < 0 || rect.top > win.innerHeight ? null : { left, top })
-    }
-    place()
-    doc.addEventListener('scroll', place, true)
-    win.addEventListener('resize', place)
-    const observer = new ResizeObserver(place)
-    observer.observe(table)
-    return () => { doc.removeEventListener('scroll', place, true); win.removeEventListener('resize', place); observer.disconnect() }
+    setTableAnchor(active && !readOnly ? ReactEditor.toDOMNode(editor, element) as HTMLTableElement : null)
   }, [active, editor, element, readOnly])
+  // Leave room for the column handles and their delete action above the table.
+  const menu = useBlockToolbarPosition(tableAnchor, menuRef, { active: active && !readOnly, alignment: 'center', aboveGap: 62 })
 
   useEffect(() => {
     if (readOnly) return
@@ -121,6 +106,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if (!target || target.closest('table') !== table) return
       const cell = target.getBoundingClientRect(), row = target.parentElement as HTMLTableRowElement
       const button=handle.getBoundingClientRect()
+      const viewport=editorOverlayViewport(handle)
+      if(button.bottom<=viewport.top||button.top>=viewport.bottom||button.right<=viewport.left||button.left>=viewport.right){hideInsertions();return}
       const right = event.clientX >= button.left + button.width / 2
       const below = event.clientY >= button.top + button.height / 2
       const next: Insertion[] = []
@@ -129,8 +116,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       else next.push({ axis: 'row', index: row.sectionRowIndex + (below ? 1 : 0),
         left: rect.left - 54, top: (below ? cell.bottom : cell.top) - 14 })
       for (const button of next) {
-        button.left = Math.max(4, Math.min(win.innerWidth - 32, button.left))
-        button.top = Math.max(4, Math.min(win.innerHeight - 32, button.top))
+        button.left = Math.max(viewport.left + 4, Math.min(viewport.right - 32, button.left))
+        button.top = Math.max(viewport.top + 4, Math.min(viewport.bottom - 32, button.top))
       }
       if (pending?.length === next.length && pending.every((button, i) =>
         button.axis === next[i].axis && button.index === next[i].index && button.left === next[i].left && button.top === next[i].top)) return
@@ -228,7 +215,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     try { return (ReactEditor.toDOMNode(editor, element) as HTMLElement).ownerDocument } catch { return document }
   }
   return <>
-    {menu && createPortal(<div ref={menuRef} className="wysimark-overlay wysimark-table-actions" data-table-align-menu contentEditable={false} style={{ position: 'fixed', ...menu }}>
+    {active && tableAnchor && createPortal(<div ref={menuRef} className="wysimark-overlay wysimark-block-toolbar wysimark-table-actions" data-table-align-menu contentEditable={false}
+      style={{ position: 'fixed', left: menu.left, top: menu.top, maxWidth: menu.maxWidth, visibility: menu.visible ? 'visible' : 'hidden', pointerEvents: menu.visible ? 'auto' : 'none' }}>
       {(['left', 'center', 'right'] as const).map(value => <button key={value} aria-label={ui(value === 'left' ? '列左对齐' : value === 'center' ? '列居中对齐' : '列右对齐')}
         onMouseDown={event => { event.preventDefault(); event.stopPropagation(); align(value) }}>
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" aria-hidden="true">

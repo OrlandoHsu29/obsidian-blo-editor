@@ -5,8 +5,8 @@ import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useReadOnly, useSelected, useSlateStatic } from 'slate-react'
 import { AnchorDialog } from '../../anchor-plugin/render-element/AnchorDialog'
 import { $Input, $PrimaryButton, $CancelButton } from '../../shared-styles'
-import { $Panel } from '../../shared-overlays'
-import { positionInside, useAbsoluteReposition } from '../../use-reposition'
+import { $Panel, CloseMask } from '../../shared-overlays'
+import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { useLayer } from '../../use-layer'
 import { ui } from '../../utils/translations'
 import type { ImageBlockElement, ImageInlineElement } from '../types'
@@ -15,9 +15,8 @@ import { deleteBlockGroup } from '../../../blocks/model'
 function EditMediaReference({ anchor, target, onSave }: { anchor: HTMLElement; target: string; onSave: (target: string) => void }) {
   const ref = useRef<HTMLDivElement>(null), [value, setValue] = useState(target)
   const dialog = useLayer('dialog')
-  const style = useAbsoluteReposition({ src: ref, destAnchor: anchor, destStartEdge: anchor },
-    ({ src, destAnchor }, viewport) => positionInside(src, viewport, { left: destAnchor.left, top: destAnchor.top + destAnchor.height }, { margin: 16 }))
-  return <$Panel ref={ref} contentEditable={false} style={{ ...style, position: 'absolute', width: '20em', padding: '1em', zIndex: 1000 }}>
+  const style = useAnchoredPanelPosition(anchor, ref)
+  return <><CloseMask close={dialog.close} /><$Panel ref={ref} contentEditable={false} style={{ ...style, width: '20em', padding: '1em' }}>
     <form onSubmit={event => { event.preventDefault(); if (value.trim()) onSave(value.trim()) }}>
       <$Input aria-label={ui('引用文件')} value={value} onChange={event => setValue(event.target.value)} autoFocus />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
@@ -25,7 +24,7 @@ function EditMediaReference({ anchor, target, onSave }: { anchor: HTMLElement; t
         <$PrimaryButton as="button">{ui('修改引用')}</$PrimaryButton>
       </div>
     </form>
-  </$Panel>
+  </$Panel></>
 }
 
 /** Information about a vault source outside the managed attachment directory. */

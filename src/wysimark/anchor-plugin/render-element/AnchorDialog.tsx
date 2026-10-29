@@ -1,6 +1,6 @@
 import { ui } from "../../utils/translations"
 import styled from "@emotion/styled"
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ReactEditor, useSlateStatic } from "slate-react"
 import { Notice } from 'obsidian'
 
@@ -11,7 +11,7 @@ import {
   wikiLinkTarget,
 } from "../../convert/obsidian-links"
 import { useLayer } from "../../use-layer"
-import { positionInside, useAbsoluteReposition } from "../../use-reposition"
+import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { tooltipLabel } from "../../use-tooltip"
 import { AnchorElement } from "../index"
 import { AnchorEditDialog } from "./AnchorEditDialog"
@@ -227,7 +227,6 @@ export function AnchorDialog({
     ? editor.wysimark.renderInternalLinkPreview?.(internalTarget)
     : null
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [visible, setVisible] = useState(true)
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const titlePending = useRef(false)
   const mounted = useRef(true)
@@ -235,64 +234,16 @@ export function AnchorDialog({
   const mediaUrl = remoteMediaUrl(href)
   const canFetchTitle = !!element && !isInternalLink && !mediaUrl && /^https?:\/\//i.test(href)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  const [, refreshGeometry] = useState(0)
-  useLayoutEffect(() => {
-    const doc = destAnchor.ownerDocument
-    const win = doc.defaultView!
-    let frame = 0
-    const refresh = () => {
-      if (!frame) frame = win.requestAnimationFrame(() => {
-        frame = 0
-        refreshGeometry(value => value + 1)
-      })
-    }
-    const observer = new win.ResizeObserver(refresh)
-    // Media resize state lives below the portal's owner, so the information
-    // card must measure its anchor even when its own React props do not change.
-    for (const element of new Set([destAnchor, destStartEdge, ref.current])) {
-      if (element) observer.observe(element)
-    }
-    const visibility = new win.IntersectionObserver(entries => {
-      const entry = entries[0]
-      if (entry) setVisible(!!entry.isIntersecting && !!entry.intersectionRect.width && !!entry.intersectionRect.height)
-    })
-    visibility.observe(destAnchor)
-    // Scroll events from nested editor panes do not reach the window listener
-    // used by useAbsoluteReposition. Capture them on the owner document too.
-    doc.addEventListener('scroll', refresh, true)
-    return () => { doc.removeEventListener('scroll', refresh, true); observer.disconnect(); visibility.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
-  }, [destAnchor, destStartEdge])
 
   const handleDrag = useCallback((deltaX: number, deltaY: number) => {
     setDragOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
   }, [])
 
-  const editorViewport = destAnchor.closest<HTMLElement>('.wysimark-editor-container')
-  const baseStyle = useAbsoluteReposition(
-    { src: ref, destAnchor, destStartEdge, editorViewport: editorViewport ?? destAnchor.ownerDocument.body },
-    ({ src, destAnchor, destStartEdge, editorViewport }, viewport) => {
-      const top = Math.max(viewport.top, editorViewport.top)
-      const bottom = Math.min(viewport.bottom, editorViewport.bottom)
-      const bounds = { ...viewport, top, bottom, height: Math.max(0, bottom - top) }
-      const above = destAnchor.top - (src?.height ?? 0) - 8
-      const position = positionInside(
-        src,
-        bounds,
-        {
-          left: destStartEdge.left + dragOffset.x,
-          top: (above >= bounds.top + 16 ? above : destAnchor.bottom + 8) + dragOffset.y,
-        },
-        { margin: 16 }
-      )
-      return { ...position, maxHeight: Math.max(0, bounds.height - 32), top: Math.max(bounds.top + 16, Math.min(position.top, bounds.bottom - (src?.height ?? 0) - 16)) }
-    }
-  )
-
-  const style = {
-    ...baseStyle,
-    visibility: visible ? 'visible' as const : 'hidden' as const,
-    pointerEvents: visible ? 'auto' as const : 'none' as const,
-  }
+  const anchorRect = useCallback(() => {
+    const rect = destAnchor.getBoundingClientRect(), start = destStartEdge.getBoundingClientRect()
+    return { ...rect.toJSON(), left: start.left, width: rect.right - start.left }
+  }, [destAnchor, destStartEdge])
+  const style = useAnchoredPanelPosition(destAnchor, ref, { getAnchorRect: anchorRect, offsetX: dragOffset.x, offsetY: dragOffset.y })
 
   const removeTooltip = tooltipLabel({ title: ui("删除链接") })
   const openTooltip = tooltipLabel({ title: ui("打开链接") })

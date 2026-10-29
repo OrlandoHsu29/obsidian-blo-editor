@@ -6,6 +6,7 @@ import { $Menu } from '../../toolbar-plugin/styles'
 import { ui } from '../../utils/translations'
 import { languageAliases, LanguageList } from '../languages'
 import { BuiltInLanguage, CodeBlockElement } from '../types'
+import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 
 const $Languages = styled($Menu)`
   position: fixed;
@@ -30,7 +31,7 @@ export function LanguageMenu({ dest, element, close }: {
   const panel = useRef<HTMLDivElement>(null), input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLDivElement>(null), search = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState(''), [selected, setSelected] = useState(0)
-  const [position, setPosition] = useState({ left: -10000, top: 0, maxHeight: 360 })
+  const position = useAnchoredPanelPosition(dest, panel, { close, alignment: 'end', maxHeight: 360 })
   const needle = query.trim().toLowerCase()
   const matches = LanguageList.filter(language => !needle || language.includes(needle) ||
     (language === 'text' && ui('Plain text').toLowerCase().includes(needle)) ||
@@ -41,25 +42,6 @@ export function LanguageMenu({ dest, element, close }: {
     close(); ReactEditor.focus(editor)
   }
   useLayoutEffect(() => { input.current?.focus({ preventScroll: true }) }, [])
-  useLayoutEffect(() => {
-    const menu = panel.current, win = dest.ownerDocument.defaultView!
-    if (!menu) return
-    const update = () => {
-      if (!dest.isConnected) { close(); return }
-      const anchor = dest.getBoundingClientRect(), edge = 8, gap = 8
-      const natural = Math.min(360, (search.current?.offsetHeight || 0) + (list.current?.scrollHeight || 0) + 14)
-      const above = Math.max(0, anchor.top - gap - edge)
-      const below = Math.max(0, win.innerHeight - anchor.bottom - gap - edge)
-      const up = below < natural && above > below, maxHeight = Math.min(natural, up ? above : below)
-      const next = { left: Math.max(edge, Math.min(anchor.right - menu.offsetWidth, win.innerWidth - menu.offsetWidth - edge)),
-        top: up ? anchor.top - gap - maxHeight : anchor.bottom + gap, maxHeight }
-      setPosition(old => old.left === next.left && old.top === next.top && old.maxHeight === next.maxHeight ? old : next)
-    }
-    update()
-    const observer = new ResizeObserver(update); observer.observe(menu); observer.observe(dest)
-    win.addEventListener('resize', update); dest.ownerDocument.addEventListener('scroll', update, true)
-    return () => { observer.disconnect(); win.removeEventListener('resize', update); dest.ownerDocument.removeEventListener('scroll', update, true) }
-  }, [dest, query, close])
   useLayoutEffect(() => {
     list.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
   }, [active, query])

@@ -6,7 +6,7 @@ import { ReactEditor, useSlateStatic } from 'slate-react'
 import { CloseMask } from '../../shared-overlays/components/CloseMask'
 import { t, ui } from '../../utils/translations'
 import { useLayer } from '../../use-layer'
-import { positionInside, useAbsoluteReposition } from '../../use-reposition'
+import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import type { AnchorElement } from '../index'
 import { DraggableHeader } from '../../toolbar-plugin/components/dialog/DraggableHeader'
 import { $AnchorDialog } from '../../toolbar-plugin/styles/anchor-dialog-styles'
@@ -18,7 +18,6 @@ export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEm
 }) {
   const editor = useSlateStatic(), dialog = useLayer('dialog'), id = useId()
   const ref = useRef<HTMLDivElement>(null), location = useRef<PathRef | null>(null)
-  const refreshPosition = useRef<(() => void) | undefined>(undefined)
   const internal = isWikiLinkHref(element.href)
   const parts = splitWikiSpec(internal ? wikiLinkSpecFromHref(element.href) : '')
   const [mode, setMode] = useState(internal ? 'internal' : 'external')
@@ -36,18 +35,7 @@ export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEm
     location.current = Editor.pathRef(editor, ReactEditor.findPath(editor, element))
     return () => { location.current?.unref(); location.current = null }
   }, [editor, element])
-  const style = useAbsoluteReposition({ src: ref, destAnchor, destStartEdge }, ({ src, destAnchor, destStartEdge }, viewport, refresh) => {
-    refreshPosition.current = refresh
-    const position = positionInside(src, viewport, { left: destStartEdge.left + dragOffset.x, top: destAnchor.bottom + 8 + dragOffset.y }, { margin: 16 })
-    return { ...position, top: Math.max(viewport.top + 16, Math.min(position.top, viewport.bottom - (src?.height ?? 0) - 16)) }
-  })
-  useEffect(() => {
-    const panel = ref.current, Observer = panel?.ownerDocument.defaultView?.ResizeObserver
-    if (!panel || !Observer) return
-    const observer = new Observer(() => refreshPosition.current?.())
-    observer.observe(panel)
-    return () => observer.disconnect()
-  }, [])
+  const style = useAnchoredPanelPosition(destAnchor, ref, { offsetX: dragOffset.x, offsetY: dragOffset.y })
   const submit = () => {
     if (!valid || editor.wysimark.readOnly) return
     const at = location.current?.current

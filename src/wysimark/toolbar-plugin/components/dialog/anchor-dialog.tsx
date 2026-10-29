@@ -7,20 +7,21 @@ import { attachmentPreviewUrl } from '../../../../attachment-preview'
 import { fetchLinkTitle } from '../../../../remote-link-title'
 import { isWikiEmbedUrl, normalizeWikiLinkInput, wikiLinkDisplayText, wikiLinkHref, wikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from '../../../convert/obsidian-links'
 import { CloseMask } from '../../../shared-overlays/components/CloseMask'
-import { positionInside, useAbsoluteReposition } from '../../../use-reposition'
+import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
 import { t, ui } from '../../../utils/translations'
 import { $AnchorDialog } from '../../styles'
 import { $DialogHint } from '../../styles/dialog-shared-styles'
 import { DraggableHeader } from './DraggableHeader'
+import type { Rect } from '../../../use-reposition/types'
 
-type DialogProps = { dest: HTMLElement; close: () => void }
+type DialogProps = { dest: HTMLElement; close: () => void; getAnchorRect?: () => Rect }
 type Source = 'url' | 'vault' | 'computer'
 const subscribeNoop = () => () => {}
 
 export function AnchorDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment={false} /> }
 export function AttachmentInsertDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment /> }
 
-function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment: boolean }) {
+function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps & { attachment: boolean }) {
   const editor = useSlateStatic()
   const labelId = useId()
   const ref = useRef<HTMLDivElement>(null)
@@ -28,7 +29,6 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
   const location = useRef<RangeRef | null>(null)
   const active = useRef(true)
   const pending = useRef(false)
-  const refreshPosition = useRef<(() => void) | undefined>(undefined)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const initialText = useMemo(() => editor.selection && !Range.isCollapsed(editor.selection) ? Editor.string(editor, editor.selection) : '', [editor])
   const [source, setSource] = useState<Source>(attachment ? 'vault' : 'url')
@@ -55,19 +55,7 @@ function ReferenceDialog({ dest, close, attachment }: DialogProps & { attachment
 
   const dismiss = () => { active.current = false; close() }
   const handleDrag = useCallback((x: number, y: number) => setDragOffset(previous => ({ x: previous.x + x, y: previous.y + y })), [])
-  const style = useAbsoluteReposition({ src: ref, dest }, ({ src, dest }, viewport, refresh) => {
-    refreshPosition.current = refresh
-    const position = positionInside(src, viewport, { left: dest.left - 12 + dragOffset.x, top: dest.bottom + dragOffset.y }, { margin: 16 })
-    return { ...position, top: Math.max(viewport.top + 16, Math.min(position.top, viewport.bottom - (src?.height ?? 0) - 16)) }
-  })
-  useEffect(() => {
-    const panel = ref.current
-    const Observer = panel?.ownerDocument.defaultView?.ResizeObserver
-    if (!panel || !Observer) return
-    const observer = new Observer(() => refreshPosition.current?.())
-    observer.observe(panel)
-    return () => observer.disconnect()
-  }, [])
+  const style = useAnchoredPanelPosition(dest, ref, { getAnchorRect, offsetX: dragOffset.x - 12, offsetY: dragOffset.y })
 
   const changeSource = (value: Source) => { setSource(value); setError('') }
   const changeTarget = (value: string) => {

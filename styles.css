@@ -451,6 +451,8 @@
 .wysimark-table-settings { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--background-modifier-border); }
 .wysimark-table-settings label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:var(--blo-popup-font-size, var(--font-ui-small)); }
 .wysimark-table-actions { display:flex; gap:2px; padding:4px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-m,8px); background:var(--background-primary); box-shadow:var(--shadow-s); z-index:12; }
+.wysimark-overlay.wysimark-block-toolbar { z-index:12; overflow-x:auto; transition:none; }
+.wysimark-block-toolbar > button { flex-shrink:0; }
 .wysimark-table-actions[data-table-action-axis="row"] { flex-direction:column; }
 .wysimark-overlay.wysimark-table-actions button { display:flex; align-items:center; justify-content:center; width:26px; height:24px; min-height:0; padding:0; border:0; box-shadow:none; color:var(--text-muted); background:transparent; cursor:pointer; }
 .wysimark-overlay.wysimark-table-actions button:hover { color:var(--text-normal); background:var(--background-modifier-hover); }

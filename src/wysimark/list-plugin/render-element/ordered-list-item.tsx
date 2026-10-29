@@ -3,6 +3,7 @@ import { clsx } from "clsx"
 import { useEffect } from "react"
 import { ReactEditor, useReadOnly, useSlate } from "slate-react"
 import { Menu } from 'obsidian'
+import { showAnchoredMenu } from '../../use-reposition/native-menu'
 import { resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
 import { Element, Node } from 'slate'
 
@@ -49,7 +50,7 @@ export function OrderedListItem({
         event.preventDefault();event.stopPropagation();const menu=new Menu()
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))
         menu.addItem(item=>item.setTitle(ui("重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
-        menu.showAtMouseEvent(event.nativeEvent)
+        showAnchoredMenu(menu,event.currentTarget)
       }}>{label}</button>
       <div className="wysimark-list-content">{children}</div>
     </$OrderedListItem>

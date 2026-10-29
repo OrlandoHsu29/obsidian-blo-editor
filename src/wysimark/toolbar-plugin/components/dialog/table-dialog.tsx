@@ -4,7 +4,7 @@ import { ReactEditor, useSlate } from "slate-react"
 import { ui } from '../../../utils/translations'
 
 import { CloseMask } from "../../../shared-overlays"
-import { useAbsoluteReposition } from "../../../use-reposition"
+import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
 
 import {
   $TableDialog,
@@ -32,9 +32,7 @@ export function TableDialog({
     editor.wysimark.setTableDefaults?.(next)
   }
   const ref = useRef<HTMLDivElement>(null)
-  const style = useAbsoluteReposition({ src: ref, dest }, ({ dest }) => {
-    return { left: dest.left - 8, top: dest.top + dest.height }
-  })
+  const style = useAnchoredPanelPosition(dest, ref, { close, offsetX: -8 })
   const rows = createRange(5).map((i) => i + 1)
   const cols = createRange(5).map((i) => i + 1)
 

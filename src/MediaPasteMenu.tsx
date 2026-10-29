@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { Editor, Element, Node } from 'slate'
 import { ReactEditor, useSlateStatic } from 'slate-react'
@@ -11,7 +11,7 @@ import { Notice, setTooltip } from 'obsidian'
 import { Link, ImportEmbed } from './wysimark/toolbar-plugin/icons'
 import { useLayer } from './wysimark/use-layer'
 import { $Panel } from './wysimark/shared-overlays'
-import { positionInside, useFixedReposition } from './wysimark/use-reposition'
+import { useAnchoredPanelPosition } from './wysimark/use-reposition/hooks/use-block-toolbar-position'
 import { ui } from './wysimark/utils/translations'
 import { PageTitleIcon } from './wysimark/anchor-plugin/render-element/icons'
 
@@ -61,7 +61,6 @@ export function MediaLinkActions({ element, close }: { element: AnchorElement; c
 function MediaPasteMenu({ session, host, close }: { session: PasteSession; host: HTMLElement; close: () => void }) {
   const editor = useSlateStatic(), ref = useRef<HTMLDivElement>(null)
   const dismissed = useRef(false)
-  const refreshPosition = useRef<(() => void) | undefined>(undefined)
   const dismiss = () => { if (!dismissed.current) { dismissed.current = true; session.dispose(); close() } }
   useEffect(() => {
     const initial = ref.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]') ?? ref.current?.querySelector('button')
@@ -83,26 +82,12 @@ function MediaPasteMenu({ session, host, close }: { session: PasteSession; host:
       session.dispose()
     }
   }, [session])
-  const style = useFixedReposition({ src: ref, host }, ({ src, host: fallback }, viewport, refresh) => {
-    refreshPosition.current = refresh
-    let anchor = fallback
-    if (session.path.current) try {
-      const dom = ReactEditor.toDOMNode(editor, Editor.node(editor, session.path.current)[0])
-      const rects = dom.getClientRects()
-      anchor = rects[rects.length - 1] || dom.getBoundingClientRect()
-    } catch { /* The pasted link's DOM may still be mounting. */ }
-    const below = anchor.bottom + 8
-    const top = below + (src?.height ?? 0) <= viewport.bottom - 16 ? below : anchor.top - (src?.height ?? 0) - 8
-    const position = positionInside(src, viewport, { left: anchor.right - (src?.width ?? 0), top }, { margin: 16 })
-    return { ...position, position: 'fixed' as const, top: Math.max(viewport.top + 16, Math.min(position.top, viewport.bottom - (src?.height ?? 0) - 16)) }
-  })
-  useEffect(() => {
-    const panel = ref.current, Observer = panel?.ownerDocument.defaultView?.ResizeObserver
-    if (!panel || !Observer) return
-    const observer = new Observer(() => refreshPosition.current?.())
-    observer.observe(panel)
-    return () => observer.disconnect()
-  }, [])
+  const anchorRect = useCallback(() => {
+    if (!session.path.current) return host.getBoundingClientRect()
+    const dom = ReactEditor.toDOMNode(editor, Editor.node(editor, session.path.current)[0]), rects = dom.getClientRects()
+    return rects[rects.length - 1] || dom.getBoundingClientRect()
+  }, [editor, session, host])
+  const style = useAnchoredPanelPosition(host, ref, { getAnchorRect: anchorRect, alignment: 'end', close: dismiss })
   return <$Panel ref={ref} style={style} className="wysimark-media-paste-menu" role="menu"
       onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) dismiss() }}
       onKeyDown={event => {

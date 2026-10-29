@@ -1,7 +1,7 @@
 import { useRef } from "react"
 import { useSlateStatic } from "slate-react"
 
-import { useAbsoluteReposition } from "../../../use-reposition"
+import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
 
 import { $Menu, $MenuDivider } from "../../../toolbar-plugin/styles"
 import { MenuItemData } from "../../types"
@@ -19,9 +19,7 @@ export function Menu({
 }) {
   const editor = useSlateStatic()
   const ref = useRef<HTMLDivElement>(null)
-  const style = useAbsoluteReposition({ src: ref, dest }, ({ dest }) => {
-    return { left: dest.left - 8, top: dest.top + dest.height }
-  })
+  const style = useAnchoredPanelPosition(dest, ref, { close, offsetX: -8 })
 
   return (
     <>

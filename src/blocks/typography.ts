@@ -4,11 +4,11 @@ import { mappedTextColors } from './colors'
 import { isStructuredBlock } from './structured-block'
 
 export function blockSpacing(node:Node):{before:number;after:number} {
-  if(Element.isElement(node)&&node.__subtitle)return {before:1.2,after:.85}
+  if(Element.isElement(node)&&node.__subtitle)return {before:1.25,after:.95}
   if(isListBlock(node)&&'blockChildren' in node&&node.blockChildren&&Element.isElement(node.children[0])&&node.children[0].type==='heading')return blockSpacing(node.children[0])
   if(Element.isElement(node)&&node.type==='heading')return [
-    {before:1.55,after:.8},{before:1.3,after:.7},{before:1.1,after:.65},
-    {before:.95,after:.6},{before:1.2,after:.85},{before:.8,after:.55},
+    {before:2.25,after:1.35},{before:1.95,after:1.1},{before:1.7,after:.9},
+    {before:1.5,after:.75},{before:1.25,after:.95},{before:1,after:.75},
   ][node.level-1]
   if(isListBlock(node))return {before:.35,after:.35}
   if(Element.isElement(node)&&node.type==='block-quote')return {before:.85,after:.85}

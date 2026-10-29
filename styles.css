@@ -65,7 +65,7 @@
 .wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > li > button.wysimark-list-number { anchor-name:--blo-list-number; }
 .wysimark-container .wysimark-block[data-block-type="ordered-list-item"] > button.wysimark-block-handle { position-anchor:--blo-list-number; left:calc(anchor(left) - 31px); }
 .wysimark-editor li[data-list-heading-level] { --wysimark-list-number-weight:var(--font-bold,700); }
-.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"]) > button.wysimark-list-number { margin-right:3px; }
+.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"]) > button.wysimark-list-number { margin-right:6px; }
 
 .wysimark-editor li[data-list-heading-level="1"] { --wysimark-list-number-size:1.75em; --wysimark-list-number-line:1.4; }
 .wysimark-editor li[data-list-heading-level="2"] { --wysimark-list-number-size:1.5em; --wysimark-list-number-line:1.45; }

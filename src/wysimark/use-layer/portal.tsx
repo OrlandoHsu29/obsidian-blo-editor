@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom"
+import { ReactEditor, useSlateStatic } from 'slate-react'
 
 /**
  * Portal to the active document body.
@@ -10,6 +11,9 @@ import { createPortal } from "react-dom"
  * any styling from `<html>` and `<body>` element.
  */
 export function Portal({ children }: { children: React.ReactNode }) {
-  if (typeof activeDocument === "undefined" || !activeDocument.body) return null
-  return createPortal(<div className="wysimark-overlay">{children}</div>, activeDocument.body)
+  const editor = useSlateStatic()
+  let doc: Document | undefined
+  try { doc = ReactEditor.toDOMNode(editor, editor).ownerDocument } catch { if (typeof activeDocument !== 'undefined') doc = activeDocument }
+  if (!doc?.body) return null
+  return createPortal(<div className="wysimark-overlay">{children}</div>, doc.body)
 }

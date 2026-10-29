@@ -19,6 +19,14 @@ export function editorOverlayViewport(anchor: HTMLElement, avoidChrome = true): 
     viewport.top = Math.max(viewport.top, clip.top + scroller.clientTop * y)
     viewport.bottom = Math.min(viewport.bottom, clip.top + (scroller.clientTop + scroller.clientHeight) * y)
   }
+  const tableScroll = anchor.closest<HTMLElement>('.blo-table-frame[data-overflow="true"] .blo-table-scroll')
+  if (tableScroll) {
+    const clip = tableScroll.getBoundingClientRect()
+    const frame = tableScroll.parentElement!
+    const left = frame.dataset.moreLeft === 'true' ? frame.getBoundingClientRect().left : clip.left
+    viewport.left = Math.max(viewport.left, left)
+    viewport.right = Math.min(viewport.right, clip.right)
+  }
   if (avoidChrome) {
     const root = anchor.closest('.wysimark-container')
     for (const obstacle of [root?.querySelector<HTMLElement>('[data-wysimark-toolbar]:not([data-wysimark-toolbar="image"])'), root?.querySelector<HTMLElement>('.wysimark-find-panel:not([hidden])')]) {

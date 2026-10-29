@@ -11,6 +11,7 @@ import { TableContext, TableDeletePreview } from "./table-context"
 import { useBlockSelection } from '../../../blocks/use-block-selection'
 import { getTableAxisSelection, subscribeTableAxisSelection, tableCellSelection } from '../cell-selection'
 import { TableInteractions } from './table-interactions'
+import { useTableOverflow } from './use-table-overflow'
 
 export function Table({
   element,
@@ -18,6 +19,7 @@ export function Table({
   children,
 }: ConstrainedRenderElementProps<TableElement>) {
   const editor = useSlateStatic()
+  const frame = useTableOverflow(element)
   const isSelected = useSelected()
   const readOnly=useReadOnly()
   const blockSelected=useBlockSelection(element)
@@ -56,9 +58,13 @@ export function Table({
   }, [])
   return (
     <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
-      <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}>
-        <tbody>{children}</tbody>
-      </$Table>
+      <div ref={frame} className="blo-table-frame">
+        <div className="blo-table-scroll">
+          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}>
+            <tbody>{children}</tbody>
+          </$Table>
+        </div>
+      </div>
       <TableInteractions element={element} readOnly={readOnly} active={isSelected||blockSelected} />
     </TableContext.Provider>
   )

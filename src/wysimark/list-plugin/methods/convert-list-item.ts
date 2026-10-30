@@ -1,6 +1,6 @@
-import { Editor, Element } from "slate"
+import { Editor } from "slate"
 import { selectionHasHeading } from '../../../blocks/heading-policy'
-import { blockDepth, defaultOrderedNumbering } from '../../../blocks/model'
+import { blockDepth } from '../../../blocks/model'
 import { convertContainingList } from '../../../blocks/list-container'
 
 import {
@@ -11,16 +11,13 @@ import {
 
 export function convertOrderedList(editor: Editor, allowToggle: boolean) {
   if(convertContainingList(editor,'ordered-list-item',allowToggle))return true
-  const entries=[...Editor.nodes(editor,{match:node=>Element.isElement(node)&&editor.convertElement.isConvertibleElement(node),mode:'highest'})]
-  const converting=new Set(entries.map(([node])=>node))
-  const modes=new Map(entries.map(([node,path])=>[node,defaultOrderedNumbering(editor,path,converting)]))
   return editor.convertElement.convertElements<OrderedListItemElement>(
     (element) => element.type === "ordered-list-item",
     (element) => {
       return {
         type: "ordered-list-item",
         depth: blockDepth(element),
-        __numbering: modes.get(element) || 'continue',
+        __numbering: 'continue',
       }
     },
     allowToggle

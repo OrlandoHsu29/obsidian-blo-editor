@@ -107,10 +107,6 @@ export function resolveOrderedNumbers(nodes: Node[]) {
   }
   return {numbers,numberLabels}
 }
-/** Intervening content does not opt a newly created list out of continuation. */
-export function defaultOrderedNumbering(editor: Editor, path: Path, converting?: ReadonlySet<Node>): 'continue'|'restart' {
-  return 'continue'
-}
 function batch(editor: Editor, run: ()=>void) {
   const apply=()=>Editor.withoutNormalizing(editor,run)
   if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,apply);else apply()

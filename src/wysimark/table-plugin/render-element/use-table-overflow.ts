@@ -13,6 +13,14 @@ export function useTableOverflow(element: TableElement) {
       host.dataset.moreLeft = String(scroll.scrollLeft > 2)
       host.dataset.moreRight = String(scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 2)
     }
+    const hoverScrollbar = (event: PointerEvent) => {
+      const bounds = scroll.getBoundingClientRect()
+      const hovering = host.dataset.overflow === 'true' &&
+        event.clientY >= bounds.top + scroll.clientTop + scroll.clientHeight &&
+        event.clientY < bounds.bottom && event.clientX >= host.getBoundingClientRect().left
+      scroll.dataset.scrollbarHover = String(hovering)
+    }
+    const leaveScrollbar = () => { delete scroll.dataset.scrollbarHover }
     const measure = () => {
       scheduled = 0
       if (!visible || !host.isConnected || host.clientWidth < 1) return
@@ -67,9 +75,12 @@ export function useTableOverflow(element: TableElement) {
     }, { root: host.closest('.wysimark-editor-container'), rootMargin: '200px' })
     intersection.observe(host)
     scroll.addEventListener('scroll', hint, { passive: true })
+    scroll.addEventListener('pointermove', hoverScrollbar, { passive: true })
+    scroll.addEventListener('pointerleave', leaveScrollbar)
     return () => {
       refresh.current = () => {}; win.cancelAnimationFrame(scheduled)
       resize.disconnect(); intersection.disconnect(); scroll.removeEventListener('scroll', hint)
+      scroll.removeEventListener('pointermove', hoverScrollbar); scroll.removeEventListener('pointerleave', leaveScrollbar)
     }
   }, [])
   useLayoutEffect(() => { refresh.current() }, [element])

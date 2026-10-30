@@ -58,7 +58,7 @@ export function Table({
   }, [])
   return (
     <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
-      <div ref={frame} className="blo-table-frame">
+      <div ref={frame} className="blo-table-frame" data-scrollbar-active={isSelected||blockSelected||!!cells||undefined}>
         <div className="blo-table-scroll">
           <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}>
             <tbody>{children}</tbody>

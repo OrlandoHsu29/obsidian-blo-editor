@@ -225,6 +225,7 @@ export const uiMessages = {
   "HTML 已导出": { zh: "HTML 已导出", en: "HTML exported" },
   "笔记导出失败：": { zh: "笔记导出失败：", en: "Note export failed: " },
   "不能覆盖原笔记，请选择其他文件名": { zh: "不能覆盖原笔记，请选择其他文件名", en: "Choose a different filename to avoid overwriting the original note" },
+  "全选": { zh: "全选", en: "Select all" },
   "纸张": { zh: "纸张", en: "Paper size" },
   "横向": { zh: "横向", en: "Landscape" },
   "页边距（毫米）": { zh: "页边距（毫米）", en: "Margins (mm)" },

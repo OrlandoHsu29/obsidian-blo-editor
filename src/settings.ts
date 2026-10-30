@@ -75,9 +75,37 @@ export class BloSettingsTab extends PluginSettingTab {
     const scopeGroup = group(ui('编辑范围'))
     const attachmentGroup = group(ui('附件'))
     const integrationGroup = group(ui('扩展功能'))
-    const toolbarDescription = toolbarGroup.createEl('p', { cls: 'setting-item-description blo-toolbar-description', text: ui('勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。'), attr: { id: 'blo-toolbar-config-description' } })
-    toolbarGroup.before(toolbarDescription)
+    const toolbarHeader = toolbarGroup.createDiv({ cls: 'blo-toolbar-header' })
+    toolbarHeader.createEl('p', { cls: 'setting-item-description blo-toolbar-description', text: ui('勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。'), attr: { id: 'blo-toolbar-config-description' } })
+    const selectAllLabel = toolbarHeader.createEl('label', { cls: 'blo-toolbar-select-all' })
+    const selectAll = selectAllLabel.createEl('input', { type: 'checkbox' })
+    selectAllLabel.createSpan({ text: ui('全选') })
+    toolbarGroup.before(toolbarHeader)
     const toolbarRow = toolbarGroup.createDiv({ cls: 'blo-toolbar-settings', attr: { role: 'group', 'aria-describedby': 'blo-toolbar-config-description' } })
+    const controls = new Map<string, HTMLInputElement>()
+    const syncSelectAll = () => {
+      const optional = [...controls.values()].filter(control => !control.disabled)
+      const checked = optional.filter(control => control.checked).length
+      selectAll.checked = optional.length > 0 && checked === optional.length
+      selectAll.indeterminate = checked > 0 && checked < optional.length
+      selectAll.disabled = optional.length === 0
+    }
+    const updateHidden = (hidden: Set<string>) => {
+      plugin.settings.hiddenToolbarButtons = [...hidden]
+      plugin.toolbarPreferences.setHidden(plugin.settings.hiddenToolbarButtons)
+      for (const [id, control] of controls) control.checked = control.disabled || !hidden.has(id)
+      syncSelectAll()
+      void plugin.saveData(plugin.settings)
+    }
+    selectAll.addEventListener('change', () => {
+      const hidden = new Set(plugin.toolbarPreferences.getSnapshot())
+      for (const [id, control] of controls) {
+        if (control.disabled) continue
+        if (selectAll.checked) hidden.delete(id)
+        else hidden.add(id)
+      }
+      updateHidden(hidden)
+    })
     const icons: ReturnType<typeof createPortal>[] = []
     toolbarGroups.forEach((entries, index) => {
       if (index) toolbarRow.createDiv({ cls: 'blo-toolbar-settings-divider', attr: { 'aria-hidden': 'true' } })
@@ -88,16 +116,16 @@ export class BloSettingsTab extends PluginSettingTab {
         const checkbox = label.createEl('input', { type: 'checkbox', attr: { 'aria-label': entry.item.title, 'data-toolbar-id': entry.id } })
         checkbox.disabled = isFixedToolbarButton(entry.id)
         checkbox.checked = checkbox.disabled || !plugin.toolbarPreferences.getSnapshot().includes(entry.id)
+        controls.set(entry.id, checkbox)
         checkbox.addEventListener('change', () => {
           const hidden = new Set(plugin.toolbarPreferences.getSnapshot())
           if (checkbox.checked) hidden.delete(entry.id)
           else hidden.add(entry.id)
-          plugin.settings.hiddenToolbarButtons = [...hidden]
-          plugin.toolbarPreferences.setHidden(plugin.settings.hiddenToolbarButtons)
-          void plugin.saveData(plugin.settings)
+          updateHidden(hidden)
         })
       }
     })
+    syncSelectAll()
     this.iconRoot = createRoot(toolbarGroup.createDiv({ attr: { hidden: 'true' } }))
     this.iconRoot.render(icons)
     new Setting(editorGroup)

@@ -2,9 +2,11 @@
 /* Align leading root groups without expanding skipped native heading levels. */
 .workspace-leaf-content[data-type="outline"] { --blo-outline-indent-step:calc(var(--nav-item-children-margin-start,var(--nav-item-children-margin-left,12px)) + var(--nav-item-children-padding-start,var(--nav-item-children-padding-left,4px)) + var(--nav-indentation-guide-width,1px)); }
 .workspace-leaf-content[data-type="outline"] [data-blo-outline-root] { margin-inline-start:calc(var(--blo-outline-root-offset) * var(--blo-outline-indent-step)); }
-.blo-settings .setting-item-heading { padding-inline:0; margin-inline:0; }
-.blo-settings .setting-group:has(> .blo-toolbar-description) > .setting-item-heading { margin-bottom:4px; }
-.blo-toolbar-description { margin:0 0 12px; padding-top:0; }
+.blo-settings .setting-group:has(> .blo-toolbar-header) > .setting-item-heading { margin-bottom:4px; }
+.blo-toolbar-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; padding-inline-start:16px; }
+.blo-toolbar-description { flex:1; min-width:0; margin:0; padding-top:0; }
+.blo-toolbar-select-all { display:flex; align-items:center; gap:6px; flex-shrink:0; margin-right:12px; font-size:var(--font-ui-small); white-space:nowrap; cursor:pointer; }
+.blo-toolbar-select-all input { margin:0; cursor:pointer; }
 .blo-toolbar-settings { display:flex; align-items:stretch; gap:4px; overflow-x:auto; padding:8px 4px 12px; max-width:100%; }
 .blo-toolbar-setting { display:flex; flex:0 0 34px; flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:8px 2px; border-radius:6px; cursor:pointer; }
 .blo-toolbar-setting:hover { background:var(--background-modifier-hover); }

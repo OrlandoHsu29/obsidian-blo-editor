@@ -289,8 +289,6 @@ function KnowledgeSpaceEditorComponent({
   onChange,
   plugin,
   file,
-  fileName,
-  onReload,
   onImageSave,
   connectEditor,
   readOnly,
@@ -300,8 +298,6 @@ function KnowledgeSpaceEditorComponent({
   onChange: (markdown: string) => void;
   plugin: BloEditorPlugin;
   file: TFile;
-  fileName: string;
-  onReload: () => void;
   onImageSave?: OnImageSaveHandler;
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
@@ -438,7 +434,6 @@ function KnowledgeSpaceContainer({
   openingFileName,
   content,
   onChange,
-  onReload,
   onImageSave,
   reloadKey,
   plugin,
@@ -451,7 +446,6 @@ function KnowledgeSpaceContainer({
   openingFileName?: string;
   content: string;
   onChange: (markdown: string) => void;
-  onReload: () => void;
   onImageSave?: OnImageSaveHandler;
   reloadKey: number;
   plugin: BloEditorPlugin;
@@ -471,8 +465,6 @@ function KnowledgeSpaceContainer({
       plugin={plugin}
       connectEditor={connectEditor}
       file={file}
-      fileName={file.basename}
-      onReload={onReload}
       onImageSave={onImageSave}
       readOnly={readOnly}
       memoPanel={memoPanel}
@@ -963,7 +955,6 @@ export class BloView extends FileView {
         openingFileName={this.openingFile?.basename}
         content={this.bodyContent}  // Pass only body content (without frontmatter)
         onChange={this.handleChange}
-        onReload={this.handleReload}
         onImageSave={this.handleImageSave}
         reloadKey={this.reloadKey}
         plugin={this.plugin}

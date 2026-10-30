@@ -1,10 +1,10 @@
 import { useCallback, useContext } from "react"
 import { Editor } from "slate"
-import { ReactEditor } from "slate-react"
 
 import { $MenuItem } from "../../../toolbar-plugin/styles"
 import { LayerContext, useLayer } from "../../../use-layer"
 import { MenuItemData } from "../../types"
+import { runMenuAction } from '../../menu-action'
 import { formatHotkey } from "./formatHotkey"
 
 export function MenuItem({
@@ -20,20 +20,20 @@ export function MenuItem({
 }) {
   const layer = useContext(LayerContext)
   const menuLayer = useLayer(layer?.type || 'menu')
+  const disabled = !!item.disabled?.(editor)
 
   const onClick = useCallback(() => {
+    if (disabled) return
     if (item.Component) {
       const Component = item.Component
       menuLayer.open(() => <Component dest={dest} close={menuLayer.close} />)
     } else if (item.action) {
-      item.action(editor)
-      ReactEditor.focus(editor)
-      close()
+      if (runMenuAction(item, editor)) close()
     }
-  }, [editor, item])
+  }, [editor, item, disabled, dest, close, menuLayer])
   return (
     <>
-      <$MenuItem onClick={onClick}>
+      <$MenuItem onClick={onClick} aria-disabled={disabled || undefined} style={disabled ? { opacity: 0.45, cursor: 'default' } : undefined}>
         <div className="--icon">
           <item.icon />
         </div>

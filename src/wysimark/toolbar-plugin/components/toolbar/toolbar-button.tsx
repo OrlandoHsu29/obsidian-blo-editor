@@ -1,9 +1,10 @@
 import { clsx } from "clsx"
 import { useCallback, useRef } from "react"
 import type { FunctionComponent, RefObject } from 'react'
-import { ReactEditor, useSlate, useSlateStatic } from "slate-react"
+import { useSlate, useSlateStatic } from "slate-react"
 
 import { formatHotkey, Menu, MenuItemData } from "../../../shared-overlays"
+import { runMenuAction } from '../../../shared-overlays/menu-action'
 import { useLayer } from "../../../use-layer"
 import { tooltipLabel } from "../../../use-tooltip"
 import { r } from "../../../utils/translations"
@@ -56,8 +57,7 @@ export function ToolbarButton({
   const onClick = useCallback(() => {
     if (isDisabled) return
     if (item.action) {
-      item.action(staticEditor)
-      if (item.focusEditor !== false) ReactEditor.focus(staticEditor)
+      runMenuAction(item, staticEditor)
       if (inOverflow) { menuLayer.close(); closeOverflow?.() }
       return
     }

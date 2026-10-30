@@ -19,7 +19,9 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
   const input = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const preview = useRef<HTMLSpanElement>(null), changed = useRef(false)
   const [failed, setFailed] = useState(false)
+  const [source, setSource] = useState(element.latex)
   const display = element.type === "math-block"
+  useLayoutEffect(() => { setSource(element.latex) }, [element.latex])
   useLayoutEffect(() => {
     if (!editing) return
     changed.current = false
@@ -56,11 +58,13 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
     if (moveCaret) ReactEditor.focus(editor)
   }
   const sourceProps = {
-    value: element.latex,
+    value: source,
     'aria-label': ui('LaTeX 公式源码'),
     spellCheck: false,
     onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const run = () => Transforms.setNodes(editor, { latex: event.target.value }, { at: ReactEditor.findPath(editor, element) })
+      const latex = event.target.value
+      setSource(latex)
+      const run = () => Transforms.setNodes(editor, { latex }, { at: ReactEditor.findPath(editor, element) })
       if (changed.current) HistoryEditor.withMerging(editor, run)
       else HistoryEditor.withNewBatch(editor, run)
       changed.current = true

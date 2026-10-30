@@ -25,8 +25,7 @@ import { handleMediaTransfer, handleVaultMediaTransfer } from './media-paste';
 import { normalizeVaultLinkInput, resolveVaultReference, vaultMediaUrl, vaultTransferReferences } from './vault-media';
 import { watchRemoteImages } from './remote-images';
 import { downloadAttachment } from './remote-attachments';
-import { PdfExportModal } from './pdf-export';
-import type { Menu } from 'obsidian';
+import { NoteExportModal } from './note-export/modal';
 import { CacheProvider } from '@emotion/react';
 
 export const VIEW_TYPE_BLO = 'blo-view';
@@ -554,10 +553,10 @@ export class BloView extends FileView {
     this.plugin = plugin;
     this.modeAction = this.addAction('book-open', ui("切换到阅读模式（Ctrl+Alt+P）"), () => { void this.toggleReading(); });
     this.addAction('refresh-cw', ui("从文件重新载入"), () => { void this.reloadFile(); });
-    const pdfAction = this.addAction('file-down', ui('导出 PDF'), () => {
-      if (this.currentFile && this.editor) new PdfExportModal(this).open();
+    const exportAction = this.addAction('file-output', ui('导出笔记'), () => {
+      if (this.currentFile && this.editor) new NoteExportModal(this).open();
     });
-    this.modeAction.after(pdfAction);
+    this.modeAction.after(exportAction);
     this.scope = new Scope(this.app.scope);
     this.scope.register(null, null, (event) => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && ['f','h'].includes(event.key.toLowerCase())) {
@@ -706,10 +705,6 @@ export class BloView extends FileView {
   /** Glimmer Memo asks the hosted view to flush before it hides or closes the popout. */
   async save(): Promise<void> { await this.saveFile(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
-  onPaneMenu(menu: Menu, source: string) {
-    super.onPaneMenu(menu, source);
-    if (this.currentFile) menu.addItem(item => item.setTitle(ui('导出 PDF')).setIcon('file-down').onClick(() => new PdfExportModal(this).open()));
-  }
   async loadNote(file: TFile) { await this.leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path }, active: true }); }
   getMode() { return this.readOnly ? 'preview' : 'source'; }
   async setState(state: { file?: string; mode?: string }, result: { history: boolean }) {
@@ -849,6 +844,8 @@ export class BloView extends FileView {
 
     this.renderEditor();
   }
+
+  getFrontmatter(): string { return this.frontmatter; }
 
   async saveFile(): Promise<void> {
     if (this.editor && !this.readOnly) {

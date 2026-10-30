@@ -14,7 +14,7 @@ import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
-import { PdfExportModal } from './pdf-export';
+import { NoteExportModal } from './note-export/modal';
 import { ToolbarPreferences } from './toolbar-preferences';
 import { LinkTitlePreferences } from './link-title-preferences';
 import { parseBlockDocument } from './blocks/persistence';
@@ -115,14 +115,15 @@ export default class BloEditorPlugin extends Plugin {
     this.registerView(VIEW_TYPE_BLO, (leaf) => new BloView(leaf, this));
     this.registerEvent(this.app.workspace.on('file-menu', (menu, file, source) => {
       if (!source.includes('file-explorer') || !(file instanceof TFile) || file.extension !== 'md' || isDrawingFile(this.app, file)) return;
-      menu.addItem(item => item.setTitle(ui('导出 PDF')).setIcon('file-down').setSection('action').onClick(() => {
-        void this.exportFileToPdf(file).catch(error => new Notice(ui('PDF 导出失败：') + String(error).slice(0, 300)));
+      menu.addItem(item => item.setTitle(ui('导出笔记')).setIcon('file-output').setSection('action').onClick(() => {
+        void this.exportFile(file).catch(error => new Notice(ui('笔记导出失败：') + String(error).slice(0, 300)));
       }));
     }));
-    this.addCommand({ id: 'export-pdf', name: ui('导出 PDF'), checkCallback: checking => {
+    // Retain the command ID so existing hotkeys open the upgraded export dialog.
+    this.addCommand({ id: 'export-pdf', name: ui('导出笔记'), checkCallback: checking => {
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!view?.editor || !view.currentFile) return false;
-      if (!checking) new PdfExportModal(view).open();
+      if (!checking) new NoteExportModal(view).open();
       return true;
     }});
     this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
@@ -395,13 +396,13 @@ export default class BloEditorPlugin extends Plugin {
     }
   }
   isPdfExportLeaf(leaf: WorkspaceLeaf) { return this.pdfExportLeaves.has(leaf); }
-  private async exportFileToPdf(file: TFile) {
+  private async exportFile(file: TFile) {
     const workspace = this.app.workspace;
     const existing = workspace.getLeavesOfType(VIEW_TYPE_BLO).map(leaf => leaf.view)
       .find((view): view is BloView => view instanceof BloView && view.currentFile === file && !!view.editor);
     if (existing) {
       await workspace.revealLeaf(existing.leaf);
-      new PdfExportModal(existing).open();
+      new NoteExportModal(existing).open();
       return;
     }
     for (const leaf of workspace.getLeavesOfType('markdown')) {
@@ -427,7 +428,7 @@ export default class BloEditorPlugin extends Plugin {
       }
       const view = leaf.view;
       if (!(view instanceof BloView) || view.currentFile !== file || !view.editor) throw new Error(ui('编辑器尚未就绪，请稍后重试'));
-      new PdfExportModal(view, cleanup).open();
+      new NoteExportModal(view, cleanup).open();
     } catch (error) { cleanup(); throw error; }
   }
   async enforceEditingScope(onlyLeaf?: WorkspaceLeaf): Promise<void> {

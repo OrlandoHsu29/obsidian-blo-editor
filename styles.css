@@ -446,6 +446,30 @@
     margin-bottom: 0.5em;
 }
 
+/* Note export uses Obsidian's native modal, buttons and theme colors. */
+.modal.blo-note-export-modal { width:860px; max-width:calc(100vw - 40px); container:blo-note-export / inline-size; }
+.blo-note-export-modal .modal-content { overflow-y:auto; }
+.blo-export-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:4px 0 8px; }
+.blo-export-card { display:flex; flex-direction:column; min-width:0; padding:20px; border:1px solid var(--background-modifier-border); border-radius:var(--radius-l,12px); background:var(--background-primary); }
+.blo-export-card-main { display:grid; grid-template-columns:72px minmax(0,1fr); gap:18px; align-items:stretch; margin-bottom:12px; flex-shrink:0; }
+.blo-export-card-details { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.blo-export-card-icon { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1; align-self:start; border-radius:var(--radius-m); background:var(--background-secondary); color:var(--text-muted); }
+.blo-export-card-icon svg { width:30px; height:30px; }
+.blo-export-card h3 { margin:0; font-size:var(--font-ui-medium); font-weight:var(--font-semibold,600); color:var(--text-normal); overflow-wrap:anywhere; }
+.blo-export-card p { margin:0; font-size:var(--font-ui-small); line-height:1.6; color:var(--text-muted); }
+.blo-export-card .blo-export-card-description { margin-top:auto; line-height:1.5; overflow-wrap:anywhere; }
+.blo-export-card-actions { display:flex; flex-direction:column; gap:8px; margin-top:auto; flex-shrink:0; }
+.blo-export-card-actions button { width:100%; min-height:32px; white-space:normal; }
+@container blo-note-export (max-width:650px) {
+  .blo-export-cards { grid-template-columns:1fr; }
+  .blo-export-card { padding:16px; }
+  .blo-export-card-actions { flex-direction:row; }
+  .blo-export-card-actions button { flex:1; }
+}
+@container blo-note-export (max-width:400px) {
+  .blo-export-card-main { grid-template-columns:64px minmax(0,1fr); gap:12px; }
+}
+
 /* Tables */
 .blo-table-frame { --blo-table-edge-color:var(--background-primary); position:relative; min-width:0; max-width:100%; }
 .blo-table-frame:has(table[data-block-selected="true"]) { --blo-table-edge-color:var(--interactive-accent); }

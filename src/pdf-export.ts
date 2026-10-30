@@ -20,6 +20,8 @@ body{padding:0!important;margin:0!important;font-family:var(--font-text);font-si
 .wysimark-editor :is(tr,[data-blo-image],[data-blo-drawing]){break-inside:avoid}
 .wysimark-editor :is(table,pre,[data-wysimark-code-block]){max-width:100%!important;width:auto;overflow:visible!important}
 .wysimark-editor table{width:100%!important;table-layout:fixed!important}
+.blo-table-frame,.blo-table-scroll{width:auto!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important;clip-path:none!important}
+.blo-table-frame::before,.blo-table-frame::after{display:none!important}
 .wysimark-editor :is(td,th){overflow-wrap:anywhere!important;min-width:0!important}
 .wysimark-editor :is(pre,[data-wysimark-code-scroller],[data-wysimark-code-lines]){white-space:pre-wrap!important;overflow-wrap:anywhere!important;overflow:visible!important;max-height:none!important}
 .wysimark-editor [data-wysimark-code-lines]>div{white-space:pre-wrap!important;height:auto!important;min-height:1.5em}

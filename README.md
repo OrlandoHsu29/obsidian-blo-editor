@@ -8,9 +8,16 @@
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
+<details>
+<summary>Preview in light and dark mode</summary>
+
 <p align="center">
-  <img src="assets/preview-light.png" alt="Blo Editor light mode with headings, lists, tables, code, and the native outline using a public sample note" width="1200">
+  <img src="assets/preview-light.png" alt="Blo Editor light mode with headings, lists, tables, and code in a public demo note" width="1200">
 </p>
+
+![Public demo note in dark mode](assets/preview-dark.png)
+
+</details>
 
 Edit content directly and organize ideas by dragging and indenting blocks.
 Notes stay in Markdown, with automatic saving, rich copy/paste, and inline drawings.
@@ -19,10 +26,22 @@ Insert inline LaTeX with `Ctrl/Cmd+Shift+M`, the formula toolbar button, or `/ma
 Type the source in place, leave the field to render it, and double-click to edit.
 Formulas use Obsidian's built-in MathJax and save as `$...$`; no extra rendering plugin is required.
 
-Export the rendered note through the file explorer context menu, tab menu, or **Blo Editor: Export PDF** command,
-without another export plugin. Choose A4, A3, or Letter, orientation, margins, title,
-and page numbers. PDFs use a light background and preserve code highlighting,
-tables, images, and drawing previews.
+Use the top-right **Export note** button, file explorer context menu, or
+**Blo Editor: Export note** command to choose a format without another export plugin:
+
+- **Native Markdown:** standard syntax and local image files for editors such as Typora and Obsidian.
+- **Rich text for cloud docs:** copy indentation, colors, and tables for pasting into Yuque, Feishu, or Notion.
+- **HTML:** a browser-ready page with embedded local images.
+- **PDF:** preserve the reading layout, with paper, orientation, margins, title, and page-number options.
+
+Markdown simplifies Blo-specific formatting; cloud editors determine image and formula support.
+
+<details>
+<summary>View note export</summary>
+
+![Markdown, rich-text copy, HTML, and PDF choices](assets/feature-note-export.png)
+
+</details>
 
 ## A block editing workflow
 
@@ -33,36 +52,26 @@ tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
 adjust indentation. On an indented empty text block, Backspace removes one level
 of indentation before deleting the line. Repeating the active paragraph-style shortcut restores body text.
 
-<details>
-<summary>View block dragging and indentation</summary>
-
-![Block drag preview with indentation levels 0, 1, and 2](assets/feature-drag-indent.png)
-
-</details>
-
 **Hierarchical heading numbers.** Combine heading levels and indentation to
 display `1.2.3`, counting only numbered ancestors. Continue/restart rules respect
 heading and parent-block boundaries; intervening text and code do not restart
 same-level numbering. Restart manually when needed; body lists keep ordinary `1.` markers.
 Heading numbers also appear in the native outline.
 
-<details>
-<summary>View heading numbers and outline</summary>
-
-![Synthetic project plan with hierarchical numbers and matching outline entries](assets/feature-blocks-outline.png)
-
-</details>
-
 **Table editing by cells, rows, or columns.** Select a rectangle or use row/column
 handles and adjust alignment and headers from the floating toolbar. Click to select
 a cell; double-click, Enter, or Space to edit, or type to replace its contents.
 Tab moves between cells; Shift+arrows extend a rectangle. Backspace/Delete clear
 contents; select row/column handles to remove rows/columns. Set default header styles.
+Narrow panes allow horizontal table overflow, with fading edge hints and a scrollbar
+that appears on selection, focus, or hovering its track.
 
 <details>
 <summary>View table selection and floating controls</summary>
 
 ![Synthetic feature table with a selected column and theme-aware imported text](assets/feature-table-clipboard.png)
+
+![A wide table with horizontal overflow and edge hints in a narrow editor](assets/feature-table-overflow.png)
 
 </details>
 
@@ -73,13 +82,6 @@ text and neutral backgrounds follow the current theme.
 Imported or pasted Markdown images, including Yuque `<img>` tags, are downloaded
 to the attachment folder and displayed locally. Failed downloads keep the original
 link, and tags inside code remain literal.
-
-<details>
-<summary>View imported formatting and theme-aware colors</summary>
-
-![Imported bold, underline, colored code, and neutral text in dark mode](assets/feature-styled-clipboard.png)
-
-</details>
 
 **Inline drawings and attachments.** Drawing previews fit their content. Click to
 select, drag to resize proportionally, or place the caret in the right gutter and
@@ -99,13 +101,6 @@ Drag existing vault media from the file explorer to embed it without copying fil
 or reference them through **Attachment → Vault**. In editing mode, click a link to
 select it, then click again to open it, or Ctrl/Cmd-click to open it directly.
 In reading mode, a single click opens the link.
-
-<details>
-<summary>View inline drawings and attachments</summary>
-
-![Public flowchart demo with a selected drawing, proportional resize handle, and drawing editor button](assets/feature-inline-drawing.png)
-
-</details>
 
 Try the [block structure example](examples/block-structure.md) and
 [table and formatting example](examples/tables-and-formatting.md).
@@ -150,6 +145,15 @@ In **Toolbar configuration**, shared
 icons and checkboxes control visibility immediately. Paragraph style, clear
 formatting, undo, redo, text color, find/replace, table, link, and attachment stay
 visible; their settings remain checked, gray, and disabled.
+**Select all** toggles optional buttons. Narrow panes collect overflowing controls
+in a horizontal icon menu under the three-dot button; click again to collapse it.
+
+<details>
+<summary>View the responsive toolbar</summary>
+
+![Overflow controls collected under the three-dot toolbar button](assets/feature-toolbar-overflow.png)
+
+</details>
 
 Pasted/imported media and new drawings share the vault-root `附件` folder by default. **Attachment
 folder** accepts a vault-relative path such as `Attachments/Media`; leave empty

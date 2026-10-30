@@ -51,7 +51,7 @@ export function OrderedListItem({
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))
         menu.addItem(item=>item.setTitle(ui("重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
         showAnchoredMenu(menu,event.currentTarget)
-      }}>{label}</button>
+      }}><span className="wysimark-list-number-label">{label}</span></button>
       <div className="wysimark-list-content">{children}</div>
     </$OrderedListItem>
   )

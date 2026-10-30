@@ -1,6 +1,8 @@
 import type BloEditorPlugin from './main';
 import { ui } from "./wysimark/utils/translations"
-import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice } from 'obsidian';
+import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice, MarkdownView } from 'obsidian';
+import { NoteSync, NoteSyncConflict, NoteSyncView, validateWrite, lockElement } from './note-sync';
+import { getLanguage } from './wysimark/utils/translations';
 import { Editor, Node, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
 import * as React from 'react';
@@ -30,6 +32,7 @@ import { NoteExportModal } from './note-export/modal';
 import { CacheProvider } from '@emotion/react';
 
 export const VIEW_TYPE_BLO = 'blo-view';
+const noteSync = new NoteSync();
 
 // Frontmatter regex: matches YAML frontmatter at the start of the file
 const FRONTMATTER_REGEX = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
@@ -493,6 +496,14 @@ export class BloView extends FileView {
   private saveTimeout: number | null = null;
   private viewRedirect: number | null = null;
   private isDirty: boolean = false;
+  private savedContent = '';
+  private saveQueue: Promise<void> = Promise.resolve();
+  private focusSync: Promise<void> | null = null;
+  private focusSyncTarget: BloView | MarkdownView | null = null;
+  private nextSyncTarget: BloView | MarkdownView | null = null;
+  private restoreSyncFocus = false;
+  private conflictNoticeShown = false;
+  private conflictCopy: { source: TFile; copy: TFile; content: string } | null = null;
   private reactContainer: HTMLElement | null = null;
   private reloadKey: number = 0;  // Used to force React component remount on reload
   editor: Editor | null = null;
@@ -514,6 +525,15 @@ export class BloView extends FileView {
     this.findBar?.attach();
     this.findBar?.refresh();
     this.lastEditorMarkdown = editor.getMarkdown();
+    if (this.restoreSyncFocus) {
+      this.restoreSyncFocus = false;
+      const doc = this.contentEl.ownerDocument;
+      doc.defaultView?.requestAnimationFrame(() => {
+        if (!doc.hasFocus() || this.app.workspace.activeLeaf !== this.leaf || this.editor !== editor) return;
+        const active = doc.activeElement;
+        if (!active || active === doc.body || active.closest('[data-slate-editor="true"]')) this.focusEditor();
+      });
+    }
     editor.wysimark.save = () => this.saveFile();
     editor.wysimark.openSearch = replace => this.showSearch(replace);
     editor.wysimark.toggleReading = () => this.toggleReading();
@@ -552,7 +572,7 @@ export class BloView extends FileView {
     this.allowNoFile = true;
     this.plugin = plugin;
     this.modeAction = this.addAction('book-open', ui("切换到阅读模式（Ctrl+Alt+P）"), () => { void this.toggleReading(); });
-    this.addAction('refresh-cw', ui("从文件重新载入"), () => { void this.reloadFile(); });
+    this.addAction('refresh-cw', ui("从文件重新载入"), () => { void this.reloadFromDisk().catch(error => this.reportSyncError(error)); });
     const exportAction = this.addAction('file-output', ui('导出笔记'), () => {
       if (this.currentFile && this.editor) new NoteExportModal(this).open();
     });
@@ -656,6 +676,19 @@ export class BloView extends FileView {
     // Create React root
     this.root = createRoot(this.reactContainer);
     this.watchMemoPanel();
+    this.registerDomEvent(contentEl, 'focusin', () => this.syncOnFocus());
+    this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => {
+      if (leaf === this.leaf) this.syncOnFocus();
+      else if (leaf?.view instanceof MarkdownView && leaf.view.file === this.currentFile) this.syncOnFocus(leaf.view);
+    }));
+    const ownerWindow = contentEl.ownerDocument.defaultView;
+    if (ownerWindow) this.registerDomEvent(ownerWindow, 'focus', () => {
+      if (this.app.workspace.activeLeaf === this.leaf || popoutDocument(this.leaf)) this.syncOnFocus();
+    });
+    if (ownerWindow !== window) this.registerDomEvent(window, 'focus', () => {
+      const active = this.app.workspace.activeLeaf?.view;
+      if (active instanceof MarkdownView && active.file === this.currentFile) this.syncOnFocus(active);
+    });
     const panelWindow = popoutDocument(this.leaf)?.defaultView;
     if (panelWindow) {
       this.windowFocusHandler = () => this.queuePanelFocus();
@@ -809,6 +842,7 @@ export class BloView extends FileView {
     this.frontmatter = frontmatter;
     this.bodyContent = body;
     this.fileContent = rawContent;
+    this.savedContent = rawContent;
     this.lineEnding = getLineEnding(rawContent);
     this.isDirty = false;
 
@@ -818,9 +852,9 @@ export class BloView extends FileView {
 
   // Reload the current file from Obsidian (discard any unsaved changes)
   async reloadFile() {
-    if (!this.currentFile) {
-      return;
-    }
+    if (!this.currentFile) return;
+    if (this.hasUnsavedChanges()) throw new NoteSyncConflict();
+    const file = this.currentFile;
 
     // Clear any pending save timeout
     if (this.saveTimeout) {
@@ -829,13 +863,16 @@ export class BloView extends FileView {
     }
 
     // Read fresh content from disk
-    const rawContent = await this.app.vault.read(this.currentFile);
+    const rawContent = await this.app.vault.read(file);
+    if (this.currentFile !== file) return;
+    if (this.hasUnsavedChanges()) throw new NoteSyncConflict();
 
     // Extract frontmatter and body
     const { frontmatter, body } = extractFrontmatter(rawContent);
     this.frontmatter = frontmatter;
     this.bodyContent = body;
     this.fileContent = rawContent;
+    this.savedContent = rawContent;
     this.lineEnding = getLineEnding(rawContent);
     this.isDirty = false;
 
@@ -847,17 +884,154 @@ export class BloView extends FileView {
 
   getFrontmatter(): string { return this.frontmatter; }
 
+  private hasUnsavedChanges(): boolean {
+    return this.isDirty || !!(this.editor && !this.readOnly && this.editor.getMarkdown() !== this.lastEditorMarkdown);
+  }
+
+  private reportSyncError(error: unknown) {
+    if (error instanceof NoteSyncConflict) {
+      if (this.conflictNoticeShown) return;
+      this.conflictNoticeShown = true;
+      new Notice(getLanguage() === 'zh'
+        ? 'Blo Editor：同一笔记存在冲突的修改。已保留当前编辑，未覆盖文件；请先复制或另存内容，再处理冲突。'
+        : 'Blo Editor: This note has conflicting changes. Your current edits were kept and the file was not overwritten. Copy or save your edits elsewhere before resolving the conflict.', 0);
+    } else {
+      console.error('Blo Editor note synchronization', error);
+      new Notice(getLanguage() === 'zh' ? 'Blo Editor：笔记同步失败，当前编辑已保留。' : 'Blo Editor: Note synchronization failed. Current edits were kept.');
+    }
+  }
+
+  private lockSync(): () => void {
+    return lockElement(this.contentEl);
+  }
+
+  private syncOnFocus(target: BloView | MarkdownView = this) {
+    if (this.focusSync) {
+      if (this.focusSyncTarget !== target) this.nextSyncTarget = target;
+      return;
+    }
+    if (!this.currentFile || !this.root) return;
+    const file = this.currentFile;
+    const adaptBlo = (view: BloView): NoteSyncView => ({
+      isCurrent: () => view.currentFile === file,
+      isDirty: () => view.hasUnsavedChanges(),
+      save: () => view.saveFile(),
+      savedContent: () => view.savedContent,
+      reload: async () => {
+        const doc = view.contentEl.ownerDocument;
+        view.restoreSyncFocus = doc.hasFocus() && !!doc.activeElement?.closest('[data-slate-editor="true"]');
+        try { await view.reloadFile(); }
+        catch (error) { view.restoreSyncFocus = false; throw error; }
+      },
+      lock: () => view.lockSync(),
+    });
+    const adaptNative = (view: MarkdownView): NoteSyncView => ({
+      isCurrent: () => view.file === file,
+      isDirty: () => view.getViewData() !== view.data,
+      save: async () => {
+        const disk = await this.app.vault.read(file);
+        validateWrite(view.data, disk, view.getViewData());
+        await view.save();
+      },
+      savedContent: () => view.data,
+      reload: async () => {
+        if (view.getViewData() !== view.data) throw new NoteSyncConflict();
+        await view.onLoadFile(file);
+      },
+      lock: () => lockElement(view.contentEl),
+    });
+    const peers: NoteSyncView[] = [];
+    this.app.workspace.iterateAllLeaves(leaf => {
+      const view = leaf.view;
+      if (view === target || (view as FileView).file !== file) return;
+      if (view instanceof BloView && view.currentFile === file) peers.push(adaptBlo(view));
+      else if (view instanceof MarkdownView) peers.push(adaptNative(view));
+    });
+    if (!peers.length) return;
+    const task = noteSync.handoff(target instanceof BloView ? adaptBlo(target) : adaptNative(target), peers, () => this.app.vault.read(file));
+    this.focusSyncTarget = target;
+    const complete = task.then(() => { this.conflictNoticeShown = false; }, error => { this.reportSyncError(error); throw error; })
+      .finally(() => {
+        if (this.focusSync !== complete) return;
+        this.focusSync = null; this.focusSyncTarget = null;
+        const next = this.nextSyncTarget; this.nextSyncTarget = null;
+        if (next) this.syncOnFocus(next);
+      });
+    this.focusSync = complete;
+    void complete.catch(() => {});
+  }
+
   async saveFile(): Promise<void> {
+    const task = this.saveQueue.catch(() => {}).then(() => this.saveCurrentFile());
+    this.saveQueue = task;
+    return task;
+  }
+
+  private async saveCurrentFile(): Promise<void> {
     if (this.editor && !this.readOnly) {
       const markdown = this.editor.getMarkdown();
       if (markdown !== this.lastEditorMarkdown) { this.lastEditorMarkdown = markdown; this.handleChange(markdown); }
     }
     if (this.currentFile && this.isDirty) {
-      const file = this.currentFile, content = this.fileContent, children = this.editor?.children;
-      await this.app.vault.process(file, () => content);
-      // Edits made while a write is in flight still need their own save.
-      if (this.currentFile === file) this.isDirty = this.fileContent !== content || this.editor?.children !== children;
+      const file = this.currentFile, content = this.fileContent, base = this.savedContent, children = this.editor?.children;
+      try {
+        await this.app.vault.process(file, disk => validateWrite(base, disk, content));
+      } catch (error) {
+        if (error instanceof NoteSyncConflict) await this.saveConflictCopy(file, content);
+        throw error;
+      }
+      if (this.currentFile === file) {
+        this.savedContent = content;
+        this.isDirty = this.fileContent !== content || this.editor?.children !== children;
+        this.conflictNoticeShown = false;
+      }
     }
+  }
+
+  private async saveConflictCopy(file: TFile, content: string): Promise<void> {
+    const previous = this.conflictCopy;
+    if (previous?.source === file && this.app.vault.getFileByPath(previous.copy.path) === previous.copy) {
+      if (previous.content === content) return;
+      try {
+        await this.app.vault.process(previous.copy, disk => validateWrite(previous.content, disk, content));
+        previous.content = content;
+        return;
+      } catch (error) {
+        if (!(error instanceof NoteSyncConflict)) throw error;
+      }
+    }
+    const folder = file.parent?.path && file.parent.path !== '/' ? `${file.parent.path}/` : '';
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    for (let index = 1; index <= 1000; index++) {
+      const path = `${folder}${file.basename} (Blo conflict ${stamp}${index === 1 ? '' : ` ${index}`}).md`;
+      if (this.app.vault.getAbstractFileByPath(path)) continue;
+      try {
+        const copy = await this.app.vault.create(path, content);
+        this.conflictCopy = { source: file, copy, content };
+        new Notice(getLanguage() === 'zh' ? `冲突内容已保存到：${path}` : `Conflicting edits saved to: ${path}`, 0);
+        return;
+      } catch (error) {
+        if (!this.app.vault.getAbstractFileByPath(path)) throw error;
+      }
+    }
+    throw new Error('Could not create a conflict copy');
+  }
+
+  private async reloadFromDisk(): Promise<void> {
+    const unlock = this.lockSync();
+    try {
+      if (this.hasUnsavedChanges()) {
+        try { await this.saveFile(); }
+        catch (error) {
+          const backup = this.conflictCopy;
+          if (!(error instanceof NoteSyncConflict) || !backup || backup.source !== this.currentFile || backup.content !== this.fileContent) throw error;
+          this.isDirty = false;
+          if (this.editor) this.lastEditorMarkdown = this.editor.getMarkdown();
+        }
+      }
+      await this.reloadFile();
+      this.conflictNoticeShown = false;
+    } finally { unlock(); }
   }
 
   handleChange = (markdown: string) => {
@@ -874,7 +1048,7 @@ export class BloView extends FileView {
     if (this.saveTimeout) window.clearTimeout(this.saveTimeout);
     this.saveTimeout = window.setTimeout(() => {
       this.saveTimeout = null;
-      void this.saveFile();
+      void this.saveFile().catch(error => this.reportSyncError(error));
     }, 1000);
   }
 
@@ -942,7 +1116,7 @@ export class BloView extends FileView {
   }
 
   handleReload = () => {
-    void this.reloadFile();
+    void this.reloadFromDisk().catch(error => this.reportSyncError(error));
   }
 
   renderEditor() {

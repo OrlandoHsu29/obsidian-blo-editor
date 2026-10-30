@@ -39,7 +39,17 @@ await rm(archive, { force: true })
 const zip = process.platform === 'win32'
   ? spawnSync('powershell.exe', [
       '-NoProfile', '-NonInteractive', '-Command',
-      'Compress-Archive -LiteralPath $env:BLO_PACKAGE_SOURCE -DestinationPath $env:BLO_PACKAGE_ARCHIVE -Force -ErrorAction Stop',
+      `$ErrorActionPreference = 'Stop'
+       Add-Type -AssemblyName System.IO.Compression.FileSystem
+       $source = $env:BLO_PACKAGE_SOURCE
+       $archive = [System.IO.Compression.ZipFile]::Open($env:BLO_PACKAGE_ARCHIVE, 'Create')
+       try {
+         Get-ChildItem -LiteralPath $source -File -Recurse | ForEach-Object {
+           $relative = $_.FullName.Substring($source.Length).TrimStart([char]92).Replace([char]92, [char]47)
+           $entry = (Split-Path -Leaf $source) + '/' + $relative
+           [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entry) | Out-Null
+         }
+       } finally { $archive.Dispose() }`,
     ], {
       cwd: root,
       stdio: 'inherit',

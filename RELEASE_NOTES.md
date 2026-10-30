@@ -1,25 +1,23 @@
-# Blo Editor 0.1.17 — 可选插件集成与画板引用替换
+# Blo Editor 0.1.27 — 光标边界与拖选修复
 
 ## 中文
 
-- **可选插件集成**：设置中新增图片查看器和画板开关，开启后自动安装并启用 Image Toolkit 或 Excalidraw，已有安装直接复用。关闭只停用 Blo 集成，保留依赖插件、附件及已有预览。
-- **画板另存与引用替换**：新增“另存后替换当前引用”，默认关闭；勾选后仅更新对应的画板引用，保留尺寸和原文件，支持撤销与重做。内嵌预览和画板窗口均可使用。
-- **媒体交互修复**：来源弹窗跟随对象滚动及缩放，打开画板窗口或另存为时自动隐藏；改进悬浮返回按钮和图片工具条的显示，修复查看器工具条背景及浮动按钮层级问题。
-- **表格选区**：多格选择改为单元格背景高亮，避免跨行选择时误高亮未选中格内的链接，并在多格选择时关闭链接信息框。
-- **笔记编辑细节**：文件名标题更醒目、与正文间距更宽；正文首行空行现在可用 Backspace 删除并撤销。
+- 修复行内代码左右两侧的光标定位，支持分别停留在代码内外并输入对应样式的内容。
+- 修复从行内代码外侧，以及图片、画板、代码块、表格和块公式右侧边界开始拖选时，选区丢失或被折叠的问题。
+- 文档末尾空白区域支持拖选；改进拖选期间的选区锚点、工具栏命中和自动滚动处理。
+- 优化选中样式，裁剪媒体的空占位节点，避免下方突出；移除画板及公式预览文字的原生选区色块，保留块选中外框。
 
-安装：下载 blo-editor-0.1.17.zip，将解压后的 blo-editor 文件夹放入笔记库的 .obsidian/plugins/。更新时保留 data.json，然后重新加载插件或重启 Obsidian。
+安装：下载 blo-editor-0.1.27.zip，将解压后的 blo-editor 文件夹放入笔记库的 .obsidian/plugins/。更新时保留 data.json，然后重新加载插件或重启 Obsidian。
 
-要求桌面版 Obsidian **1.8.7 或更新版本**。单独的 main.js、styles.css 和 manifest.json 也可下载。
+要求桌面版 Obsidian **1.8.7 或更新版本**。也提供单独的 main.js、styles.css 和 manifest.json。
 
 ## English
 
-- **Optional integrations:** enable the image viewer or drawings in settings to install and activate Image Toolkit or Excalidraw, reusing existing installations. Disabling a Blo integration keeps its dependency plugin, attachments and existing previews.
-- **Save drawing copies and replace references:** optionally replace only the originating embed after saving a copy. The option defaults off, preserves dimensions and the original file, and supports undo/redo from both embedded previews and drawing windows.
-- **Media interaction fixes:** source cards follow scrolling and image/drawing resizing, and close when opening the drawing window or Save As. Improve floating return controls and media toolbars, including viewer toolbar backgrounds and floating button stacking.
-- **Table selection:** highlight selected cell backgrounds, prevent links in other cells from appearing selected across rows, and close link cards during multi-cell selection.
-- **Note editing:** enlarge the file title and its spacing above the body; allow Backspace to remove an empty first body line with undo support.
+- Fix caret placement at both ends of inline code, with distinct positions inside and outside the code for correctly styled input.
+- Preserve drag selections starting outside inline code or at the right boundary of images, drawings, code blocks, tables and block formulas.
+- Support selection dragging from the blank area at the end of a document; improve selection anchors, toolbar hit testing and scrolling during boundary drags.
+- Clip empty media placeholders to prevent protruding artifacts. Remove native text-selection highlights from drawing and formula previews while retaining block selection outlines.
 
-Install blo-editor-0.1.17.zip by placing the extracted blo-editor folder in your vault's .obsidian/plugins/. Preserve data.json when updating, then reload the plugin or restart Obsidian.
+Install blo-editor-0.1.27.zip by placing the extracted blo-editor folder in your vault's .obsidian/plugins/. Preserve data.json when updating, then reload the plugin or restart Obsidian.
 
 Requires desktop Obsidian **1.8.7 or later**. Standalone main.js, styles.css and manifest.json assets are also provided.

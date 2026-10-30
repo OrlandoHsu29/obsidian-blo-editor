@@ -10,6 +10,7 @@ import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
+import { consumePointerSelectionClick, resetPointerSelection } from './blocks/pointer-selection';
 import { selectDocumentEndFromPointer } from './blocks/document-end-pointer';
 import { insertDocumentStartParagraph } from './blocks/document-start';
 import { rootCache } from './blocks/model';
@@ -396,6 +397,7 @@ function KnowledgeSpaceEditorComponent({
     return image instanceof TFile ? plugin.app.vault.getResourcePath(image) : url;
   };
   React.useEffect(() => connectEditor(editor), [connectEditor, editor]);
+  React.useEffect(() => () => resetPointerSelection(editor), [editor]);
   // Keep the controlled Markdown value current when the view rerenders.
   const value = initialValue;
 
@@ -405,10 +407,16 @@ function KnowledgeSpaceEditorComponent({
 
   return (
     <div className="wysimark-editor-wrapper"
-      onMouseDownCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}
+      onMouseDownCapture={event => {
+        resetPointerSelection(editor);
+        if (!readOnly) selectBoundaryFromPointer(editor, event);
+      }}
       // Slate's later click handler selects void image blocks even when the
       // preceding mousedown was handled in the right gutter.
-      onClickCapture={event => { if (!readOnly) selectBoundaryFromPointer(editor, event); }}>
+      onClickCapture={event => {
+        if (consumePointerSelectionClick(editor)) { event.preventDefault(); event.stopPropagation(); return; }
+        if (!readOnly) selectBoundaryFromPointer(editor, event);
+      }}>
       <div className="wysimark-editor-container">
         <Editable
           editor={editor}

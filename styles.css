@@ -372,6 +372,25 @@
 }
 .wysimark-editor p[data-block-boundary="true"].--collapsible.--empty.--selected { visibility: visible; }
 .wysimark-reading p[data-block-boundary="true"] { display:none; }
+/* Slate's empty void leaf belongs to selection mapping, not the media layout. */
+.wysimark-editor [data-slate-void="true"] > [data-slate-spacer] {
+    top: 0;
+    left: 0;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.blo-selecting-from-boundary :is(.wysimark-overlay,.wysimark-image-toolbar),
+.blo-selecting-from-boundary :is(.wysimark-overlay,.wysimark-image-toolbar) * {
+    pointer-events: none !important;
+}
+/* Preview text is decorative; document selection is owned by the Slate block. */
+.wysimark-editor :is(.blo-drawing-preview,.blo-math-preview),
+.wysimark-editor :is(.blo-drawing-preview,.blo-math-preview) *,
+.wysimark-editor [data-blo-image] > img {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
 .wysimark-editor table[data-block-selected="true"] { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
 .wysimark-editor table[data-block-selected="true"] td { background: color-mix(in srgb,var(--interactive-accent) 22%,var(--background-primary)); }
 .wysimark-editor table[data-block-selected="true"] { caret-color: transparent; }

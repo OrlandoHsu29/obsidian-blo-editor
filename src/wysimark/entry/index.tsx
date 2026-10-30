@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import { Descendant, Editor, Element } from "slate"
-import { RenderLeafProps, Slate } from "slate-react"
+import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
+import { isPointerSelecting } from '../../blocks/pointer-selection'
 
 import { parse, serialize } from "../convert"
 import { throttle } from "../utils/throttle"
@@ -17,6 +18,10 @@ export { useEditor }
 
 function renderLeaf({ children, attributes }: RenderLeafProps) {
   return <span {...attributes}>{children}</span>
+}
+
+function scrollSelectionIntoView(editor: Editor, range: globalThis.Range) {
+  if (!isPointerSelecting(editor)) defaultScrollSelectionIntoView(editor, range)
 }
 
 /**
@@ -221,6 +226,7 @@ export function Editable({
       onChange={onSlateChange}
     >
       <SinkEditable
+        scrollSelectionIntoView={scrollSelectionIntoView}
         readOnly={readOnly}
         renderLeaf={renderLeaf}
         onMouseDown={onSinkeEditableMouseDown}

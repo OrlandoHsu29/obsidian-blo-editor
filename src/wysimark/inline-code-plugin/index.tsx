@@ -1,8 +1,11 @@
 import { Editor, Element, Node, Path, Point, Range, Text, Transforms } from "slate"
 import { HistoryEditor } from "slate-history"
+import { useEffect, useRef } from 'react'
+import { startInlineCodeDrag } from './mouse-selection'
 import { createHotkeyHandler, createPlugin, TypedPlugin } from "../sink"
 import { materializeTextBoundary } from "../../blocks/boundary"
 import { InlineCode } from "./render-element"
+
 import type { InlineCodeElement, InlineCodePluginCustomTypes } from "./types"
 export * from "./styles"
 export * from "./types"
@@ -80,10 +83,19 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor
         return false
       },
     },
-    renderEditable: ({ attributes, Editable }) => <Editable {...attributes} onBlur={event => {
+    renderEditable: ({ attributes, Editable }) => {
+      const drag = useRef<(() => void) | undefined>(undefined)
+      useEffect(() => () => drag.current?.(), [])
+      return <Editable {...attributes} onMouseDown={event => {
+        drag.current?.()
+        attributes.onMouseDown?.(event)
+        if (!event.defaultPrevented) drag.current = startInlineCodeDrag(editor, event)
+      }} onBlur={event => {
+      drag.current?.()
       attributes.onBlur?.(event)
       if (!editor.wysimark.readOnly && !event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) cancelEmpty()
-    }} />,
+    }} />
+    },
     editableProps: {
       renderElement: ({ element, attributes, children }) => isCode(element)
         ? <InlineCode element={element} attributes={attributes}>{children}</InlineCode> : undefined,
@@ -99,16 +111,32 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor
         }
         if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return false
         const backward = event.key === 'ArrowLeft', point = editor.selection.anchor
+        const nextCharacter = backward ? Editor.before(editor, point, { unit: 'character' }) : Editor.after(editor, point, { unit: 'character' })
         if (code) {
-          if (!Point.equals(point, backward ? Editor.start(editor, code[1]) : Editor.end(editor, code[1]))) return false
-          const target = backward ? Editor.before(editor, code[1]) : Editor.after(editor, code[1])
-          if (!target) return false
+          const edge = backward ? Editor.start(editor, code[1]) : Editor.end(editor, code[1])
+          if (!Point.equals(point, edge)) {
+            if (!nextCharacter || !Path.isAncestor(code[1], nextCharacter.path)) {
+              Transforms.select(editor, edge)
+              event.preventDefault(); return true
+            }
+            return false
+          }
+          const sibling = [...code[1].slice(0, -1), code[1].at(-1)! + (backward ? -1 : 1)]
+          if (sibling.at(-1)! < 0 || !Node.has(editor, sibling) || !Text.isText(Node.get(editor, sibling))) return false
+          const target = backward ? Editor.end(editor, sibling) : Editor.start(editor, sibling)
           Transforms.select(editor, target)
         } else {
           const [text] = Editor.leaf(editor, point)
-          if (point.offset !== (backward ? 0 : text.text.length)) return false
           const sibling = [...point.path.slice(0, -1), point.path.at(-1)! + (backward ? -1 : 1)]
           if (sibling.at(-1)! < 0 || !Node.has(editor, sibling) || !isCode(Node.get(editor, sibling))) return false
+          const edge = { path: point.path, offset: backward ? 0 : text.text.length }
+          if (!Point.equals(point, edge)) {
+            if (!nextCharacter || !Path.equals(point.path, nextCharacter.path)) {
+              Transforms.select(editor, edge)
+              event.preventDefault(); return true
+            }
+            return false
+          }
           Transforms.select(editor, backward ? Editor.end(editor, sibling) : Editor.start(editor, sibling))
         }
         event.preventDefault(); return true

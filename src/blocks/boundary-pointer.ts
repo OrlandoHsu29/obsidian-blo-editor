@@ -5,6 +5,7 @@ import { rootCache } from './model'
 import { selectStructuredBoundary } from './boundary'
 import { clearBlockSelection } from './selection'
 import { structuredBlockContent, structuredBlockSelector } from './structured-block'
+import { startPointerSelection } from './pointer-selection'
 
 /** Catch the right page gutter before Slate resolves it to a table cell. */
 export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTMLElement>): boolean {
@@ -38,7 +39,10 @@ export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTML
     if (index === undefined) continue
     event.preventDefault(); event.stopPropagation()
     clearBlockSelection(editor)
-    if (selectStructuredBoundary(editor, index)) ReactEditor.focus(editor)
+    if (selectStructuredBoundary(editor, index)) {
+      if (event.type === 'mousedown' && editor.selection) startPointerSelection(editor, editor.selection.anchor, event)
+      else ReactEditor.focus(editor)
+    }
     return true
   }
   return false

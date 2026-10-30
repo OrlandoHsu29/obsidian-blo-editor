@@ -4,19 +4,17 @@ import { ReactEditor, RenderElementProps, useSlateSelection, useSlateStatic } fr
 import { $InlineCode } from './styles'
 import type { InlineCodeElement } from './types'
 
+
 export function InlineCode({ element, attributes, children }: Omit<RenderElementProps, 'element'> & { element: InlineCodeElement }) {
   const editor = useSlateStatic()
   const selection = useSlateSelection()
   const empty = element.children.every(text => text.text === '')
 
   useLayoutEffect(() => {
-    if (!empty || editor.wysimark.readOnly || !selection || !Range.isCollapsed(selection) ||
+    if (editor.wysimark.readOnly || !selection || !Range.isCollapsed(selection) ||
       !ReactEditor.isFocused(editor) || ReactEditor.isComposing(editor)) return
     const path = ReactEditor.findPath(editor, element)
-    if (!Path.isAncestor(path, selection.anchor.path)) return
-    // Replacing the final character with Slate's zero-width text can leave
-    // Chromium's caret on the parent element. Both DOM points map to the same
-    // Slate point, so Editable otherwise considers the selection synchronized.
+    if (!empty || !Path.isAncestor(path, selection.anchor.path)) return
     const range = ReactEditor.toDOMRange(editor, selection)
     const native = range.startContainer.ownerDocument?.getSelection()
     if (native && (native.anchorNode !== range.startContainer || native.anchorOffset !== range.startOffset ||
@@ -25,5 +23,10 @@ export function InlineCode({ element, attributes, children }: Omit<RenderElement
     }
   }, [editor, element, empty, selection])
 
-  return <$InlineCode {...attributes} data-inline-code spellCheck={false}>{children}</$InlineCode>
+  return <$InlineCode {...attributes} data-inline-code spellCheck={false}>
+    {/* Keep Chromium from merging the editable positions inside and outside the code. */}
+    <span contentEditable={false} aria-hidden style={{ fontSize: 0 }}>{'\u00a0'}</span>
+    {children}
+    <span contentEditable={false} aria-hidden style={{ fontSize: 0 }}>{'\u00a0'}</span>
+  </$InlineCode>
 }

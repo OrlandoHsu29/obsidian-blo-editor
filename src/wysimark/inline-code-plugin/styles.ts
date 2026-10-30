@@ -5,6 +5,7 @@ export const $InlineCode = styled("code")`
   background-color: var(--inline-code-bgcolor);
   border: 1px solid var(--inline-code-border-color);
   border-radius: 0.25em;
+  margin-inline: 2px;
   padding: 0.1375em 0.125em;
   /**
    * Font Stack from

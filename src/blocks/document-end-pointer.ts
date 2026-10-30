@@ -2,6 +2,7 @@ import { Editor, Element, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor } from 'slate-react'
 import { clearBlockSelection } from './selection'
+import { startPointerSelection } from './pointer-selection'
 
 /** Only the page background below the final block starts a new trailing paragraph. */
 export function selectDocumentEndFromPointer(editor: Editor, event: MouseEvent, container: HTMLElement): boolean {
@@ -30,5 +31,9 @@ export function selectDocumentEndFromPointer(editor: Editor, event: MouseEvent, 
     else insert()
   }
   ReactEditor.focus(editor)
+  if (editor.selection) startPointerSelection(editor, editor.selection.anchor, {
+    clientX: event.clientX, clientY: event.clientY, currentTarget: container,
+    preventDefault: () => event.preventDefault(),
+  })
   return true
 }

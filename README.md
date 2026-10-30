@@ -123,7 +123,9 @@ settings, notes, attachments, dependencies, or migration tools.
 Use `/` for commands, the block handle for block actions, and the floating toolbar
 for formatting. Find/replace, reading mode, code highlighting, image insertion and
 resizing are included. Changes save automatically and before closing; Ctrl+S saves
-immediately. Removing embedded images, audio, video, PDFs or drawings keeps the
+immediately. When a Blo view shares a note with another Blo or native Markdown view, switching views saves pending edits before loading the latest file. If edits conflict, Blo keeps the original and saves a separate `Blo conflict` copy; use the reload button after reviewing the copy.
+
+Removing embedded images, audio, video, PDFs or drawings keeps the
 original by default. The single **Delete attachment when removing an embedded file**
 setting moves unreferenced files to trash only within the attachment folder and
 its subfolders. Other folders keep originals; an empty path covers root-level

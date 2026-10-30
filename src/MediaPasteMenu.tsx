@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { Editor, Element, Node } from 'slate'
-import { ReactEditor, useSlateStatic } from 'slate-react'
+import { Editor, Element, Node, Range } from 'slate'
+import { ReactEditor, useSlate, useSlateStatic } from 'slate-react'
 import { clipboardMediaLink, createMediaLinkImport, createMediaUrlPaste } from './media-url-paste'
 import type { MediaUrlPaste } from './media-url-paste'
 import { clipboardWebLink, createWebUrlPaste } from './web-link-paste'
@@ -59,9 +59,14 @@ export function MediaLinkActions({ element, close }: { element: AnchorElement; c
 }
 
 function MediaPasteMenu({ session, host, close }: { session: PasteSession; host: HTMLElement; close: () => void }) {
-  const editor = useSlateStatic(), ref = useRef<HTMLDivElement>(null)
+  const editor = useSlate(), ref = useRef<HTMLDivElement>(null)
   const dismissed = useRef(false)
+  const initialSelection = useRef(editor.selection)
   const dismiss = () => { if (!dismissed.current) { dismissed.current = true; session.dispose(); close() } }
+  useEffect(() => {
+    const initial = initialSelection.current, current = editor.selection
+    if (!initial || !current || !Range.equals(initial, current)) dismiss()
+  }, [editor.selection, session])
   useEffect(() => {
     const initial = ref.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]') ?? ref.current?.querySelector('button')
     initial?.focus({ preventScroll: true })

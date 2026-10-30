@@ -1,9 +1,9 @@
-import { useCallback } from "react"
+import { useCallback, useContext } from "react"
 import { Editor } from "slate"
 import { ReactEditor } from "slate-react"
 
 import { $MenuItem } from "../../../toolbar-plugin/styles"
-import { useLayer } from "../../../use-layer"
+import { LayerContext, useLayer } from "../../../use-layer"
 import { MenuItemData } from "../../types"
 import { formatHotkey } from "./formatHotkey"
 
@@ -18,7 +18,8 @@ export function MenuItem({
   close: () => void
   dest: HTMLElement
 }) {
-  const menuLayer = useLayer("menu")
+  const layer = useContext(LayerContext)
+  const menuLayer = useLayer(layer?.type || 'menu')
 
   const onClick = useCallback(() => {
     if (item.Component) {

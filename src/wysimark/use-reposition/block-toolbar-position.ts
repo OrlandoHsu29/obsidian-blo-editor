@@ -2,6 +2,7 @@ import type { Rect } from './types'
 
 export type BlockToolbarOptions = {
   alignment?: 'start' | 'center' | 'end'
+  preferredSide?: 'above' | 'below'
   aboveGap?: number
   belowGap?: number
   allowResize?: boolean
@@ -22,7 +23,9 @@ export function blockToolbarPosition(anchor: Rect, panel: Pick<Rect, 'width' | '
   const aboveSpace = Math.max(0, anchor.top - (options.aboveGap ?? 8) - topEdge)
   const belowTop = Math.max(topEdge, anchor.bottom + (options.belowGap ?? 8))
   const belowSpace = Math.max(0, bottomEdge - belowTop)
-  const up = aboveSpace >= naturalHeight || !!options.allowResize && belowSpace < naturalHeight && aboveSpace >= belowSpace
+  const up = options.preferredSide === 'below'
+    ? belowSpace < naturalHeight && (aboveSpace >= naturalHeight || !!options.allowResize && aboveSpace > belowSpace)
+    : aboveSpace >= naturalHeight || !!options.allowResize && belowSpace < naturalHeight && aboveSpace >= belowSpace
   const height = options.allowResize ? Math.min(naturalHeight, up ? aboveSpace : belowSpace) : naturalHeight
   let top = up ? anchor.top - height - (options.aboveGap ?? 8) : belowTop
   if (options.offsetY) top = Math.max(topEdge, Math.min(top + options.offsetY, bottomEdge - height))

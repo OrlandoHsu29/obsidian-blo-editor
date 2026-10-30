@@ -768,7 +768,7 @@ export class BloView extends FileView {
         const target = ReactEditor.toDOMNode(this.editor, match[0]);
         const toolbar = this.containerEl.querySelector<HTMLElement>('[data-wysimark-toolbar]');
         // Native scrollIntoView accounts for scroll-margin in each scroll container.
-        target.style.scrollMarginTop = `${toolbar ? toolbar.getBoundingClientRect().height + 10 + 16 : 16}px`;
+        target.style.scrollMarginTop = `${toolbar ? toolbar.getBoundingClientRect().height + 14 + 16 : 16}px`;
         if (!this.readOnly) {
           Transforms.select(this.editor, Editor.start(this.editor, match[1]));
           ReactEditor.focus(this.editor);

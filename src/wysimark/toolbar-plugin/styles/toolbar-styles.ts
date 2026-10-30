@@ -14,7 +14,7 @@ export const $ToolbarContainer = styled("div")`
    * https://stackoverflow.com/a/73051006
    */
   position: sticky;
-  top: 10px;
+  top: 14px;
   /* Above block controls; menus and dialogs use the higher overlay layer. */
   z-index: 20;
   background: var(--background-secondary);
@@ -25,7 +25,7 @@ export const $ToolbarContainer = styled("div")`
   border-radius: 12px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, .16);
   align-self: center;
-  /* Fit every enabled button; only a genuinely narrow pane scrolls. */
+  /* Overflow controls move into the menu instead of a horizontal scrollbar. */
   width: max-content;
   max-width: calc(100% - 32px);
   /**
@@ -37,7 +37,7 @@ export const $ToolbarContainer = styled("div")`
    * is stuck to the bottom of the editor, setting margin-bottom to -1px will
    * fix the 2px bottom border and make it the proper 1px.
    */
-  margin: 10px 16px 6px;
+  margin: 14px 16px 6px;
 
   /**
    * NOTE: The space in the equation is significant
@@ -45,13 +45,13 @@ export const $ToolbarContainer = styled("div")`
   height: calc(
     3em + 1px
   ); // $ToolbarDivider height + border-bottom of 1px above
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 `
 
 export const $Toolbar = styled("div")`
   white-space: nowrap;
-  display: inline-block;
+  display: inline-flex;
   height: calc(
     3em + 1px
   ); // $ToolbarDivider height + border-bottom of 1px above
@@ -90,6 +90,10 @@ export const $ToolbarButton = styled("div")`
     opacity: 0.3;
     cursor: default;
     pointer-events: none;
+  }
+  &.--menu-open {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
   }
   &.--active {
     color: var(--text-on-accent, var(--blue-700));

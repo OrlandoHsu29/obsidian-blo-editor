@@ -19,7 +19,7 @@
 .blo-toolbar-setting input[type="checkbox"]:disabled { filter:grayscale(1); opacity:.65; cursor:default; }
 .blo-toolbar-setting:has(input:not(:checked)) .blo-toolbar-setting-icon { color:var(--text-faint); }
 .blo-toolbar-settings-divider { flex:0 0 1px; margin:8px 3px; background:var(--background-modifier-border); opacity:.35; }
-.wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 18px); z-index:30; height:0; flex:0 0 0; overflow:visible; }
+.wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 22px); z-index:30; height:0; flex:0 0 0; overflow:visible; }
 .wysimark-reading .wysimark-find-slot { top:8px; }
 .wysimark-find-panel { --blo-popup-font-size:calc(var(--font-ui-small) + 1px); position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--blo-popup-font-size) var(--font-interface); transform:scale(var(--blo-popup-scale,1)); transform-origin:top right; }
 .wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 var(--blo-document-gutter); }
@@ -206,11 +206,11 @@
 .wysimark-container.blo-memo-panel .wysimark-document-title { display: none; }
 .wysimark-container.blo-memo-panel [data-wysimark-toolbar] {
     font-size: calc(1em * var(--blo-memo-toolbar-scale, .9));
-    margin: 8px 6px 4px;
+    margin: 12px 6px 4px;
     padding: 0 4px;
     max-width: calc(100% - 12px);
     border-radius: 10px;
-    top: 8px;
+    top: 12px;
 }
 
 /* React root container */
@@ -498,11 +498,11 @@
 .blo-table-frame::after { right:0; background:linear-gradient(to left,color-mix(in srgb,var(--blo-table-edge-color) 18%,transparent) 0%,color-mix(in srgb,var(--blo-table-edge-color) 17%,transparent) 18%,color-mix(in srgb,var(--blo-table-edge-color) 12%,transparent) 40%,color-mix(in srgb,var(--blo-table-edge-color) 5%,transparent) 65%,color-mix(in srgb,var(--blo-table-edge-color) 1%,transparent) 85%,transparent 100%); }
 .blo-table-frame[data-overflow="true"][data-more-left="true"]::before,
 .blo-table-frame[data-overflow="true"][data-more-right="true"]::after { opacity:1; }
-.wysimark-container .wysimark-block[data-block-type="table"]:has(> .blo-table-frame[data-overflow="true"]) > button.wysimark-block-handle { top:0; }
-.wysimark-container .wysimark-block[data-block-type="table"] > button.wysimark-block-handle { left:-22px; top:-22px; transform:none; width:20px; height:20px; z-index:2; }
 @media (prefers-reduced-motion:reduce) {
   .blo-table-frame::before,.blo-table-frame::after { transition:none; }
 }
+.wysimark-container .wysimark-block[data-block-type="table"]:has(> .blo-table-frame[data-overflow="true"]) > button.wysimark-block-handle { top:0; }
+.wysimark-container .wysimark-block[data-block-type="table"] > button.wysimark-block-handle { left:-22px; top:-22px; transform:none; width:20px; height:20px; z-index:2; }
 .wysimark-editor [data-table-header="true"] { background:var(--background-secondary); font-weight:var(--font-bold,700); }
 .wysimark-table-settings { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--background-modifier-border); }
 .wysimark-table-settings label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:var(--blo-popup-font-size, var(--font-ui-small)); }
@@ -567,6 +567,12 @@
 }
 
 /* Toolbar overrides for Obsidian theme compatibility */
+.blo-toolbar-item { display:inline-flex; flex:0 0 auto; }
+.blo-toolbar-item-hidden { position:absolute; top:0; left:0; visibility:hidden; pointer-events:none; }
+.blo-toolbar-overflow-menu { display:flex; flex-wrap:wrap; align-items:center; gap:2px; width:max-content; min-width:0; max-width:calc(100vw - 32px); }
+.blo-toolbar-overflow-menu .blo-toolbar-overflow-item { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; margin:0; padding:7px; border:0; font-size:var(--font-ui-small); }
+.blo-toolbar-overflow-item > svg { flex:0 0 18px; width:18px; height:18px; }
+.blo-toolbar-overflow-menu .blo-toolbar-overflow-divider { flex:0 0 1px; width:1px; height:22px; margin:0 4px; }
 .wysimark-editor [class*="toolbar"] {
     background-color: var(--background-secondary);
     border-color: var(--background-modifier-border);

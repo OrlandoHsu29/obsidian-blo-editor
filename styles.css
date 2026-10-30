@@ -391,11 +391,38 @@
 /* Links */
 .wysimark-editor a {
     color: var(--text-accent);
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 .wysimark-editor a:hover {
     color: var(--text-accent-hover);
+    background: var(--background-modifier-hover);
+}
+.wysimark-editor a.--selected[data-link-precise="true"] {
+    background: var(--text-selection);
+    transition: none;
+}
+.wysimark-editor a.--selected[data-link-precise="true"] ::selection {
+    background: transparent;
+    color: inherit;
+}
+.wysimark-editor .wysimark-block:is([data-block-selected="true"],[data-block-dragging="true"]) a.--selected[data-link-precise="true"],
+.wysimark-editor table[data-cell-selection="true"] a.--selected[data-link-precise="true"] {
+    background: transparent;
+}
+.wysimark-editor a[data-titled-link="true"]::before {
+    content: '';
+    display: inline-block;
+    width: .9em;
+    height: .9em;
+    margin-inline-end: .3em;
+    vertical-align: -.04em;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.1.5l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.1-.5l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7'/%3E%3C/svg%3E") center / contain no-repeat;
+    pointer-events: none;
+}
+.wysimark-editor blockquote a:not(:hover) {
+    color: color-mix(in srgb, var(--text-accent) 78%, transparent);
 }
 
 /* Code blocks */

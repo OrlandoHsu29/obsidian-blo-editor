@@ -1,6 +1,6 @@
 import { clsx } from "clsx"
 import React, { useCallback, useEffect, useRef } from "react"
-import { Editor, Element, Path, Range } from "slate"
+import { Editor, Element, Node, Path, Range } from "slate"
 import { useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
@@ -10,6 +10,7 @@ import { useLayer } from "../../use-layer"
 import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
 import { AnchorDialog } from "./AnchorDialog"
+import { remoteMediaUrl } from '../../../media-url-paste'
 
 function isPreciseLinkSelection(editor: Editor): boolean {
   const selection = editor.selection
@@ -44,6 +45,7 @@ export function Anchor({
   const ownedDialog = useRef<React.FunctionComponent<Record<string, never>> | null>(null)
   dialogRef.current = dialog
   const isInternalLink = isWikiLinkHref(element.href)
+  const hasTitle = !isInternalLink && /^https?:\/\//i.test(element.href) && !remoteMediaUrl(element.href) && Node.string(element).trim() !== element.href.trim()
   const readOnly = useReadOnly()
 
   useEffect(() => {
@@ -78,6 +80,8 @@ export function Anchor({
       href={isInternalLink ? undefined : element.href}
       target={isInternalLink ? undefined : element.target}
       data-internal-link={isInternalLink ? "true" : undefined}
+      data-titled-link={hasTitle ? "true" : undefined}
+      data-link-precise={!readOnly && selected && preciseSelection ? "true" : undefined}
       onMouseDown={event => {
         // Remember selection before Slate moves the caret on this mousedown.
         clickIntent.current = { open: readOnly || event.ctrlKey || event.metaKey || selected && preciseSelection, x: event.clientX, y: event.clientY }

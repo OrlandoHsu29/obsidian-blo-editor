@@ -6,8 +6,7 @@ import { portableDocument, portableMarkdown } from './portable-document'
 const imageMime: Record<string, string> = { avif:'image/avif', bmp:'image/bmp', gif:'image/gif', jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', svg:'image/svg+xml', webp:'image/webp' }
 
 /** Resolve only referenced local assets; no downloads, document edits or selection changes. */
-export async function exportContent(view: BloView, source: TFile, nodes: Descendant[], destination: string) {
-  const frontmatter = view.getFrontmatter()
+export async function resolveExportAssets(view: BloView, source: TFile, nodes: Descendant[], destination: string) {
   const local = new Map<string, { file: TFile; embedded: boolean }>()
   const external = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i
   const discover = (target: string, embedded: boolean) => {
@@ -49,8 +48,16 @@ export async function exportContent(view: BloView, source: TFile, nodes: Descend
     }
     return external.test(target) ? target : encodeURI(target)
   }
-  const document = portableDocument(nodes, link)
-  const body = portableMarkdown(document)
-  const markdown = frontmatter ? frontmatter.replace(/\s*$/, '\n\n') + body : body
-  return { markdown, assetFolder, images: [...images.values()], resolveLink: link }
+  return { assetFolder, images: [...images.values()], resolveLink: link }
+}
+
+export function exportMarkdown(view: BloView, nodes: Descendant[], link: Parameters<typeof portableDocument>[1]) {
+  const body = portableMarkdown(portableDocument(nodes, link))
+  const frontmatter = view.getFrontmatter()
+  return frontmatter ? frontmatter.replace(/\s*$/, '\n\n') + body : body
+}
+
+export async function exportContent(view: BloView, source: TFile, nodes: Descendant[], destination: string) {
+  const assets = await resolveExportAssets(view, source, nodes, destination)
+  return { ...assets, markdown: exportMarkdown(view, nodes, assets.resolveLink) }
 }

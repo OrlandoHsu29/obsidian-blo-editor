@@ -5,10 +5,11 @@ import type { ListItemElement } from '../wysimark/list-plugin/types'
 import { blockDepth, isEditorSpacer, isListBlock, resolveOrderedNumbers } from '../blocks/model'
 import { serializeElements } from '../wysimark/convert/serialize/serialize-elements'
 import { isWikiEmbedUrl, isWikiLinkHref, wikiEmbedSpecFromUrl, wikiLinkSpecFromHref, wikiLinkTarget } from '../wysimark/convert/obsidian-links'
+import { imageExtensions, mediaExtensions } from '../media-extensions'
 
 export type ExportLink = (target: string, embedded: boolean) => string
-const imageExtension = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)(?:[?#]|$)/i
-const mediaExtension = /\.(?:mp3|wav|m4a|ogg|oga|opus|flac|aac|mp4|webm|ogv|mov|mkv|3gp|pdf|excalidraw(?:\.md)?)(?:[?#]|$)/i
+const imageExtension = new RegExp(`\\.(?:${imageExtensions})(?:[?#]|$)`, 'i')
+const mediaExtension = new RegExp(`\\.(?:${mediaExtensions}|excalidraw(?:\\.md)?)(?:[?#]|$)`, 'i')
 const isList = (node: Descendant): node is ListItemElement => Element.isElement(node) && isListBlock(node)
 
 /** Work on a detached tree. Saved documents, selections and undo history are untouched. */

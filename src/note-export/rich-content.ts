@@ -5,12 +5,12 @@ import type { BloView } from '../BloView'
 import { clipboardFragmentHtml } from '../wysimark/paste-markdown-plugin/clipboard-html'
 import { rootCache } from '../blocks/model'
 import { isWikiEmbedUrl, isWikiLinkHref, wikiEmbedSpecFromUrl, wikiLinkSpecFromHref, wikiLinkTarget } from '../wysimark/convert/obsidian-links'
-import { exportContent } from './content'
+import { exportMarkdown, resolveExportAssets } from './content'
 
 /** Use the same semantic renderer as rich copy/paste, without changing selection. */
-export async function richContent(view: BloView, source: TFile, nodes: Descendant[]) {
+export async function richContent(view: BloView, source: TFile, nodes: Descendant[], includeText = true) {
   const labels = new Map(rootCache(view.editor!).numberLabels)
-  const content = await exportContent(view, source, nodes, source.basename + '.md')
+  const content = await resolveExportAssets(view, source, nodes, source.basename + '.md')
   const images = new Map(content.images.map(image => [image.url, image]))
   const nodeRequire = require
   const { Buffer } = nodeRequire('node:buffer') as typeof import('node:buffer')
@@ -38,12 +38,12 @@ export async function richContent(view: BloView, source: TFile, nodes: Descendan
   const doc = view.contentEl.ownerDocument.implementation.createHTMLDocument('')
   doc.body.innerHTML = clipboardFragmentHtml(fragment, '', mappedLabels)
   doc.body.firstElementChild?.removeAttribute('data-slate-fragment')
-  return { html: doc.body.innerHTML, text: content.markdown }
+  return { html: doc.body.innerHTML, text: includeText ? exportMarkdown(view, nodes, resolve) : '' }
 }
 
 /** Wrap the shared rich-text fragment in a standalone browser document. */
 export async function htmlDocument(view: BloView, source: TFile, nodes: Descendant[]) {
-  const content = await richContent(view, source, nodes)
+  const content = await richContent(view, source, nodes, false)
   const doc = view.contentEl.ownerDocument.implementation.createHTMLDocument(source.basename)
   const charset = doc.createElement('meta'); charset.setAttribute('charset', 'utf-8'); doc.head.prepend(charset)
   const viewport = doc.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1'; doc.head.append(viewport)

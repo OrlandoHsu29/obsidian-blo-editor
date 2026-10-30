@@ -3,6 +3,9 @@ import type { Descendant, Path } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { attachmentPreviewUrl } from './attachment-preview'
 import { wikiEmbedUrl } from './wysimark/convert/obsidian-links'
+import { imageExtensions, mediaExtensions } from './media-extensions'
+
+const mediaFile = new RegExp(`\\.(?:${imageExtensions}|${mediaExtensions})(?=$|[?!#@:;/"'])`, 'i')
 
 /** Recognize file URLs without downloading anything just to inspect a paste. */
 export function remoteMediaUrl(value: string): string | undefined {
@@ -10,10 +13,9 @@ export function remoteMediaUrl(value: string): string | undefined {
   try {
     const url = new URL(value.trim())
     if (!/^https?:$/.test(url.protocol)) return
-    const media = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp|mp3|wav|m4a|ogg|oga|opus|flac|aac|mp4|webm|ogv|mov|mkv|3gp|pdf)(?=$|[?!#@:;/"'])/i
     const matches = (candidate: string) => {
       for (let count = 0; count < 2; count++) try { candidate = decodeURIComponent(candidate) } catch { break }
-      return media.test(candidate)
+      return mediaFile.test(candidate)
     }
     if (matches(url.pathname)) return value.trim()
     for (const [key, candidate] of url.searchParams) {

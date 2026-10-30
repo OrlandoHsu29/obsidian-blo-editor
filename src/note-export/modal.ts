@@ -68,47 +68,63 @@ export class NoteExportModal extends Modal {
       new Notice(ui('笔记导出失败：') + message)
     } finally { this.busy = false; this.buttons.forEach(button => button.setDisabled(false)) }
   }
-  private async exportMarkdown() {
+  private async destination(title: string, extension: string, name: string) {
     const remote = require('electron').remote
     const result = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
-      title: ui('导出笔记'), defaultPath: this.file!.basename + '.md',
-      filters: [{name: 'Markdown', extensions: ['md']}],
+      title, defaultPath: this.file!.basename + '.' + extension,
+      filters: [{ name, extensions: [extension] }],
     })
     if (result.canceled || !result.filePath || this.closed) return
     this.assertCurrent()
     const nodeRequire = require
     const path = nodeRequire('node:path') as typeof import('node:path')
+    const fs = nodeRequire('node:fs/promises') as typeof import('node:fs/promises')
     const basePath = (this.app.vault.adapter as { basePath?: string }).basePath
-    if (basePath && path.resolve(result.filePath).toLowerCase() === path.resolve(basePath, this.file!.path).toLowerCase()) throw new Error(ui('不能覆盖原笔记，请选择其他文件名'))
-    const content = await exportContent(this.view, this.file!, this.view.editor!.children, result.filePath)
+    if (basePath) {
+      const source = path.resolve(basePath, this.file!.path)
+      const target = path.resolve(result.filePath)
+      const normalize = (value: string) => process.platform === 'win32' ? value.toLowerCase() : value
+      let same = normalize(source) === normalize(target)
+      if (!same) {
+        try {
+          const [a, b] = await Promise.all([fs.stat(source), fs.stat(target)])
+          same = a.dev === b.dev && a.ino === b.ino
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+        }
+      }
+      if (same) throw new Error(ui('不能覆盖原笔记，请选择其他文件名'))
+    }
+    if (this.closed) return
+    this.assertCurrent()
+    return result.filePath as string
+  }
+  private async exportMarkdown() {
+    const destination = await this.destination(ui('导出笔记'), 'md', 'Markdown')
+    if (!destination) return
+    const nodeRequire = require
+    const path = nodeRequire('node:path') as typeof import('node:path')
+    const content = await exportContent(this.view, this.file!, this.view.editor!.children, destination)
     if (this.closed) return
     this.assertCurrent()
     const fs = nodeRequire('node:fs/promises') as typeof import('node:fs/promises')
     if (content.images.length) {
-      const folder = path.join(path.dirname(result.filePath), content.assetFolder)
+      const folder = path.join(path.dirname(destination), content.assetFolder)
       await fs.mkdir(folder, {recursive: true})
       for (const image of content.images) await fs.writeFile(path.join(folder, image.name), new Uint8Array(image.data))
     }
-    await fs.writeFile(result.filePath, content.markdown, 'utf8')
+    await fs.writeFile(destination, content.markdown, 'utf8')
     new Notice(ui('Markdown 已导出'))
   }
   private async exportHtml() {
-    const remote = require('electron').remote
-    const result = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
-      title: ui('导出 HTML'), defaultPath: this.file!.basename + '.html',
-      filters: [{ name: 'HTML', extensions: ['html'] }],
-    })
-    if (result.canceled || !result.filePath || this.closed) return
-    this.assertCurrent()
+    const destination = await this.destination(ui('导出 HTML'), 'html', 'HTML')
+    if (!destination) return
     const nodeRequire = require
-    const path = nodeRequire('node:path') as typeof import('node:path')
-    const basePath = (this.app.vault.adapter as { basePath?: string }).basePath
-    if (basePath && path.resolve(result.filePath).toLowerCase() === path.resolve(basePath, this.file!.path).toLowerCase()) throw new Error(ui('不能覆盖原笔记，请选择其他文件名'))
     const html = await htmlDocument(this.view, this.file!, this.view.editor!.children)
     if (this.closed) return
     this.assertCurrent()
     const fs = nodeRequire('node:fs/promises') as typeof import('node:fs/promises')
-    await fs.writeFile(result.filePath, html, 'utf8')
+    await fs.writeFile(destination, html, 'utf8')
     new Notice(ui('HTML 已导出'))
   }
   private finish() { const callback = this.afterClose; this.afterClose = undefined; callback?.() }

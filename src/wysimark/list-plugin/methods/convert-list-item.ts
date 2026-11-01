@@ -1,5 +1,6 @@
 import { Editor } from "slate"
 import { selectionHasHeading } from '../../../blocks/heading-policy'
+import { convertSelectedHeadingList, headingListControlDisabled } from '../../../blocks/heading-numbering'
 import { blockDepth } from '../../../blocks/model'
 import { convertContainingList } from '../../../blocks/list-container'
 
@@ -10,6 +11,8 @@ import {
 } from ".."
 
 export function convertOrderedList(editor: Editor, allowToggle: boolean) {
+  if(headingListControlDisabled(editor,'number'))return false
+  if(convertSelectedHeadingList(editor,'number',allowToggle))return true
   if(convertContainingList(editor,'ordered-list-item',allowToggle))return true
   return editor.convertElement.convertElements<OrderedListItemElement>(
     (element) => element.type === "ordered-list-item",
@@ -41,6 +44,8 @@ export function convertTaskList(editor: Editor, allowToggle: boolean) {
 }
 
 export function convertUnorderedList(editor: Editor, allowToggle: boolean) {
+  if(headingListControlDisabled(editor,'hash'))return false
+  if(convertSelectedHeadingList(editor,'hash',allowToggle))return true
   if(selectionHasHeading(editor))return false
   if(convertContainingList(editor,'unordered-list-item',allowToggle))return true
   return editor.convertElement.convertElements<UnorderedListItemElement>(

@@ -129,6 +129,10 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '标题列表': { zh: '标题列表', en: 'Heading lists' },
+  '标题前缀样式': { zh: '标题前缀样式', en: 'Heading prefix style' },
+  '标题级别': { zh: '标题级别', en: 'Heading levels' },
+  '点击各级别应用或清除样式，不包含子标题。': { zh: '点击各级别应用或清除样式，不包含子标题。', en: 'Toggle each level to apply or clear its style. Subheadings are excluded.' },
   "网址": { zh: "网址", en: "URL" },
   "网址导入": { zh: "网址导入", en: "Import URL" },
   "电脑导入": { zh: "电脑导入", en: "Computer" },
@@ -205,7 +209,7 @@ export const uiMessages = {
   "无法另存为画板": { zh: "无法另存为画板", en: "Unable to save drawing copy" },
   "编辑器尚未就绪，请稍后重试": { zh: "编辑器尚未就绪，请稍后重试", en: "The editor is not ready. Please try again shortly" },
   "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。": { zh: "勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。", en: "Check to show buttons; gray checked items are always visible. Hover for names. Changes apply immediately." },
-  "复选框": { zh: "复选框", en: "Checkbox" },
+  "任务列表": { zh: "任务列表", en: "Task list" },
   "工具栏配置": { zh: "工具栏配置", en: "Toolbar configuration" },
   "全选": { zh: "全选", en: "Select all" },
   "更多工具": { zh: "更多工具", en: "More tools" },

@@ -1,4 +1,5 @@
 import { Editor, Element, Transforms } from "slate"
+import { deleteHeadingListPrefix, headingListControlDisabled } from '../../blocks/heading-numbering'
 
 import {
   createHotkeyHandler,
@@ -40,8 +41,8 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
     const hotkeyHandler = createHotkeyHandler({
       tab: list.indent,
       "shift+tab": list.outdent,
-      "super+7": curryOne(list.convertOrderedList, true),
-      "super+8": curryOne(list.convertUnorderedList, true),
+      "super+7": () => headingListControlDisabled(editor,'number') ? true : list.convertOrderedList(true),
+      "super+8": () => headingListControlDisabled(editor,'hash') ? true : list.convertUnorderedList(true),
       "super+9": curryOne(list.convertTaskList, true),
     })
 
@@ -52,6 +53,7 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
         insertBreak: list.insertBreak,
         deleteBackward: (unit) => {
           if (unit !== "character") return false
+          if (deleteHeadingListPrefix(editor)) return true
           if (!isStartOfElement(editor, isListItem)) return false
           const listItem = findElementUp<ListItemElement>(editor, isListItem)
           if (!listItem) return false

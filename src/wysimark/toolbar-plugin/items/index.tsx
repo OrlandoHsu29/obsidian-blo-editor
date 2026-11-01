@@ -7,6 +7,7 @@ import { compactBlockItems } from './block-items'
 import { dialogItems } from './dialogItems'
 import { expandedMarkItems } from './mark-items'
 import { listItems } from './list-items'
+import { headingPrefixItem } from './heading-items'
 import { expandedQuoteItems } from './quote-items'
 import { blockIndentItems, clearStyleItem, historyItems, utilityItems } from './utility-items'
 
@@ -24,12 +25,14 @@ function entry(id: string, item: MenuItemData, settingsIcon?: ToolbarIcon): Tool
 /** Stable IDs keep preferences independent of language and button order. */
 export const toolbarGroups: ToolbarEntry[][] = [
   [entry('paragraph-style',pick(compactBlockItems,t('paragraphStyle')),Normal),
+    entry('heading-prefix',headingPrefixItem),
     entry('clear-formatting',clearStyleItem)],
   [entry('undo',historyItems[0]),entry('redo',historyItems[1])],
   [entry('text-color',expandedMarkItems[0],TextColorPreview),entry('bold',pick(expandedMarkItems,t('bold'))),
     entry('italic',pick(expandedMarkItems,t('italic'))),entry('underline',pick(expandedMarkItems,t('underline'))),
-    entry('strike',pick(expandedMarkItems,t('strike'))),entry('check-list',pick(listItems,t('checkList'))),
+    entry('strike',pick(expandedMarkItems,t('strike'))),
     entry('numbered-list',pick(listItems,t('numberedList'))),entry('bullet-list',pick(listItems,t('bulletList'))),
+    entry('check-list',pick(listItems,t('checkList'))),
     entry('quote',pick(expandedQuoteItems,t('quote'))),entry('code-block',pick(expandedQuoteItems,t('codeBlock'))),
     entry('inline-math', { title: ui('插入行内公式'), icon: Formula, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline() } }),
     entry('horizontal-rule',pick(dialogItems,t('horizontalRule')))],

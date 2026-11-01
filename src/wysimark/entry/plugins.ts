@@ -63,6 +63,8 @@ type CustomEditor = PluginTypes["Editor"]
 type CustomElement = PluginTypes["Element"] & {
   __blockDepth?: number
   __subtitle?: true
+  /** Heading prefix choice and whether it is applied; persisted in block metadata. */
+  __headingList?: { style: 'hash' | 'number'; enabled: boolean }
   __numbering?: 'continue' | 'restart' | 'explicit'
   __literalOrderedText?: string
   __markdownLeadingNewlines?: number

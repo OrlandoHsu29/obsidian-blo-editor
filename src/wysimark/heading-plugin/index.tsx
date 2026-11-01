@@ -40,15 +40,16 @@ export const HeadingPlugin = createPlugin<HeadingPluginCustomTypes>(
       editableProps: {
         renderElement: ({ element, attributes, children }) => {
           if (element.type === "heading") {
+            const headingAttributes = { ...attributes, 'data-heading-list-enabled': element.__headingList?.enabled }
             switch (element.level) {
               case 1:
-                return <$H1 {...attributes}>{children}</$H1>
+                return <$H1 {...headingAttributes}>{children}</$H1>
               case 2:
-                return <$H2 {...attributes}>{children}</$H2>
+                return <$H2 {...headingAttributes}>{children}</$H2>
               case 3:
-                return <$H3 {...attributes}>{children}</$H3>
+                return <$H3 {...headingAttributes}>{children}</$H3>
               case 4:
-                return <$H4 {...attributes}>{children}</$H4>
+                return <$H4 {...headingAttributes}>{children}</$H4>
               case 5:
                 return <$H5 {...attributes}>{children}</$H5>
               case 6:

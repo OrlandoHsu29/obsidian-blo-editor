@@ -1,5 +1,6 @@
 import { MenuItemData } from "../../shared-overlays"
-import { selectionHasHeading } from '../../../blocks/heading-policy'
+import { selectionHasHeading, selectionHasMainHeading } from '../../../blocks/heading-policy'
+import { headingListControlDisabled, headingListSelectionActive } from '../../../blocks/heading-numbering'
 import { findElementUp } from "../../sink"
 
 import * as Icon from "../icons"
@@ -12,17 +13,18 @@ export const listItems: MenuItemData[] = [
   {
     icon: Icon.BulletList,
     title: t("bulletList"),
-    disabled:selectionHasHeading,
+    disabled: editor => headingListControlDisabled(editor,'hash') || (selectionHasHeading(editor)&&!selectionHasMainHeading(editor)),
     hotkey: "mod+shift+8",
     action: (editor) => editor.list.convertUnorderedList(true),
-    active: (editor) => !!findElementUp(editor, "unordered-list-item"),
+    active: (editor) => headingListSelectionActive(editor,'hash') || !!findElementUp(editor, "unordered-list-item"),
   },
   {
     icon: Icon.ListNumbers,
     title: t("numberedList"),
+    disabled: editor => headingListControlDisabled(editor,'number'),
     hotkey: "mod+shift+7",
     action: (editor) => editor.list.convertOrderedList(true),
-    active: (editor) => !!findElementUp(editor, "ordered-list-item"),
+    active: (editor) => headingListSelectionActive(editor,'number') || !!findElementUp(editor, "ordered-list-item"),
   },
   {
     icon: Icon.ListCheck,

@@ -13,7 +13,7 @@ export const $UnorderedListItem = styled($ListItem)`
   .--list-item-icon {
     position: absolute;
     top: var(--wysimark-list-marker-center, 0.75em);
-    left: -1.375em;
+    left: -1.5em;
     display: flex;
     align-items: center;
     line-height: 1;

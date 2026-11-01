@@ -73,10 +73,10 @@ export function orderedNumbers(nodes: Node[]) {
 }
 /** Manual restart clears source starts; legacy automatic conversions retained them. */
 const restartsNumbering = (node: Block) => node.__numbering === 'restart' && node.start === undefined
-/** Display paths include numbered heading ancestors only; Markdown keeps local integers. */
+/** The nearest heading scopes numbering; an unnumbered heading blocks inherited paths. */
 export function resolveOrderedNumbers(nodes: Node[]) {
   const counters=new Map<number,Map<number,number>>(), numbers=new Map<Node,number>(),numberLabels=new Map<Node,string>()
-  const ancestors:{level:number;depth:number;path:string}[]=[]
+  const ancestors:{level:number;depth:number;path?:string}[]=[]
   for(const node of nodes) {
     if(isEditorSpacer(node))continue
     const headingLevel=listHeadingLevel(node)
@@ -96,14 +96,15 @@ export function resolveOrderedNumbers(nodes: Node[]) {
       const block=node as Block
       const number=block.__numbering==='explicit'&&block.start!==undefined?block.start:restartsNumbering(block)?1:(counts.get(depth)||0)+1
       counts.set(depth,number);numbers.set(node,number)
-      if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
+      // Subtitles use their own simple sequence rather than the H1–H4 path.
+      if(headingLevel===undefined||headingLevel===5)numberLabels.set(node,`${number}.`)
       else {
-        const parent=ancestors[ancestors.length-1]
-        const path=parent?`${parent.path}.${number}`:String(number)
+        const parent=ancestors[ancestors.length-1]?.path
+        const path=parent?`${parent}.${number}`:String(number)
         numberLabels.set(node,parent?path:`${number}.`)
         ancestors.push({level:headingLevel,depth,path})
       }
-    }
+    } else if(headingLevel!==undefined&&headingLevel!==5)ancestors.push({level:headingLevel,depth})
   }
   return {numbers,numberLabels}
 }

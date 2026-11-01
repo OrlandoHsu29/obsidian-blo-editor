@@ -270,6 +270,9 @@ export const ListNumbers = () => (
   </TablerIcon>
 )
 
+export const HeadingHashes = () => <TablerIcon><path d="M5 9h15M4 15h15M11 3 7 21M17 3l-4 18" /></TablerIcon>
+export const MultilevelList = () => <TablerIcon><path d="M4 5h3M11 5h9M7 12h3M14 12h6M10 19h3M17 19h3M5 8v4h1M8 15v4h1" /></TablerIcon>
+
 export const IncreaseDepth = () => (
   <TablerIcon>
     <path d="M4 6h16M8 12h12M12 18h8M7 12l-3-3M7 12l-3 3" />

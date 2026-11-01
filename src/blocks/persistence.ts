@@ -3,13 +3,25 @@ import { Element as SlateElement, Node } from 'slate'
 import { blockDepth, isEditorSpacer, isListBlock, orderedNumbers } from './model'
 
 const prefix='<!-- wysimark-block:v1 '
-const subtitlePaths=(node:Element)=>[...Node.elements(node)].filter(([n])=>n.__subtitle).map(([,path])=>path)
-export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>n.__blockDepth!==undefined||n.__numbering!==undefined||subtitlePaths(n).length>0)}
+const formats = new WeakMap<Element, { subtitles:number[][]; headingStyles:({path:number[]} & NonNullable<Element['__headingList']>)[] }>()
+function blockFormats(node:Element) {
+  let value=formats.get(node)
+  if(!value) {
+    value={subtitles:[],headingStyles:[]}
+    for(const [element,path] of Node.elements(node)) {
+      if(element.__subtitle)value.subtitles.push(path)
+      if(element.type==='heading'&&element.__headingList)value.headingStyles.push({path,...element.__headingList})
+    }
+    formats.set(node,value)
+  }
+  return value
+}
+export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>n.__blockDepth!==undefined||n.__numbering!==undefined||blockFormats(n).subtitles.length>0||blockFormats(n).headingStyles.length>0)}
 export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Element,number?:number)=>string) {
   const numbers=orderedNumbers(nodes)
   return nodes.filter(n=>!isEditorSpacer(n)).map(node=>{
-    const subtitles=subtitlePaths(node)
-    const metadata={depth:blockDepth(node),subtitles:subtitles.length?subtitles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
+    const {subtitles,headingStyles:styles}=blockFormats(node)
+    const metadata={depth:blockDepth(node),subtitles:subtitles.length?subtitles:undefined,headingStyles:styles.length?styles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
     const plain=isListBlock(node)?{...node,depth:0,...(node.type==='ordered-list-item'?{start:numbers.get(node)}:{})}:node
     return `${prefix}${encodeURIComponent(JSON.stringify(metadata))} -->\n\n${serializeOne(plain as Element,numbers.get(node)).trimEnd()}\n\n`
   }).join('').trimEnd()+'\n'
@@ -59,6 +71,11 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
       } else if(SlateElement.isElement(target)&&isListBlock(target)&&!('blockChildren' in target&&target.blockChildren)) {
         target.children=[{type:'heading',level:5,children:target.children}];(target as unknown as {blockChildren:boolean}).blockChildren=true
       }
+    }
+    if(Array.isArray(chunk.metadata.headingStyles))for(const saved of chunk.metadata.headingStyles) {
+      if(!saved||!Array.isArray(saved.path)||!saved.path.every((i:unknown)=>typeof i==='number'&&Number.isInteger(i)&&i>=0)||!Node.has(node,saved.path)||!['hash','number'].includes(saved.style)||typeof saved.enabled!=='boolean')continue
+      const target=Node.get(node,saved.path)
+      if(SlateElement.isElement(target)&&target.type==='heading')target.__headingList={style:saved.style,enabled:saved.enabled}
     }
     if(node.type==='ordered-list-item'&&!recoveredList) {
       if(typeof chunk.metadata.start==='number')node.start=chunk.metadata.start;else delete node.start

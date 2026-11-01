@@ -51,7 +51,7 @@ export const slashCommands: SlashCommand[] = [
   ...([1, 2, 3] as const).map(level => command('标题 {level}', `heading-${level}`, editor => editor.heading.convertHeading(level, false), {level}, [`bt${level}`])),
   command('无序列表', 'list', editor => editor.list.convertUnorderedList(true), {}, ['wxlb']),
   command('有序列表', 'list-ordered', editor => editor.list.convertOrderedList(true), {}, ['yxlb']),
-  command('复选框', 'list-checks', editor => editor.list.convertTaskList(true), {}, ['任务列表', '待办', 'task', 'todo', 'checklist', 'fxk', 'rwlb', 'db']),
+  command('任务列表', 'list-checks', editor => editor.list.convertTaskList(true), {}, ['复选框', '待办', 'task', 'todo', 'checklist', 'checkbox', 'fxk', 'rwlb', 'db']),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
   command('表格', 'table', editor => { editor.tablePlugin.insertTable(3, 3) }, {}, ['bg', 'grid', 'spreadsheet']),
   command('插入行内公式', 'sigma', editor => { editor.math.insertInline() }, {}, ['公式', '数学公式', 'LaTeX', 'math', 'equation', 'formula', 'hngs', 'crhngs', 'gs', 'sxgs']),

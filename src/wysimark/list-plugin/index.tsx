@@ -1,4 +1,4 @@
-import { Editor, Transforms } from "slate"
+import { Editor, Element, Transforms } from "slate"
 
 import {
   createHotkeyHandler,
@@ -27,6 +27,14 @@ export const isListItem = createIsElementType<ListItemElement>(LIST_ITEM_TYPES)
 
 export const ListPlugin = createPlugin<ListPluginCustomTypes>(
   (editor, _options, { createPolicy }) => {
+    const { shouldMergeNodesRemovePrevNode } = editor
+    editor.shouldMergeNodesRemovePrevNode = (previous, current) => {
+      // An empty list item still owns its marker, indentation and task state.
+      // Backspace from following prose must merge into it rather than replace it.
+      if (isListItem(previous[0]) && !previous[0].blockChildren &&
+        Element.isElement(current[0]) && Editor.hasInlines(editor, current[0])) return false
+      return shouldMergeNodesRemovePrevNode(previous, current)
+    }
     editor.convertElement.addConvertElementType(LIST_ITEM_TYPES)
     const list = (editor.list = createListMethods(editor))
     const hotkeyHandler = createHotkeyHandler({

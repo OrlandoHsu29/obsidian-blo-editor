@@ -172,7 +172,8 @@ export function RootBlock({ element, children }: { element: Element; children: R
       if (!event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) setDrop(null)
     }} onDrop={onDrop}>
     {!readOnly && <button className="wysimark-block-handle" contentEditable={false} draggable
-      aria-label={ui('拖动整块及子块；点击选中并打开块菜单')} data-tooltip-position="right"
+      aria-label={ui('拖动整块及子块；点击选中并打开块菜单')}
+      data-tooltip-position="bottom"
       onMouseDown={event => {
         if(event.button!==0)return
         didDrag.current = false

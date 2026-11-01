@@ -73,7 +73,7 @@ export default class BloEditorPlugin extends Plugin {
       if(!control?.closest('.wysimark-container, .wysimark-overlay, .oit-img-toolbar'))return;
       const placement=control.dataset.tooltipPosition;
       const viewerToolbar = control.closest('.oit-img-toolbar');
-      setTooltip(control,control.getAttribute('aria-label')!,{delay:150,...(viewerToolbar
+      setTooltip(control,control.getAttribute('aria-label')!,{delay:control.classList.contains('wysimark-block-handle')?1000:150,...(viewerToolbar
         ? viewerTooltip
         : control.classList.contains('wysimark-media-import-icon') ? {placement:'top' as const,gap:8,classes:['blo-media-import-tooltip']}
         : ['top','bottom','left','right'].includes(placement||'')?{placement:placement as 'top'|'bottom'|'left'|'right'}:{})});

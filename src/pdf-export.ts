@@ -17,6 +17,7 @@ body{padding:0!important;margin:0!important;font-family:var(--font-text);font-si
 *,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .wysimark-block{outline:none!important;box-shadow:none!important}
 .wysimark-editor :is(h1,h2,h3,h4,h5,h6){break-after:avoid-page}
+.wysimark-editor :is(h1,h2,h3,h4)::before{content:none!important}
 .wysimark-editor :is(tr,[data-blo-image],[data-blo-drawing]){break-inside:avoid}
 .wysimark-editor :is(table,pre,[data-wysimark-code-block]){max-width:100%!important;width:auto;overflow:visible!important}
 .wysimark-editor table{width:100%!important;table-layout:fixed!important}
@@ -99,6 +100,12 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   });
   // Number markers are interactive buttons in the editor, but are note content.
   clone.querySelectorAll('button.wysimark-list-number').forEach(button => {
+    const heading = button.parentElement?.querySelector(':scope > .wysimark-list-content > :is(h1,h2,h3,h4,h6):first-child');
+    if (heading) {
+      heading.prepend(doc.createTextNode(button.textContent + ' '));
+      button.remove();
+      return;
+    }
     const marker = doc.createElement('span');
     marker.className = button.className;
     marker.style.cssText = (button as HTMLElement).style.cssText;

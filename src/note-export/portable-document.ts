@@ -2,7 +2,8 @@ import { Element, Text } from 'slate'
 import type { Descendant } from 'slate'
 import type { Element as BloElement } from '../wysimark/convert/types'
 import type { ListItemElement } from '../wysimark/list-plugin/types'
-import { blockDepth, isEditorSpacer, isListBlock, resolveOrderedNumbers } from '../blocks/model'
+import { blockDepth, isEditorSpacer, isListBlock } from '../blocks/model'
+import { exportHeadingLists } from './heading-lists'
 import { serializeElements } from '../wysimark/convert/serialize/serialize-elements'
 import { isWikiEmbedUrl, isWikiLinkHref, wikiEmbedSpecFromUrl, wikiLinkSpecFromHref, wikiLinkTarget } from '../wysimark/convert/obsidian-links'
 import { imageExtensions, mediaExtensions } from '../media-extensions'
@@ -14,8 +15,6 @@ const isList = (node: Descendant): node is ListItemElement => Element.isElement(
 
 /** Work on a detached tree. Saved documents, selections and undo history are untouched. */
 export function portableDocument(nodes: Descendant[], link: ExportLink = target => target): BloElement[] {
-  const { numbers, numberLabels } = resolveOrderedNumbers(nodes)
-  const numberedHeadings = new WeakSet<Descendant>()
   const bold = (node: Descendant): Descendant => Text.isText(node)
     ? { ...node, bold: true }
     : { ...node, children: node.children.map(bold) } as typeof node
@@ -48,17 +47,11 @@ export function portableDocument(nodes: Descendant[], link: ExportLink = target 
     }
     if (isList(copy)) {
       copy.depth = 0
-      if (copy.type === 'ordered-list-item') { copy.start = numbers.get(node) ?? copy.start; copy.__numbering = 'explicit' }
-      const first = copy.children[0]
-      if (copy.type === 'ordered-list-item' && copy.blockChildren && Element.isElement(first) && first.type === 'heading') {
-        const heading = { ...first, children: [{ text: (numberLabels.get(node) || `${numbers.get(node) ?? 1}.`) + ' ' }, ...first.children] }
-        copy.children = [heading, ...copy.children.slice(1)]
-        numberedHeadings.add(heading)
-      }
+      if (copy.type === 'ordered-list-item') copy.__numbering = 'explicit'
     }
     return copy
   }
-  const source = nodes.filter(node => !isEditorSpacer(node))
+  const source = exportHeadingLists(nodes).filter(node => !isEditorSpacer(node))
   type Branch = { node: Descendant; depth: number; children: Branch[] }
   const roots: Branch[] = [], stack: Branch[] = []
   for (const node of source) {
@@ -83,16 +76,7 @@ export function portableDocument(nodes: Descendant[], link: ExportLink = target 
     if (isList(branch.node)) return [render(branch)]
     return [clean(branch.node) as BloElement, ...branch.children.flatMap(flatten)]
   }
-  // Keep the number inside the heading itself: "# 1. Title" instead of
-  // "1. # Title", whose list marker gets the body font in other renderers.
-  // Lift all content rather than dropping additional blocks in the list item.
-  const liftHeadings = (node: Descendant): Descendant[] => {
-    if (Text.isText(node)) return [node]
-    const children = node.children.flatMap(liftHeadings)
-    if (isList(node) && node.blockChildren && numberedHeadings.has(node.children[0])) return children
-    return [{ ...node, children } as typeof node]
-  }
-  return roots.flatMap(flatten).flatMap(liftHeadings) as BloElement[]
+  return roots.flatMap(flatten)
 }
 
 export function portableMarkdown(nodes: BloElement[]): string {

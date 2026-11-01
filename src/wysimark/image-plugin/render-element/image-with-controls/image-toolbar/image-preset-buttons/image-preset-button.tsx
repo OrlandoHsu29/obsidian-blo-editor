@@ -36,7 +36,7 @@ export function ImagePresetButton({
   srcSize: ImageSize
 }) {
   const editor = useSlateStatic()
-  const presetSize = resizeInPreset(size, srcSize, preset)
+  const presetSize = resizeInPreset(srcSize, preset)
   const tooltip = tooltipLabel({
     title: preset.title,
     hotkey: `${presetSize.width}x${presetSize.height}`,
@@ -44,10 +44,9 @@ export function ImagePresetButton({
 
   const onClick = useCallback(() => {
     const path = ReactEditor.findPath(editor, element)
-    const nextSize = resizeInPreset(size, srcSize, preset)
-    setSize(nextSize)
-    Transforms.setNodes(editor, { ...nextSize, srcWidth: srcSize.width, srcHeight: srcSize.height }, { at: path })
-  }, [element, preset, size, srcSize])
+    setSize(presetSize)
+    Transforms.setNodes(editor, { ...presetSize, srcWidth: srcSize.width, srcHeight: srcSize.height }, { at: path })
+  }, [editor, element, presetSize.width, presetSize.height, srcSize.width, srcSize.height])
 
   const isEnabled =
     preset.type === "scale"

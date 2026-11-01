@@ -1,5 +1,5 @@
-import { Editor, Element, Node, Transforms } from "slate"
-import { HistoryEditor } from 'slate-history'
+import { Editor, Element, Node } from "slate"
+import { withHistoryBatch } from '../../utils/with-history-batch'
 import { rewrapElement } from '../../sink'
 
 import { curryOne } from "../../sink"
@@ -15,7 +15,7 @@ function convertHeading(
   if(editor.wysimark.readOnly||!editor.selection)return
   const entries=[...Editor.nodes(editor,{match:n=>Element.isElement(n)&&editor.convertElement.isConvertibleElement(n),mode:'highest'})]
   const toggle=allowToggle&&entries.length>0&&entries.every(([n])=>Element.isElement(n)&&n.type==='heading'&&n.level===level)
-  const run=()=>Editor.withoutNormalizing(editor,()=>{
+  withHistoryBatch(editor,()=>{
     const refs=entries.map(([,path])=>Editor.pathRef(editor,path))
     try {
       for(const ref of refs)liftHeadingContainer(editor,ref)
@@ -28,7 +28,6 @@ function convertHeading(
       } else editor.convertElement.convertElements<HeadingElement>(n=>n.type==='heading'&&n.level===level,{type:'heading',level},allowToggle)
     }finally{refs.forEach(ref=>ref.unref())}
   })
-  if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,run);else run()
 
 }
 

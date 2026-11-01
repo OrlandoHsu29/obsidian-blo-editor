@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties, DragEvent, MouseEvent, ReactNode } from 'react'
+import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import type { Menu } from 'obsidian'
 import type { Editor, Element, Node } from 'slate'
 import { ReactEditor, useReadOnly, useSlateSelector, useSlateStatic } from 'slate-react'

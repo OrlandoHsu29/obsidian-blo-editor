@@ -12,8 +12,8 @@ import { DraggableHeader } from '../../toolbar-plugin/components/dialog/Draggabl
 import { $AnchorDialog } from '../../toolbar-plugin/styles/anchor-dialog-styles'
 import { isWikiLinkHref, normalizeWikiLinkInput, splitWikiSpec, wikiLinkDisplayText, wikiLinkHref, wikiLinkSpecFromHref } from '../../convert/obsidian-links'
 
-export function AnchorEditDialog({ destAnchor, destStartEdge, element, initialEmbed = false, onCancel }: {
-  destAnchor: HTMLElement; destStartEdge: HTMLElement; element: AnchorElement
+export function AnchorEditDialog({ destAnchor, element, initialEmbed = false, onCancel }: {
+  destAnchor: HTMLElement; element: AnchorElement
   initialEmbed?: boolean; onCancel?: () => void
 }) {
   const editor = useSlateStatic(), dialog = useLayer('dialog'), id = useId()

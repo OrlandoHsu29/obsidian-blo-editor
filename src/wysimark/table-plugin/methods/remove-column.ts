@@ -22,7 +22,7 @@ export function removeColumn(
     const columns = [...tableElement.columns]
     columns.splice(cellIndex, 1)
     Transforms.setNodes(editor, { columns }, { at: tablePath })
-    tableElement.children.forEach((rowElement, rowIndex) => {
+    tableElement.children.forEach((_, rowIndex) => {
       Transforms.removeNodes(editor, {
         at: [...tablePath, rowIndex, cellIndex],
       })

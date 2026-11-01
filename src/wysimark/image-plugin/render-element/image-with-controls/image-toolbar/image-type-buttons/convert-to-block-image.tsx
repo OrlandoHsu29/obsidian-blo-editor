@@ -22,7 +22,6 @@ export function convertToBlockImage(
     !element.srcHeight
   )
     return
-  const size = { width: element.width, height: element.height }
   const srcSize = { width: element.srcWidth, height: element.srcHeight }
   const path = ReactEditor.findPath(editor, element)
 
@@ -35,7 +34,7 @@ export function convertToBlockImage(
      * `type`, `width` and `height` as an Interface making it compatible with
      * a Preset which would extend it.
      */
-    const nextSize = resizeInPreset(size, srcSize, {
+    const nextSize = resizeInPreset(srcSize, {
       name: "initial-block-image",
       title: "",
       type: "bounds",

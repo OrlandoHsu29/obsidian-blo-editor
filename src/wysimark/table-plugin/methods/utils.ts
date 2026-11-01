@@ -1,7 +1,6 @@
 import { TableCellElement, TableContentElement } from "../types"
 
 export function createCell(
-  index: number,
   children: TableContentElement[] = [
     {
       type: "table-content",

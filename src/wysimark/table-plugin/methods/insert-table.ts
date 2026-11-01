@@ -25,7 +25,7 @@ function createTable(columnCount: number, rowCount: number): TableElement {
 function createRow(columnCount: number, y: number): TableRowElement {
   return {
     type: "table-row",
-    children: [...Array(columnCount).keys()].map(x => ({ ...createCell(x), x, y })),
+    children: [...Array(columnCount).keys()].map(x => ({ ...createCell(), x, y })),
   }
 }
 

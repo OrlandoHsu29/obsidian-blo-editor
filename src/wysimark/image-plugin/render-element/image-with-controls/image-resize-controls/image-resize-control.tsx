@@ -1,9 +1,10 @@
 import { clsx } from "clsx"
-import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from "react"
+import { Dispatch, SetStateAction, useRef } from "react"
 import { Editor, Transforms } from "slate"
 import { ReactEditor, useSlateStatic } from "slate-react"
 
-import { stopEvent } from "../../../../sink"
+import { usePointerDrag } from "../../../../utils/use-pointer-drag"
+import { withHistoryBatch } from "../../../../utils/with-history-batch"
 import { useResizeBrowser } from "../../../../use-reposition/hooks"
 
 import {
@@ -52,199 +53,39 @@ export function ImageResizeControl({
   setIsDragging: Dispatch<SetStateAction<boolean>>
 }) {
   const editor = useSlateStatic()
-  const mouseMoveRef = useRef<((e: MouseEvent) => void) | null>(null)
-  const mouseUpRef = useRef<(() => void) | null>(null)
-  const touchMoveRef = useRef<((e: TouchEvent) => void) | null>(null)
-  const touchEndRef = useRef<(() => void) | null>(null)
-
-  /**
-   * Refreshes the rendering of the resize handle if the browser width is
-   * changed. This is useful, for example, if the browser is resized, making
-   * the editable area smaller, which in some cases shoudl cause the resize
-   * handle to indicate that the image can only be resized smaller.
-   */
+  const resize = useRef<{ startX: number; startWidth: number; initial: ImageSize; next: ImageSize } | null>(null)
   useResizeBrowser()
-
-  /**
-   * Retrieve the inner (usable) width of the editor.
-   */
-  const editorWidth = getEditorWidth(editor)
-
-  /**
-   * Create some convenience constants that we use a lot below
-   */
   const width = size.width
-  const maxWidth = Math.min(srcSize.width, editorWidth)
+  const maxWidth = Math.min(srcSize.width, getEditorWidth(editor))
   const minWidth = Math.min(12, srcSize.width)
-
-  /**
-   * Start dragging
-   */
-  const onMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      stopEvent(e)
-      setIsDragging(true)
-
-      /**
-       * Position of mouse pointer when mouse down is pressed
-       */
-      const startX = e.clientX
-
-      /**
-       * The initial image size for the visual image (i.e. the image we are
-       * seeing on the screen) can vary from the image width as stored in the
-       * Document value.
-       *
-       * This is because if the document image width value is larger than the
-       * screen width, we have constrained the image so that it fits.
-       *
-       * When we start a resize, we want the resize to start at the visual
-       * image width though or the drag may appear broken. For example, if you
-       * start resizing smaller, if the image is larger than the width of the
-       * screen, the resize will take no effect.
-       *
-       * For this reason, we start with the visual screen width.
-       */
-      const bounds = getImageBoundsFromSlateElement(editor, element)
-      const startWidth = bounds.width
-
-      let nextSize = { ...size }
-
-      /**
-       * Watch mouse movement during dragging
-       */
-      const onDocumentMouseMove = (e: MouseEvent) => {
-        const nextWidth = minMax({
-          value: startWidth + e.clientX - startX,
-          min: minWidth,
-          max: maxWidth,
-        })
-        nextSize = resizeToWidth(nextWidth, srcSize)
-
-        setSize(nextSize)
-      }
-
-      /**
-       * Remove dragging event listeners when releasing mouse button
-       */
-      const onDocumentMouseUp = () => {
-        activeDocument.removeEventListener("mousemove", onDocumentMouseMove)
-        activeDocument.removeEventListener("mouseup", onDocumentMouseUp)
-        mouseMoveRef.current = null
-        mouseUpRef.current = null
-        const path = ReactEditor.findPath(editor, element)
-        /**
-         * When we save the image to the document, at the moment, we have
-         * decided to save the image at the actual resize width, as stored
-         * in the resize state. This is different than using the visual
-         * image width which is constrained to the width of the screen.
-         *
-         * Not sure if this is the right approach, but it does allow for a
-         * manual workaround if desired where the content is being edited in
-         * a smaller screen than the output window and the user wants to have
-         * the image display at a larger size.
-         *
-         * Note that this is already possible (to save at a larger size than
-         * the screen width) when using presets so it's not entirely out of
-         * character for our editor either.
-         */
-        const size = {
-          width: nextSize.width,
-          height: nextSize.height,
-        }
-        /**
-         * It's not, at the moment, strictly necessary to set the size because
-         * the size is set during mouse move; however, I'm keeping this here
-         * as (a) a sanity check to ensure this is always correct and (b) if
-         * we ever decide to modify the size before saving (see the comment
-         * above when setting size) then we don't end up in a bad state. This
-         * is something that already occurred once during experimenting.
-         */
-        setSize(size)
-        Transforms.setNodes(editor, { ...size, srcWidth: srcSize.width, srcHeight: srcSize.height }, { at: path })
-        setIsDragging(false)
-      }
-
-      /**
-       * Attach event listeners directly to document
-       */
-      mouseMoveRef.current = onDocumentMouseMove
-      mouseUpRef.current = onDocumentMouseUp
-      activeDocument.addEventListener("mousemove", onDocumentMouseMove)
-      activeDocument.addEventListener("mouseup", onDocumentMouseUp)
-    },
-    [srcSize.width, srcSize.height, size.width, element]
-  )
-
-  /**
-   * FIXME:
-   *
-   * This can be refactored so that it shares more code with `onMouseDown`
-   * above. They are nearly identical except:
-   *
-   * - the event listeners that are added/removed
-   * - the way way in which clientX is retrieved
-   */
-  const onTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      stopEvent(e)
-      setIsDragging(true)
-      const startX = e.changedTouches[0].clientX
-      const startWidth = size.width
-
-      let nextSize = { ...size }
-
-      const onDocumentTouchMove = (te: TouchEvent) => {
-        // stopEvent(te)
-        const e = te.changedTouches[0]
-
-        const nextWidth = minMax({
-          value: startWidth + e.clientX - startX,
-          min: minWidth,
-          max: maxWidth,
-        })
-        nextSize = resizeToWidth(nextWidth, srcSize)
-
-        setSize(nextSize)
-      }
-      const onDocumentTouchEnd = () => {
-        activeDocument.removeEventListener("touchmove", onDocumentTouchMove)
-        activeDocument.removeEventListener("touchend", onDocumentTouchEnd)
-        touchMoveRef.current = null
-        touchEndRef.current = null
-        const path = ReactEditor.findPath(editor, element)
-        Transforms.setNodes(
-          editor,
-          { width: nextSize.width, height: nextSize.height, srcWidth: srcSize.width, srcHeight: srcSize.height },
-          { at: path }
-        )
-        setIsDragging(false)
-      }
-
-      touchMoveRef.current = onDocumentTouchMove
-      touchEndRef.current = onDocumentTouchEnd
-      activeDocument.addEventListener("touchmove", onDocumentTouchMove)
-      activeDocument.addEventListener("touchend", onDocumentTouchEnd)
-    },
-    [srcSize.width, srcSize.height, size.width, element]
-  )
-
-  useEffect(() => {
-    return () => {
-      if (mouseMoveRef.current) {
-        activeDocument.removeEventListener("mousemove", mouseMoveRef.current)
-      }
-      if (mouseUpRef.current) {
-        activeDocument.removeEventListener("mouseup", mouseUpRef.current)
-      }
-      if (touchMoveRef.current) {
-        activeDocument.removeEventListener("touchmove", touchMoveRef.current)
-      }
-      if (touchEndRef.current) {
-        activeDocument.removeEventListener("touchend", touchEndRef.current)
-      }
+  const finish = (commit: boolean) => {
+    const pending = resize.current
+    resize.current = null
+    setIsDragging(false)
+    if (!pending) return
+    if (!commit || editor.wysimark.readOnly || editor.wysimark.isCurrentDocument?.() === false) {
+      setSize(pending.initial)
+      return
     }
-  }, [])
+    const path = ReactEditor.findPath(editor, element)
+    withHistoryBatch(editor, () => Transforms.setNodes(editor,
+      { ...pending.next, srcWidth: srcSize.width, srcHeight: srcSize.height }, { at: path }))
+  }
+  const drag = usePointerDrag<HTMLSpanElement>({
+    onStart: event => {
+      if (editor.wysimark.readOnly) return false
+      resize.current = { startX: event.clientX, startWidth: getImageBoundsFromSlateElement(editor, element).width, initial: size, next: size }
+      setIsDragging(true)
+    },
+    onMove: event => {
+      const pending = resize.current!
+      const nextWidth = minMax({ value: pending.startWidth + event.clientX - pending.startX, min: minWidth, max: maxWidth })
+      pending.next = resizeToWidth(nextWidth, srcSize)
+      setSize(pending.next)
+    },
+    onEnd: () => finish(true),
+    onCancel: () => finish(false),
+  })
 
   /**
    * Add special classNames to modify appearance of resize controls
@@ -266,8 +107,7 @@ export function ImageResizeControl({
       <$ImageResizeInvisibleHandle
         data-wysimark-image-resize
         className={className}
-        onMouseDown={onMouseDown}
-        onTouchStart={onTouchStart}
+        {...drag}
       >
         <$ImageResizeHandle>
           <span className="--bar --bar-left" />

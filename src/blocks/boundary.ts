@@ -1,5 +1,5 @@
 import { Editor, Element, Node, NodeEntry, Range, Transforms } from 'slate'
-import { HistoryEditor } from 'slate-history'
+import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { blockDepth, isEditorSpacer } from './model'
 import { isStructuredBlock } from './structured-block'
 
@@ -56,12 +56,10 @@ export function insertBreakAtBoundary(editor: Editor): boolean {
   const node = editor.children[block]
   const indentation = blockDepth(node) || (Element.isElement(node) && node.__blockDepth !== undefined)
     ? { __blockDepth: blockDepth(node) } : {}
-  const insert = () => Editor.withoutNormalizing(editor, () => {
+  withHistoryBatch(editor, () => {
     Transforms.insertNodes(editor, { type: 'paragraph', ...indentation, children: [{ text: '' }] }, { at: [index + 1] })
     Transforms.select(editor, Editor.start(editor, [index + 1]))
     editor.marks = null
   })
-  if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
-  else insert()
   return true
 }

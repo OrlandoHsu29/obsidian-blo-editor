@@ -1055,10 +1055,9 @@ export class BloView extends FileView {
   /**
    * Handle saving an image file to the vault
    * @param file - The image file to save
-   * @param path - The path within the vault to save the file
    * @returns The URL to use for displaying the image in the editor
    */
-  handleImageSave: OnImageSaveHandler = (file: File, path: string) =>
+  handleImageSave: OnImageSaveHandler = (file: File) =>
     this.saveAttachmentFile(file, this.currentFile?.path, this.plugin.settings.attachmentFolder);
 
   private saveAttachmentFile = async (file: File, sourcePath: string | undefined, folder: string): Promise<string> => {

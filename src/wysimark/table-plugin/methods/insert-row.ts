@@ -9,7 +9,7 @@ import { createCell } from "./utils"
 function createRow(columnCount: number): TableRowElement {
   return {
     type: "table-row",
-    children: [...Array(columnCount).keys()].map((index) => createCell(index)),
+    children: Array.from({ length: columnCount }, () => createCell()),
   }
 }
 

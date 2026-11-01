@@ -3,7 +3,7 @@ import { installImageViewerIntegration } from './image-viewer-integration';
 import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
-import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Notice, setIcon, setTooltip } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Notice, setTooltip } from 'obsidian';
 import { DEFAULT_SETTINGS, BloSettingsTab } from './settings';
 import type { EditorSettings } from './settings';
 import { BloView, VIEW_TYPE_BLO } from "./BloView";

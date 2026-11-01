@@ -1,5 +1,5 @@
 import { Editor, Element, Text, Transforms } from 'slate'
-import { HistoryEditor } from 'slate-history'
+import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { ReactEditor } from 'slate-react'
 import { clearBlockSelection } from './selection'
 import { startPointerSelection } from './pointer-selection'
@@ -22,13 +22,11 @@ export function selectDocumentEndFromPointer(editor: Editor, event: MouseEvent, 
     last.children.every(child => Text.isText(child) && child.text === '')
   if (empty) Transforms.select(editor, Editor.end(editor, [lastIndex]))
   else {
-    const insert = () => Editor.withoutNormalizing(editor, () => {
+    withHistoryBatch(editor, () => {
       Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] }, { at: [lastIndex + 1] })
       Transforms.select(editor, Editor.start(editor, [lastIndex + 1]))
       editor.marks = null
     })
-    if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, insert)
-    else insert()
   }
   ReactEditor.focus(editor)
   if (editor.selection) startPointerSelection(editor, editor.selection.anchor, {

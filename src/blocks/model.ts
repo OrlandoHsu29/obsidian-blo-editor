@@ -1,5 +1,5 @@
 import { Editor, Element, Node, NodeEntry, Path, Point, Range, Transforms } from 'slate'
-import { HistoryEditor } from 'slate-history'
+import { withHistoryBatch as batch } from '../wysimark/utils/with-history-batch'
 import { isStructuredBlock } from './structured-block'
 
 type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart' | 'explicit'; __firstAtDepth?: boolean; depth?: number; start?: number }
@@ -106,10 +106,6 @@ export function resolveOrderedNumbers(nodes: Node[]) {
     }
   }
   return {numbers,numberLabels}
-}
-function batch(editor: Editor, run: ()=>void) {
-  const apply=()=>Editor.withoutNormalizing(editor,run)
-  if(HistoryEditor.isHistoryEditor(editor))HistoryEditor.withNewBatch(editor,apply);else apply()
 }
 function depthProps(node: Node, depth: number) {return isEditorSpacer(node)?{}:isListBlock(node)?{depth,__blockDepth:depth}:{__blockDepth:depth}}
 /** Tab moves quote blocks and their descendants; it never wraps another quote. */

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 
 /** Close the sibling panel on outside pointer-down without blocking scrolling. */
 export function CloseMask({ close, isInside }: { close: () => void; isInside?: (target: Node) => boolean }) {

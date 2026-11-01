@@ -1,5 +1,5 @@
 import { Editor, Element, Location, Path, Point, Range, Text, Transforms } from "slate"
-import { HistoryEditor } from "slate-history"
+import { withHistoryBatch } from '../../../utils/with-history-batch'
 
 import { findElementUp } from "../.."
 
@@ -38,14 +38,12 @@ export function insertRootElement(
     const [paragraph, path] = empty
     const replacement = element.__blockDepth === undefined && Element.isElement(paragraph) && paragraph.__blockDepth !== undefined
       ? { ...element, __blockDepth: paragraph.__blockDepth } : element
-    const replace = () => Editor.withoutNormalizing(editor, () => {
+    withHistoryBatch(editor, () => {
       Transforms.removeNodes(editor, { at: path })
       Transforms.insertNodes(editor, replacement, { at: path })
       Transforms.select(editor, Editor.start(editor, path))
       editor.marks = null
     })
-    if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, replace)
-    else replace()
     return true
   }
   /**

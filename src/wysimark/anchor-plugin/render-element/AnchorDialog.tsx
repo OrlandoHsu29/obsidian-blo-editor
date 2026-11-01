@@ -299,7 +299,6 @@ export function AnchorDialog({
       return (
         <AnchorEditDialog
           destAnchor={destAnchor}
-          destStartEdge={destStartEdge}
           element={element}
         />
       )

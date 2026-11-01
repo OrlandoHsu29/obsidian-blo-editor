@@ -153,28 +153,7 @@ export const MarksPlugin = createPlugin<MarksPluginCustomTypes>((editor) => {
           </$MarksSpan>
         )
       },
-      onKeyDown: (e) => {
-        if (hotkeyHandler(e)) return true
-        // if (
-        //   autocompleteMarker(editor, e, {
-        //     triggerMarker: "`",
-        //     regexp: /([`])(\S.*?)([`])$/,
-        //     mark: "code",
-        //   })
-        // ) {
-        //   return true
-        // }
-        // if (
-        //   autocompleteMarker(editor, e, {
-        //     triggerMarker: "*",
-        //     regexp: /([*])(.+?)([*])$/,
-        //     mark: "italic",
-        //   })
-        // ) {
-        //   return true
-        // }
-        return false
-      },
+      onKeyDown: hotkeyHandler,
     },
   }
 }) as TypedPlugin<MarksPluginCustomTypes>

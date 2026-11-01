@@ -40,8 +40,7 @@ export function WikiEmbedView({
 
   const handleEdit = useCallback(() => {
     const fallbackAnchor = embedRef.current
-    const fallbackStartEdge = startEdgeRef.current
-    if (!fallbackAnchor || !fallbackStartEdge) return
+    if (!fallbackAnchor) return
     const at = ReactEditor.findPath(editor, element)
     const result = editor.anchor.convertToLink(spec, { at })
     if (!result) return
@@ -53,13 +52,9 @@ export function WikiEmbedView({
       } catch {
         /* Fall back to the embed position if React has not rendered the anchor yet. */
       }
-      const startEdge =
-        anchorNode.querySelector<HTMLElement>('[contenteditable="false"]') ||
-        fallbackStartEdge
       dialog.open(() => (
         <AnchorEditDialog
           destAnchor={anchorNode}
-          destStartEdge={startEdge}
           element={anchor}
           initialEmbed
           onCancel={() => {

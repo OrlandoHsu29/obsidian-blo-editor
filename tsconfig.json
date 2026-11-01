@@ -8,6 +8,8 @@
     "target": "ES2020",
     "allowJs": true,
     "noImplicitAny": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "moduleResolution": "node",
     "importHelpers": true,
     "isolatedModules": true,

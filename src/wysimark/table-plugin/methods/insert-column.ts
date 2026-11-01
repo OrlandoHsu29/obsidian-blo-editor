@@ -27,25 +27,11 @@ export function insertColumn(
     /**
      * Insert a `TableCell` at the correct spot.
      */
-    tableElement.children.forEach((rowElement, i) => {
-      Transforms.insertNodes(editor, createCell(nextCellIndex), {
+    tableElement.children.forEach((_, i) => {
+      Transforms.insertNodes(editor, createCell(), {
         at: [...tablePath, i, nextCellIndex],
       })
     })
   })
   return true
 }
-
-// export function insertColumnLeft(
-//   editor: Editor,
-//   { at }: { at?: MatchAt } = {}
-// ) {
-//   return insertColumn(editor, { at })
-// }
-
-// export function insertColumnRight(
-//   editor: Editor,
-//   { at }: { at?: MatchAt } = {}
-// ) {
-//   return insertColumn(editor, { at, offset: 1 })
-// }

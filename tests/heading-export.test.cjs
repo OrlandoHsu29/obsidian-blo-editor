@@ -34,13 +34,21 @@ test('explicit starts and manual restarts retain their actual labels',()=>{
  assert.deepEqual(exportHeadingLists(nodes).map(Node.string),['3. Chapter','3.7 Section','3.1 Restart']);
 });
 
-test('body lists and subtitles remain real lists with independent sequence values',()=>{
+test('subtitle exports retain letter prefixes while body lists remain numeric lists',()=>{
  const body={type:'ordered-list-item',depth:0,start:8,__numbering:'explicit',children:[{text:'Body'}]};
  const nodes=[numbered(1,'Alpha'),numbered(2,'Beta'),numbered(5,'Subtitle'),numbered(5,'Second subtitle'),body];
  const output=exportHeadingLists(nodes);
- assert.equal(output[2].type,'ordered-list-item');assert.equal(output[2].start,1);assert.equal(Node.string(output[2]),'Subtitle');
- assert.equal(output[3].start,2);assert.equal(output[4].start,8);assert.equal(Node.string(output[4]),'Body');
- assert.match(markdown(nodes),/1\. \*\*Subtitle\*\*/);assert.match(markdown(nodes),/2\. \*\*Second subtitle\*\*/);assert.match(markdown(nodes),/8\. Body/);
+ assert.equal(output[2].type,'heading');assert.equal(output[2].level,5);assert.equal(Node.string(output[2]),'a. Subtitle');
+ assert.equal(Node.string(output[3]),'b. Second subtitle');assert.equal(output[4].start,8);assert.equal(Node.string(output[4]),'Body');
+ assert.match(markdown(nodes),/\*\*a\. Subtitle\*\*/);assert.match(markdown(nodes),/\*\*b\. Second subtitle\*\*/);assert.match(markdown(nodes),/8\. Body/);
+});
+
+test('legacy subtitle exports preserve lowercase labels and text formatting',()=>{
+ const nodes=[{type:'ordered-list-item',depth:1,__subtitle:true,start:27,__numbering:'explicit',children:[{text:'Legacy',italic:true}]}];
+ const output=exportHeadingLists(nodes);
+ assert.equal(output[0].type,'heading');assert.equal(output[0].level,5);assert.equal(output[0].__blockDepth,1);
+ assert.equal(Node.string(output[0]),'aa. Legacy');assert.equal(output[0].children[1].italic,true);
+ assert.deepEqual(exportHeadingLists(output),output);
 });
 
 test('lifting a heading preserves marks, indentation and additional list children',()=>{

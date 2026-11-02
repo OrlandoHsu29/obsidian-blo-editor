@@ -65,9 +65,9 @@ export const H4 = () => (
   </TablerIcon>
 )
 
-export const H5 = () => (
-  <TablerIcon>
-    <path d="M17 18h2a2 2 0 1 0 0-4h-2v-4h4M4 6v12M12 6v12M11 18h2M3 18h2M4 12h8M3 6h2M11 6h2" />
+export const Subtitle = () => (
+  <TablerIcon data-wysimark-subtitle-icon>
+    <path d="M4 5h12M10 5v11M7 16h6M17 12h3M17 16h3M4 21h16" />
   </TablerIcon>
 )
 
@@ -87,7 +87,7 @@ export const ParagraphStyle = () => {
   })
   const heading = entry?.[0]
   const CurrentIcon = heading && Element.isElement(heading) && heading.type === 'heading'
-    ? [H1, H2, H3, H4, H5][heading.level - 1] || Normal
+    ? [H1, H2, H3, H4, Subtitle][heading.level - 1] || Normal
     : Normal
   return <CurrentIcon />
 }

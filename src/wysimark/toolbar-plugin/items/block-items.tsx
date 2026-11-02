@@ -52,7 +52,7 @@ const blockItems: MenuItemData[] = [
 
 for (const level of [4, 5] as const) {
   blockItems.push({
-    icon: level === 4 ? Icon.H4 : Icon.H5,
+    icon: level === 4 ? Icon.H4 : Icon.Subtitle,
     title: t(level === 4 ? 'heading4' : 'heading5'),
     hotkey: `mod+alt+${level}`,
     action: editor => editor.heading.convertHeading(level, true),

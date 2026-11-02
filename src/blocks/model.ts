@@ -73,6 +73,12 @@ export function orderedNumbers(nodes: Node[]) {
 }
 /** Manual restart clears source starts; legacy automatic conversions retained them. */
 const restartsNumbering = (node: Block) => node.__numbering === 'restart' && node.start === undefined
+function alphabeticNumber(number: number): string {
+  if(!Number.isSafeInteger(number)||number<1)return String(number)
+  let label=''
+  for(let value=number;value>0;value=Math.floor((value-1)/26))label=String.fromCharCode(97+(value-1)%26)+label
+  return label
+}
 /** The nearest heading scopes numbering; an unnumbered heading blocks inherited paths. */
 export function resolveOrderedNumbers(nodes: Node[]) {
   const counters=new Map<number,Map<number,number>>(), numbers=new Map<Node,number>(),numberLabels=new Map<Node,string>()
@@ -96,8 +102,9 @@ export function resolveOrderedNumbers(nodes: Node[]) {
       const block=node as Block
       const number=block.__numbering==='explicit'&&block.start!==undefined?block.start:restartsNumbering(block)?1:(counts.get(depth)||0)+1
       counts.set(depth,number);numbers.set(node,number)
-      // Subtitles use their own simple sequence rather than the H1–H4 path.
-      if(headingLevel===undefined||headingLevel===5)numberLabels.set(node,`${number}.`)
+      // Subtitles use an independent lowercase alphabetic sequence.
+      if(headingLevel===5)numberLabels.set(node,`${alphabeticNumber(number)}.`)
+      else if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
       else {
         const parent=ancestors[ancestors.length-1]?.path
         const path=parent?`${parent}.${number}`:String(number)

@@ -21,6 +21,14 @@ const labels = editor => Array.from(resolveOrderedNumbers(editor.children).numbe
 
 const headingListLevels=editor=>headingListState(editor).levels;
 
+test('subtitle letter labels survive Markdown save and reload without becoming literal text',()=>{
+ const nodes=[numbered(2),numbered(5,{start:26,__numbering:'explicit'}),numbered(5),numbered(5)];
+ const source=serialize(nodes),restored=parse(source);
+ assert.deepEqual(Array.from(resolveOrderedNumbers(restored).numberLabels.values()),['1.','z.','aa.','ab.']);
+ assert(!source.includes('aa.'));
+ assert.equal(Node.string(restored[2]),'Title 5');
+});
+
 test('style conversion preserves selection and marks in one undo step',()=>{
  const editor=fixture([heading(1,{__blockDepth:1}),paragraph('body'),heading(2,{__blockDepth:1}),heading(5)]);
  Transforms.select(editor,{anchor:{path:[0,0],offset:2},focus:{path:[2,0],offset:4}});
@@ -84,7 +92,7 @@ for(const style of ['hash','number']) {
     assert.deepEqual(headingListLevels(editor),[1,3,4]);
     assert.deepEqual(editor.children[0],before[0]);assert.deepEqual(editor.children[2],before[2]);assert.deepEqual(editor.children[3],before[3]);
     assert.deepEqual(editor.children[4],subtitle);assert.deepEqual(editor.children[5],body);
-    if(style==='number')assert.deepEqual(labels(editor),['1.','1.','1.1','1.','8.']);
+    if(style==='number')assert.deepEqual(labels(editor),['1.','1.','1.1','a.','8.']);
     const disabled=structuredClone(editor.children);
     editor.undo();assert.deepEqual(editor.children,before);
     editor.redo();assert.deepEqual(editor.children,disabled);

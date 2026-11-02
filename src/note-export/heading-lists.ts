@@ -11,9 +11,11 @@ export function exportHeadingLists(nodes: Descendant[]): Descendant[] {
     if (Text.isText(node)) return [{ ...node }]
     const children = exportHeadingLists(node.children)
     const first = node.children[0]
-    if (node.type === 'ordered-list-item' && node.blockChildren && Element.isElement(first) &&
-      first.type === 'heading' && first.level !== 5) {
-      const [heading, ...rest] = children
+    const numberedHeading = node.type === 'ordered-list-item' && node.blockChildren && Element.isElement(first) && first.type === 'heading'
+    const legacySubtitle = node.type === 'ordered-list-item' && !node.blockChildren && node.__subtitle
+    if (numberedHeading || legacySubtitle) {
+      const heading = legacySubtitle ? { type: 'heading' as const, level: 5 as const, children } : children[0]
+      const rest = legacySubtitle ? [] : children.slice(1)
       const label = numbering!.numberLabels.get(node) ?? `${numbering!.numbers.get(node) ?? 1}.`
       return [{
         ...heading, __blockDepth: Math.max(blockDepth(node), blockDepth(heading)),

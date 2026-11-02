@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { ReactEditor, useReadOnly, useSlate } from "slate-react"
 import { Menu } from 'obsidian'
 import { showAnchoredMenu } from '../../use-reposition/native-menu'
-import { resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
+import { listHeadingLevel, resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
 import { Element, Node } from 'slate'
 
 import { ConstrainedRenderElementProps } from "../../sink"
@@ -33,6 +33,7 @@ export function OrderedListItem({
     label=resolved.numberLabels.get(element)
   }
   label??=`${number}.`
+  const subtitle=listHeadingLevel(element)===5
   useEffect(() => {
     const path = ReactEditor.findPath(editor, element)
     normalizeOrderedFirstAtDepth(editor, [element, path])
@@ -45,11 +46,11 @@ export function OrderedListItem({
   const className = clsx({ "--first-at-depth": element.__firstAtDepth })
   return (
     <$OrderedListItem {...attributes} data-list-heading-level={heading?.level} className={className} style={style}>
-      <button className="wysimark-list-number" contentEditable={false} disabled={readOnly||index===undefined} data-list-number={number} aria-label={ui('序号 {number}，设置编号',{number})} onMouseDown={event=>event.preventDefault()} onClick={event=>{
+      <button className="wysimark-list-number" contentEditable={false} disabled={readOnly||index===undefined} data-list-number={number} aria-label={ui('序号 {number}，设置编号',{number:subtitle?label.slice(0,-1):number})} onMouseDown={event=>event.preventDefault()} onClick={event=>{
         if(index===undefined)return
         event.preventDefault();event.stopPropagation();const menu=new Menu()
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))
-        menu.addItem(item=>item.setTitle(ui("重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
+        menu.addItem(item=>item.setTitle(ui(subtitle?"重新编号（从 a 开始）":"重新编号（从 1 开始）")).setIcon('rotate-ccw').onClick(()=>setNumbering(editor,index,'restart')))
         showAnchoredMenu(menu,event.currentTarget)
       }}><span className="wysimark-list-number-label">{label}</span></button>
       <div className="wysimark-list-content">{children}</div>

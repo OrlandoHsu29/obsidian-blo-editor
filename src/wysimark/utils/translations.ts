@@ -509,6 +509,10 @@ export const uiMessages = {
     "zh": "重新编号（从 1 开始）",
     "en": "Restart numbering (from 1)"
   },
+  "重新编号（从 a 开始）": {
+    "zh": "重新编号（从 a 开始）",
+    "en": "Restart numbering (from a)"
+  },
   "序号 {number}，设置编号": {
     "zh": "序号 {number}，设置编号",
     "en": "Number {number}; change numbering"

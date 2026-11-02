@@ -12,7 +12,7 @@
 <summary>Preview in light and dark mode</summary>
 
 <p align="center">
-  <img src="assets/preview-light.png" alt="Blo Editor light mode with headings, lists, tables, and code in a public demo note" width="1200">
+  <img src="assets/preview-light.png" alt="Blo Editor light mode with the current toolbar, heading prefixes, lists, tables, and code in a public demo note" width="1200">
 </p>
 
 ![Public demo note in dark mode](assets/preview-dark.png)

@@ -12,7 +12,7 @@
 <summary>展开查看深浅色预览</summary>
 
 <p align="center">
-  <img src="assets/preview-light.png" alt="Blo Editor 浅色模式：公开演示笔记中的标题、列表、表格和代码" width="1200">
+  <img src="assets/preview-light.png" alt="Blo Editor 浅色模式：新版工具栏及公开演示笔记中的标题前缀、列表、表格和代码" width="1200">
 </p>
 
 ![深色模式下的公开演示笔记](assets/preview-dark.png)

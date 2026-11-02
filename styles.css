@@ -78,7 +78,7 @@
 .wysimark-editor li[data-list-heading-level="5"] { --wysimark-list-number-size:1em; --wysimark-list-number-line:1.65; }
 
 /* Heading hashes are presentation only; the Slate text and Markdown stay unchanged. */
-.wysimark-editor { --blo-heading-prefix-opacity:.65; --blo-heading-number-opacity:.85; }
+.wysimark-editor { --blo-heading-prefix-opacity:.65; }
 .wysimark-editor h1 { --blo-heading-hashes: "#"; }
 .wysimark-editor h2 { --blo-heading-hashes: "##"; }
 .wysimark-editor h3 { --blo-heading-hashes: "###"; }
@@ -98,7 +98,7 @@
     content: none;
 }
 .wysimark-editor :is(h1,h2,h3,h4)[data-heading-list-enabled="false"]::before { content:none; }
-.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"]) > button.wysimark-list-number > .wysimark-list-number-label { color:var(--text-accent); opacity:var(--blo-heading-number-opacity); }
+.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"]) > button.wysimark-list-number > .wysimark-list-number-label { color:var(--text-accent); }
 
 /* Use the same controls and focus treatment as Obsidian's settings and menus. */
 .wysimark-overlay { --blo-popup-font-size:calc(var(--font-ui-small) + 1px); font-family:var(--font-interface); font-size:var(--font-ui-medium); color:var(--text-normal); }

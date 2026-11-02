@@ -14,6 +14,7 @@ import {
 } from "../sink"
 
 import { getCalloutInfo } from "./callout"
+import { deleteQuotePrefix } from "./delete-backward"
 import {
   $BlockQuote, $Callout, $CalloutBody, $CalloutFoldIcon, $CalloutIcon,
   $CalloutTitle, $CalloutTitleText,
@@ -241,6 +242,9 @@ export const BlockQuotePlugin = createPlugin<BlockQuotePluginCustomTypes>(
     }
     return {
       name: "block-quote",
+      editor: {
+        deleteBackward: () => deleteQuotePrefix(editor),
+      },
       editableProps: {
         renderElement: ({ element, attributes, children }) => {
           if (element.type === "block-quote") {

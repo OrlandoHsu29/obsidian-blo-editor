@@ -160,7 +160,8 @@ export function RootBlock({ element, children }: { element: Element; children: R
     data-block-depth={depth} data-subtitle={element.__subtitle || undefined}
     className={drop ? `wysimark-block drop-${drop.position}` : 'wysimark-block'}
     style={{ position: 'relative', marginLeft: isListBlock(element) ? undefined : `${depth * 2}em`,
-      marginTop: gap, '--blo-block-anchor': `--blo-${ReactEditor.findKey(editor, element).id}`,
+      marginTop: element.type==='table'&&gap!=='0px'?`max(4px, calc(${gap} - var(--blo-table-top-gutter,0px)))`:gap,
+      '--blo-block-anchor': `--blo-${ReactEditor.findKey(editor, element).id}`,
       '--blo-drop-left':`${drop?.left??0}px`,'--blo-drop-top':`${drop?.top??0}px` } as CSSProperties}
     data-drop-depth={drop?.depth}
     onMouseDownCapture={event => {

@@ -560,7 +560,8 @@
 .blo-table-frame { --blo-table-edge-color:var(--text-normal); position:relative; min-width:0; max-width:100%; }
 .blo-table-frame:has(table[data-block-selected="true"]) { --blo-table-edge-color:var(--interactive-accent); }
 .blo-table-scroll { min-width:0; }
-.blo-table-frame[data-overflow="true"] .blo-table-scroll { width:calc(100% + 22px); margin-left:-22px; padding:22px 0 0 22px; box-sizing:border-box; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scrollbar-width:auto; cursor:default; }
+.wysimark-block[data-block-type="table"]:has(> .blo-table-frame[data-overflow="true"]) { --blo-table-top-gutter:22px; }
+.blo-table-frame[data-overflow="true"] .blo-table-scroll { width:calc(100% + 22px); margin-left:-22px; padding:var(--blo-table-top-gutter,22px) 0 0 22px; box-sizing:border-box; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scrollbar-width:auto; cursor:default; }
 .blo-table-frame[data-overflow="true"] table { cursor:text; }
 /* The handle gutter is visible at the start, but must never expose scrolled cells. */
 .blo-table-frame[data-overflow="true"][data-more-left="true"] .blo-table-scroll { clip-path:inset(0 0 0 22px); }

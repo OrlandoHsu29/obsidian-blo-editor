@@ -13,6 +13,7 @@ export function blockSpacing(node:Node):{before:number;after:number} {
   if(isListBlock(node))return {before:.35,after:.35}
   if(Element.isElement(node)&&node.type==='block-quote')return {before:.85,after:.85}
   if(Element.isElement(node)&&node.type==='horizontal-rule')return {before:2,after:.65}
+  if(Element.isElement(node)&&node.type==='table')return {before:.75,after:1}
   if(isStructuredBlock(node))return {before:1,after:1}
   return {before:.65,after:.65}
 }

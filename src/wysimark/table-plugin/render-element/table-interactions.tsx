@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Editor, Element, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
@@ -9,6 +9,8 @@ import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepar
 import type { TableColumnAlign, TableElement } from '../types'
 import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
+import { structuredBlockBounds } from '../../../blocks/structured-block'
+import { TableContext } from './table-context'
 
 type Position = { left: number; top: number }
 type Insertion = Position & { axis: 'row' | 'column'; index: number }
@@ -20,12 +22,19 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
   const [insertions, setInsertions] = useState<Insertion[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
   const insertRef = useRef<HTMLDivElement>(null)
+  const {cells}=useContext(TableContext)
 
   useLayoutEffect(() => {
     setTableAnchor(active && !readOnly ? ReactEditor.toDOMNode(editor, element) as HTMLTableElement : null)
   }, [active, editor, element, readOnly])
-  // Leave room for the column handles and their delete action above the table.
-  const menu = useBlockToolbarPosition(tableAnchor, menuRef, { active: active && !readOnly, alignment: 'center', aboveGap: 62, belowGap: 16 })
+  const anchorRect=useCallback(()=>{
+    const bounds=structuredBlockBounds(tableAnchor!),viewport=editorOverlayViewport(tableAnchor!)
+    const left=Math.max(bounds.left,viewport.left),right=Math.min(bounds.right,viewport.right)
+    return {...bounds,left,right,width:Math.max(0,right-left)}
+  },[tableAnchor])
+  // Only reserve the extra action row when its insert/delete control is open.
+  const actionRow=cells?.axis==='column'||insertions.some(insertion=>insertion.axis==='column')
+  const menu = useBlockToolbarPosition(tableAnchor, menuRef, { active: active && !readOnly, alignment: 'center', aboveGap: actionRow?62:28, belowGap: 16, getAnchorRect:anchorRect })
 
   useEffect(() => {
     if (readOnly) return
@@ -108,6 +117,13 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       const button=handle.getBoundingClientRect()
       const viewport=editorOverlayViewport(handle)
       if(button.bottom<=viewport.top||button.top>=viewport.bottom||button.right<=viewport.left||button.left>=viewport.right){hideInsertions();return}
+      // Portaled controls may sit outside the table's internal scroll viewport.
+      const controlHost=table.closest<HTMLElement>('.wysimark-container')??table
+      const controlViewport=editorOverlayViewport(controlHost),controlBounds=controlHost.getBoundingClientRect()
+      controlViewport.left=Math.max(controlViewport.left,controlBounds.left)
+      controlViewport.right=Math.min(controlViewport.right,controlBounds.right)
+      controlViewport.top=Math.max(controlViewport.top,controlBounds.top)
+      controlViewport.bottom=Math.min(controlViewport.bottom,controlBounds.bottom)
       const right = event.clientX >= button.left + button.width / 2
       const below = event.clientY >= button.top + button.height / 2
       const next: Insertion[] = []
@@ -116,8 +132,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       else next.push({ axis: 'row', index: row.sectionRowIndex + (below ? 1 : 0),
         left: rect.left - 54, top: (below ? cell.bottom : cell.top) - 14 })
       for (const button of next) {
-        button.left = Math.max(viewport.left + 4, Math.min(viewport.right - 32, button.left))
-        button.top = Math.max(viewport.top + 4, Math.min(viewport.bottom - 32, button.top))
+        button.left = Math.max(controlViewport.left + 4, Math.min(controlViewport.right - 32, button.left))
+        button.top = Math.max(controlViewport.top + 4, Math.min(controlViewport.bottom - 32, button.top))
       }
       if (pending?.length === next.length && pending.every((button, i) =>
         button.axis === next[i].axis && button.index === next[i].index && button.left === next[i].left && button.top === next[i].top)) return

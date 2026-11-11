@@ -1,9 +1,10 @@
 import { Editor, Element, Node, Range, Transforms } from 'slate'
-import type { Path } from 'slate'
+import type { Location, Path } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { blockDepth, rootCache } from './model'
 import { selectionHasMainHeading } from './heading-policy'
 import { setListBlock } from './list-container'
+import { unwrapHeadingList } from './heading-conversion'
 
 const isNumberedHeading = (node: Node) => Element.isElement(node) && node.type === 'heading' && node.level >= 1 && node.level <= 4 && !node.__subtitle
 export type HeadingListStyle = 'hash' | 'number'
@@ -53,6 +54,17 @@ export function setHeadingListStyle(editor: Editor, style: HeadingListStyle): vo
     const enabled = heading.__headingList?.enabled !== false
     return { style, enabled }
   })
+}
+
+/** Use the state from before conversion, before a new heading affects level totals. */
+export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListState):void {
+  const entries=[...Editor.nodes(editor,{at,match:isNumberedHeading})]
+  for(const [heading,path] of entries.reverse()) {
+    if(!state.count){unwrapHeadingList(editor,path);continue}
+    if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,heading,path,{
+      style:state.style,enabled:state.levels.includes(heading.level as HeadingListLevel),
+    })
+  }
 }
 
 function currentHeadingStyle(editor:Editor,heading:Element,path:Path):HeadingListStyle|undefined {

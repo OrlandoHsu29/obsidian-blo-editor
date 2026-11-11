@@ -9,6 +9,8 @@ import {
 
 import { normalizeNode } from "./normalize-node"
 import { Paragraph } from "./render-element/paragraph"
+import { unwrapSelectedHeadingLists } from '../../blocks/heading-conversion'
+import { withHistoryBatch } from '../utils/with-history-batch'
 
 export type CollapsibleParagraphEditor = {
   collapsibleParagraph: {
@@ -57,16 +59,20 @@ export const CollapsibleParagraphPlugin =
     editor.convertElement.addConvertElementType("paragraph")
     editor.collapsibleParagraph = {
       convertParagraph: () => {
-        Transforms.unsetNodes(editor,'__subtitle',{match:n=>Element.isElement(n)&&!!n.__subtitle})
-        editor.marksPlugin?.removeMarks()
-        if (editor.codeBlock?.convertCodeBlockToParagraph()) return
-        editor.convertElement.convertElements<ParagraphElement>(
-          () => false,
-          {
-            type: "paragraph",
-          },
-          false
-        )
+        if(editor.wysimark.readOnly||!editor.selection)return
+        withHistoryBatch(editor,()=>{
+          unwrapSelectedHeadingLists(editor)
+          Transforms.unsetNodes(editor,'__subtitle',{match:n=>Element.isElement(n)&&!!n.__subtitle})
+          editor.marksPlugin?.removeMarks()
+          if (editor.codeBlock?.convertCodeBlockToParagraph()) return
+          editor.convertElement.convertElements<ParagraphElement>(
+            () => false,
+            {
+              type: "paragraph",
+            },
+            false
+          )
+        })
       },
     }
     if (!editor.normalizeAfterDelete) {

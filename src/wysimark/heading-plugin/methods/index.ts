@@ -5,7 +5,8 @@ import { rewrapElement } from '../../sink'
 import { curryOne } from "../../sink"
 
 import { HeadingElement } from "../types"
-import { liftHeadingContainer, setHeadingNode } from '../../../blocks/heading-conversion'
+import { liftHeadingContainer, setHeadingNode, unwrapSelectedHeadingLists } from '../../../blocks/heading-conversion'
+import { headingListState, inheritHeadingList } from '../../../blocks/heading-numbering'
 
 function convertHeading(
   editor: Editor,
@@ -13,19 +14,25 @@ function convertHeading(
   allowToggle: boolean
 ) {
   if(editor.wysimark.readOnly||!editor.selection)return
-  const entries=[...Editor.nodes(editor,{match:n=>Element.isElement(n)&&editor.convertElement.isConvertibleElement(n),mode:'highest'})]
+  const entries=[...Editor.nodes(editor,{match:n=>Element.isElement(n)&&editor.convertElement.isConvertibleElement(n)&&!('blockChildren' in n&&n.blockChildren),mode:'highest'})]
   const toggle=allowToggle&&entries.length>0&&entries.every(([n])=>Element.isElement(n)&&n.type==='heading'&&n.level===level)
+  const listState=level<=4&&!toggle?headingListState(editor):undefined
   withHistoryBatch(editor,()=>{
     const refs=entries.map(([,path])=>Editor.pathRef(editor,path))
     try {
+      if(toggle)unwrapSelectedHeadingLists(editor)
       for(const ref of refs)liftHeadingContainer(editor,ref)
       const current=refs.filter(ref=>ref.current).map(ref=>[Node.get(editor,ref.current!),ref.current!] as const)
       if(current.every(([n])=>Element.isElement(n)&&['heading','paragraph','ordered-list-item','unordered-list-item','task-list-item'].includes(n.type)&&!Node.string(n).includes('\n'))) {
         for(const [node,path] of current.reverse()) {
           if(Element.isElement(node)&&node.type==='ordered-list-item')rewrapElement<HeadingElement>(editor,{type:'heading',level},path)
           else setHeadingNode(editor,path,toggle?undefined:level)
+          if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState)
         }
-      } else editor.convertElement.convertElements<HeadingElement>(n=>n.type==='heading'&&n.level===level,{type:'heading',level},allowToggle)
+      } else {
+        editor.convertElement.convertElements<HeadingElement>(n=>n.type==='heading'&&n.level===level,{type:'heading',level},allowToggle)
+        if(listState&&editor.selection)inheritHeadingList(editor,editor.selection,listState)
+      }
     }finally{refs.forEach(ref=>ref.unref())}
   })
 

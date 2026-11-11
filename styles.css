@@ -390,7 +390,7 @@
 /* A real Slate navigation paragraph owns the caret beside a structured block. */
 .wysimark-editor [data-wysimark-block]:is([data-block-type="table"],[data-block-type="code-block"]) { padding-right: 18px; }
 .wysimark-editor [data-wysimark-block] > [data-wysimark-code-block],
-.wysimark-editor [data-wysimark-block] > .blo-table-frame table { anchor-name: var(--blo-block-anchor); }
+.wysimark-editor [data-wysimark-block] > .blo-table-frame { anchor-name: var(--blo-block-anchor); }
 .wysimark-editor p[data-block-boundary="true"].--collapsible.--empty {
     position: absolute;
     position-anchor: var(--blo-boundary-anchor);

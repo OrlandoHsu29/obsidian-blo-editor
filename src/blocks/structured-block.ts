@@ -31,3 +31,12 @@ export function structuredBlockContent(root: HTMLElement): HTMLElement | null {
   const type = root.dataset.blockType
   return isStructuredType(type) ? root.querySelector<HTMLElement>(kinds[type].content) : null
 }
+
+/** A wide table owns a caret beside its visible viewport, not its hidden columns. */
+export function structuredBlockBounds(content:HTMLElement) {
+  const bounds=content.getBoundingClientRect()
+  const clip=content.closest('.blo-table-frame')?.getBoundingClientRect()
+  if(!clip)return bounds
+  const left=Math.max(bounds.left,clip.left),right=Math.min(bounds.right,clip.right)
+  return {left,right,top:bounds.top,bottom:bounds.bottom,width:Math.max(0,right-left),height:bounds.height}
+}

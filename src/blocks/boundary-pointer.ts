@@ -4,7 +4,7 @@ import { ReactEditor } from 'slate-react'
 import { rootCache } from './model'
 import { selectStructuredBoundary } from './boundary'
 import { clearBlockSelection } from './selection'
-import { structuredBlockContent, structuredBlockSelector } from './structured-block'
+import { structuredBlockBounds, structuredBlockContent, structuredBlockSelector } from './structured-block'
 import { startPointerSelection } from './pointer-selection'
 
 /** Catch the right page gutter before Slate resolves it to a table cell. */
@@ -32,7 +32,7 @@ export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTML
     if (!event.currentTarget.contains(block)) continue
     const content = structuredBlockContent(block)
     if (!content) continue
-    const bounds = content.getBoundingClientRect()
+    const bounds = structuredBlockBounds(content)
     if (event.clientX < bounds.right - 1 || event.clientY < bounds.top || event.clientY > bounds.bottom) continue
     const node = ReactEditor.toSlateNode(editor, content.closest('[data-slate-node="element"]') || content)
     const index = rootCache(editor).indices.get(node)

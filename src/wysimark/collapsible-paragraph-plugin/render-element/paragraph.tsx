@@ -6,7 +6,7 @@ import { HistoryEditor } from "slate-history"
 import { ReactEditor, useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 import { isEditorSpacer, rootCache } from "../../../blocks/model"
 import { isStructuredBlock, selectStructuredBoundary } from "../../../blocks/boundary"
-import { structuredBlockContent } from '../../../blocks/structured-block'
+import { structuredBlockBounds, structuredBlockContent } from '../../../blocks/structured-block'
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -45,7 +45,7 @@ export function Paragraph({
       const parent = paragraph.offsetParent as HTMLElement | null
       if (!parent) return
       const root = block.closest<HTMLElement>('[data-wysimark-block]')
-      const target = ((root && structuredBlockContent(root)) || block).getBoundingClientRect(), origin = parent.getBoundingClientRect()
+      const target = structuredBlockBounds((root && structuredBlockContent(root)) || block), origin = parent.getBoundingClientRect()
       const scale = parent.offsetWidth ? origin.width / parent.offsetWidth : 1
       const line = parseFloat(getComputedStyle(paragraph).lineHeight)
       paragraph.style.left = `${(target.right - origin.left) / scale + parent.scrollLeft - parent.clientLeft + 4}px`

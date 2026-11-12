@@ -1,5 +1,5 @@
 import { createPlugin, TypedPlugin } from '../wysimark/sink'
-import { normalizeOrderedText } from './model'
+import { normalizeHeadingIndent, normalizeOrderedText } from './model'
 import { cleanPastedFragment } from './typography'
 import { Editor, Range } from 'slate'
 import { HistoryEditor } from 'slate-history'
@@ -39,7 +39,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  }
  return {
  name:'block-structure',editor:{
-  normalizeNode:entry=>normalizeStructuredBoundary(editor,entry)||normalizeOrderedText(editor,entry),
+  normalizeNode:entry=>normalizeHeadingIndent(editor,entry)||normalizeStructuredBoundary(editor,entry)||normalizeOrderedText(editor,entry),
   insertBreak:()=>insertBreakAtBoundary(editor)||exitEmptyQuote(editor),
   deleteBackward:()=>deleteAtBlockBoundary(editor),
   deleteForward:()=>deleteWholeBlockSelection(editor),

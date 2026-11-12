@@ -67,7 +67,7 @@ for(const type of ['ordered-list-item','unordered-list-item','task-list-item']){
   const editor=fixture([{type,depth:2,checked:true,children:[{text:'new'}]},heading(1)]);setHeadingListStyle(editor,'number');
   Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
   const title=titles(editor)[0];assert.equal(title.level,1);assert.deepEqual(title.__headingList,{style:'number',enabled:true});
-  assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].depth,2);
+  assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].depth,0);
   assert.deepEqual(headingListState(editor).levels,[1]);
  });
 }
@@ -105,7 +105,7 @@ for(const level of [1,2,3,4,5])for(const command of ['paragraph','toggle']){
   Transforms.select(editor,{path:[0,0,0],offset:3});
   const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
   if(command==='paragraph')editor.collapsibleParagraph.convertParagraph();else editor.heading.convertHeading(level,true);
-  assert.equal(editor.children[0].type,'paragraph');assert.equal(editor.children[0].__blockDepth,2);
+  assert.equal(editor.children[0].type,'paragraph');assert.equal(editor.children[0].__blockDepth,0);
   assert.equal(editor.children[0].__headingList,undefined);assert.equal(editor.children[0].level,undefined);
   assert.equal(Node.string(editor.children[0]),'existing');assert.equal(Node.string(editor.children[1]),'attached body');
   assert.equal(editor.children[1].__blockDepth,2);assert.equal(Node.string(editor.children[2]),'following');
@@ -119,7 +119,7 @@ for(const level of [1,2,3,4,5])for(const command of ['paragraph','toggle']){
 test('ordinary numbered body converted to the first heading does not donate its list formatting',()=>{
  const editor=fixture([{type:'ordered-list-item',depth:1,start:8,__numbering:'explicit',children:[{text:'body'}]}]);
  Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
- assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].level,1);assert.equal(editor.children[0].__blockDepth,1);
+ assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].level,1);assert.equal(editor.children[0].__blockDepth,0);
  assert.deepEqual(labels(editor),[]);assert.equal(editor.children[0].__numbering,undefined);
 });
 

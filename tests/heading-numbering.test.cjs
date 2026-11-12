@@ -40,10 +40,10 @@ test('style conversion preserves selection and marks in one undo step',()=>{
  editor.redo();assert.deepEqual(editor.children,after);
 });
 
-test('clearing a numbered heading preserves its other children and indentation',()=>{
+test('clearing a numbered heading keeps the heading at root and preserves attached body indentation',()=>{
  const editor=fixture([numbered(1,{depth:2,children:[heading(1),paragraph('attached body')]}),heading(5)]);
  toggleHeadingListLevel(editor,1);
- assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].__blockDepth,2);
+ assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].__blockDepth,0);
  assert.equal(editor.children[1].__blockDepth,2);assert.equal(Node.string(editor.children[1]),'attached body');
  assert.deepEqual(editor.children[2],heading(5));
 });

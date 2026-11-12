@@ -34,7 +34,7 @@ export function setHeadingNode(editor:Editor,path:number[],level:number|undefine
  if(level===undefined)path=unwrapHeadingList(editor,path)
  const node=Node.get(editor,path)
  if(!Element.isElement(node))return
- const depth=blockDepth(node)
+ const depth=level===undefined?blockDepth(node):0
  Transforms.setNodes(editor,{type:level===undefined?'paragraph':'heading',...(level===undefined?{}:{level:level as 1|2|3|4|5|6}),__subtitle:undefined,...(node.__blockDepth!==undefined||depth>0?{__blockDepth:depth}:{})},{at:path})
  if(level===undefined)Transforms.unsetNodes(editor,['level','__headingList'],{at:path})
  Transforms.unsetNodes(editor,['depth','checked','start','__firstAtDepth','__numbering'],{at:path})

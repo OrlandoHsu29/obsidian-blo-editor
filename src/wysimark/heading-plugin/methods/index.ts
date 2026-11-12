@@ -5,6 +5,7 @@ import { rewrapElement } from '../../sink'
 import { curryOne } from "../../sink"
 
 import { HeadingElement } from "../types"
+type RootHeading = HeadingElement & { __blockDepth?: number }
 import { liftHeadingContainer, setHeadingNode, unwrapSelectedHeadingLists } from '../../../blocks/heading-conversion'
 import { headingListState, inheritHeadingList } from '../../../blocks/heading-numbering'
 
@@ -25,12 +26,12 @@ function convertHeading(
       const current=refs.filter(ref=>ref.current).map(ref=>[Node.get(editor,ref.current!),ref.current!] as const)
       if(current.every(([n])=>Element.isElement(n)&&['heading','paragraph','ordered-list-item','unordered-list-item','task-list-item'].includes(n.type)&&!Node.string(n).includes('\n'))) {
         for(const [node,path] of current.reverse()) {
-          if(Element.isElement(node)&&node.type==='ordered-list-item')rewrapElement<HeadingElement>(editor,{type:'heading',level},path)
+          if(Element.isElement(node)&&node.type==='ordered-list-item')rewrapElement<RootHeading>(editor,{type:'heading',level,__blockDepth:0},path)
           else setHeadingNode(editor,path,toggle?undefined:level)
           if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState)
         }
       } else {
-        editor.convertElement.convertElements<HeadingElement>(n=>n.type==='heading'&&n.level===level,{type:'heading',level},allowToggle)
+        editor.convertElement.convertElements<RootHeading>(n=>n.type==='heading'&&n.level===level,{type:'heading',level,__blockDepth:0},allowToggle)
         if(listState&&editor.selection)inheritHeadingList(editor,editor.selection,listState)
       }
     }finally{refs.forEach(ref=>ref.unref())}

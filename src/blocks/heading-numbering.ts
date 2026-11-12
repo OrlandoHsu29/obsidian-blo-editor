@@ -1,7 +1,7 @@
 import { Editor, Element, Node, Range, Transforms } from 'slate'
 import type { Location, Path } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { blockDepth, rootCache } from './model'
+import { blockDepth, canIndentBlock, rootCache } from './model'
 import { selectionHasMainHeading } from './heading-policy'
 import { setListBlock } from './list-container'
 import { unwrapHeadingList } from './heading-conversion'
@@ -61,7 +61,7 @@ export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListSt
   const entries=[...Editor.nodes(editor,{at,match:isNumberedHeading})]
   for(const [heading,path] of entries.reverse()) {
     if(!state.count){unwrapHeadingList(editor,path);continue}
-    if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,heading,path,{
+    if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,path,{
       style:state.style,enabled:state.levels.includes(heading.level as HeadingListLevel),
     })
   }
@@ -106,7 +106,7 @@ export function convertSelectedHeadingList(editor:Editor,style:HeadingListStyle,
     for(const [node,path] of entries.reverse()) {
       if(!Element.isElement(node))continue
       const heading=headingAt(node,path)
-      if(heading)setHeadingList(editor,...heading,{style,enabled:!remove})
+      if(heading)setHeadingList(editor,heading[1],{style,enabled:!remove})
       else setListBlock(editor,node,path,remove?undefined:type)
     }
   })
@@ -119,7 +119,7 @@ export function deleteHeadingListPrefix(editor:Editor):boolean {
   if(!entry||!Element.isElement(entry[0])||!Editor.isStart(editor,editor.selection.anchor,entry[1]))return false
   const style=currentHeadingStyle(editor,entry[0],entry[1])
   if(!style)return false
-  withHistoryBatch(editor,()=>setHeadingList(editor,entry[0] as Element,entry[1],{style:entry[0].__headingList?.style??style,enabled:false}))
+  withHistoryBatch(editor,()=>setHeadingList(editor,entry[1],{style:entry[0].__headingList?.style??style,enabled:false}))
   return true
 }
 
@@ -132,29 +132,29 @@ function changeHeadings(editor: Editor, change: (heading: Element) => NonNullabl
       if (!Element.isElement(heading)) continue
       const update = change(heading)
       if (!update) continue
-      setHeadingList(editor,heading,path,update)
+      setHeadingList(editor,path,update)
     }
   })
 }
 
-function setHeadingList(editor:Editor,heading:Element,path:Path,settings:NonNullable<Element['__headingList']>):void {
+function setHeadingList(editor:Editor,path:Path,settings:NonNullable<Element['__headingList']>):void {
   const numbered=settings.style==='number'&&settings.enabled
   const parentPath=path.slice(0,-1)
   const parent=parentPath.length?Node.get(editor,parentPath):undefined
   const owner=Element.isElement(parent)&&parent.type==='ordered-list-item'&&parent.blockChildren&&path[path.length-1]===0?parent:undefined
-  Transforms.setNodes(editor,{__headingList:settings},{at:path})
+  Transforms.setNodes(editor,{__headingList:settings,__blockDepth:0},{at:path})
   if(numbered) {
     if(owner) {
       Transforms.unsetNodes(editor,['start','__firstAtDepth'],{at:parentPath})
-      Transforms.setNodes(editor,{__numbering:'continue'},{at:parentPath})
+      Transforms.setNodes(editor,{__numbering:'continue',depth:0,__blockDepth:0},{at:parentPath})
     } else {
       Transforms.wrapNodes(editor,{
-        type:'ordered-list-item',blockChildren:true,depth:blockDepth(heading),__numbering:'continue',children:[],
+        type:'ordered-list-item',blockChildren:true,depth:0,__numbering:'continue',children:[],
       },{at:path})
     }
   } else if(owner) {
     owner.children.forEach((child,index)=>{
-      if(Element.isElement(child)&&blockDepth(child)<blockDepth(owner)) {
+      if(Element.isElement(child)&&canIndentBlock(child)&&blockDepth(child)<blockDepth(owner)) {
         Transforms.setNodes(editor,{__blockDepth:blockDepth(owner)},{at:[...parentPath,index]})
       }
     })

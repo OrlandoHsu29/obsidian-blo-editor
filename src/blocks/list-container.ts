@@ -1,7 +1,7 @@
 import { Editor, Element, Transforms } from 'slate'
 import type { Path } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { blockDepth, reflowFollowingLists } from './model'
+import { blockDepth, canIndentBlock, reflowFollowingLists } from './model'
 import { rewrapElement } from '../wysimark/sink'
 
 type ListType = 'ordered-list-item'|'unordered-list-item'|'task-list-item'
@@ -13,7 +13,7 @@ export function setListBlock(editor:Editor,node:Element,path:Path,type?:ListType
     rewrapElement(editor,()=>!type?{type:'paragraph',__blockDepth:blockDepth(node)}:{type,depth:blockDepth(node),...(type==='ordered-list-item'?{__numbering:'continue' as const}:{}),...(type==='task-list-item'?{checked:false}:{})},path)
   } else if(!type) {
     node.children.forEach((child,index)=>{
-      if(Element.isElement(child))Transforms.setNodes(editor,{__blockDepth:Math.max(blockDepth(node),blockDepth(child))},{at:[...path,index]})
+      if(Element.isElement(child))Transforms.setNodes(editor,{__blockDepth:canIndentBlock(child)?Math.max(blockDepth(node),blockDepth(child)):0},{at:[...path,index]})
     })
     Transforms.unwrapNodes(editor,{at:path})
   } else {

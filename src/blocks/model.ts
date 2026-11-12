@@ -95,6 +95,15 @@ export function listHeadingLevel(node: Node): number | undefined {
     if(Element.isElement(first)&&first.type==='heading')return first.level
   }
 }
+/** Titles, subtitles and their numbered owners always stay at root depth. */
+export const canIndentBlock = (node: Node) => listHeadingLevel(node) === undefined
+export function normalizeHeadingIndent(editor: Editor, [node,path]: NodeEntry): boolean {
+  if (!Element.isElement(node) || canIndentBlock(node)) return false
+  const block = node as Block
+  if (!(block.__blockDepth || block.depth)) return false
+  Transforms.setNodes(editor, { __blockDepth: 0, ...(block.depth !== undefined ? {depth:0} : {}) }, {at:path})
+  return true
+}
 export function orderedNumbers(nodes: Node[]) {
   return resolveOrderedNumbers(nodes).numbers
 }
@@ -152,23 +161,29 @@ export function indentSelectedBlocks(editor:Editor,delta:1|-1):boolean {
   return indentSelection(editor,delta,false)
 }
 function indentSelection(editor:Editor,delta:1|-1,quotesOnly:boolean):boolean {
-  if(editor.wysimark.readOnly||!editor.selection)return false
-  const [start,end]=Range.edges(editor.selection)
-  const endsBeforeBlock=Range.isExpanded(editor.selection)&&end.path[0]>start.path[0]&&Point.equals(end,Editor.start(editor,[end.path[0]]))
-  const indices=editor.children.map((node,index)=>({node,index})).slice(start.path[0],end.path[0]+(endsBeforeBlock?0:1)).filter(({node})=>!isEditorSpacer(node))
+  const indices=selectedRootBlocks(editor)
   if(!indices.length||indices.some(({node})=>!Element.isElement(node)||(quotesOnly&&node.type!=='block-quote')))return false
   return indentBlockGroups(editor,indices.map(({index})=>index),delta)
+}
+/** Selection end at the next block's start does not include that block. */
+export function selectedRootBlocks(editor:Editor) {
+  if(editor.wysimark.readOnly||!editor.selection)return []
+  const [start,end]=Range.edges(editor.selection)
+  const endsBeforeBlock=Range.isExpanded(editor.selection)&&end.path[0]>start.path[0]&&Point.equals(end,Editor.start(editor,[end.path[0]]))
+  return editor.children.slice(start.path[0],end.path[0]+(endsBeforeBlock?0:1)).map((node,offset)=>({node,index:start.path[0]+offset})).filter(({node})=>!isEditorSpacer(node))
 }
 function indentBlockGroups(editor:Editor,indices:number[],delta:1|-1):boolean {
   if(editor.wysimark.readOnly||!indices.length)return false
   const groups:{start:number;end:number}[]=[]
   for(const index of indices)if(!groups.length||index>=groups[groups.length-1].end)groups.push({start:index,end:groupEnd(editor.children,index)})
+  if(groups.some(group=>editor.children.slice(group.start,group.end).some(node=>!canIndentBlock(node))))return true
   if(delta>0&&groups.some(group=>editor.children.slice(group.start,group.end).some(node=>blockDepth(node)>=32)))return true
   batch(editor,()=>{for(const group of groups){if(delta<0&&blockDepth(editor.children[group.start])===0)continue;for(let i=group.start;i<group.end;i++)Transforms.setNodes(editor,depthProps(editor.children[i],blockDepth(editor.children[i])+delta),{at:[i]})}})
   return true
 }
 export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
   if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
+  if(!canIndentBlock(editor.children[index]))return false
   if(delta<0&&blockDepth(editor.children[index])===0)return false
   return indentBlockGroups(editor,[index],delta)
 }
@@ -196,7 +211,7 @@ export function deleteBlockGroup(editor: Editor, index: number): boolean {
   })
   return true
 }
-export type BlockDragGroup={children:Node[];from:number;end:number;depth:number;maxRelativeDepth:number;ends:Map<number,number>}
+export type BlockDragGroup={children:Node[];from:number;end:number;depth:number;maxRelativeDepth:number;maxDepth:number;ends:Map<number,number>}
 export function blockDragGroup(children:Node[],from:number,selectedEnd=from+1):BlockDragGroup|undefined {
   if(!children[from]||isEditorSpacer(children[from]))return
   let end=groupEnd(children,from)
@@ -205,7 +220,8 @@ export function blockDragGroup(children:Node[],from:number,selectedEnd=from+1):B
   for(let i=from;i<end;i++)if(!isEditorSpacer(children[i]))depth=Math.min(depth,blockDepth(children[i]))
   let maxRelativeDepth=0
   for(let i=from;i<end;i++)if(!isEditorSpacer(children[i]))maxRelativeDepth=Math.max(maxRelativeDepth,blockDepth(children[i])-depth)
-  return {children,from,end,depth,maxRelativeDepth,ends:new Map([[from,end]])}
+  const maxDepth=children.slice(from,end).some(node=>!canIndentBlock(node))?0:32-maxRelativeDepth
+  return {children,from,end,depth,maxRelativeDepth,maxDepth,ends:new Map([[from,end]])}
 }
 /** A handle inside a multi-block text selection drags every selected subtree. */
 export function selectedBlockDragGroup(editor:Editor,index:number):BlockDragGroup|undefined {
@@ -225,7 +241,7 @@ export function blockDropTarget(group:BlockDragGroup,target:number,position:'bef
   const targetDepth=source?group.depth:blockDepth(children[target])
   const requested=requestedDepth??targetDepth+(position==='inside'?1:0)
   if(!Number.isFinite(requested))return
-  const desired=Math.max(0,Math.min(32-group.maxRelativeDepth,Math.round(requested)))
+  const desired=Math.max(0,Math.min(group.maxDepth,Math.round(requested)))
   let destination=source?from:target
   if(!source&&position!=='before') {
     if(target!==from&&desired>targetDepth)destination=target+1
@@ -242,7 +258,7 @@ export function blockDropTarget(group:BlockDragGroup,target:number,position:'bef
     if(!isEditorSpacer(children[previous]))break
     previous--
   }
-  const maxDepth=Math.min(32-group.maxRelativeDepth,previous<0?0:blockDepth(children[previous])+1)
+  const maxDepth=Math.min(group.maxDepth,previous<0?0:blockDepth(children[previous])+1)
   const depth=Math.min(desired,maxDepth)
   return {destination,depth,maxDepth,previous}
 }

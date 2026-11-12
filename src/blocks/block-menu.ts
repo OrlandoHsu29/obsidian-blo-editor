@@ -2,7 +2,7 @@ import { Menu } from 'obsidian'
 import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, changeBlockIndent, deleteBlockGroup } from './model'
+import { blockDepth, canIndentBlock, changeBlockIndent, deleteBlockGroup } from './model'
 import { indentBlockSelection } from './selection'
 import { showAnchoredMenu } from '../wysimark/use-reposition/native-menu'
 
@@ -17,11 +17,12 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
   menu.addItem(item => item
     .setTitle(ui('缩进为子块'))
     .setIcon('indent-increase')
+    .setDisabled(!canIndentBlock(editor.children[index]))
     .onClick(() => indent(1)))
   menu.addItem(item => item
     .setTitle(ui('减少缩进'))
     .setIcon('indent-decrease')
-    .setDisabled(blockDepth(editor.children[index]) === 0)
+    .setDisabled(!canIndentBlock(editor.children[index]) || blockDepth(editor.children[index]) === 0)
     .onClick(() => indent(-1)))
 
   menu.addSeparator()

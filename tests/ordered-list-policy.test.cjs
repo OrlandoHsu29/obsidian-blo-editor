@@ -76,7 +76,7 @@ for(const style of ['number','hash'])for(const depth of [0,2])test(`Backspace re
  Transforms.select(editor,Editor.start(editor,[1]));const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
  assert.equal(backspace(),true);assert.equal(editor.children.length,2);assert.equal(editor.children[1].type,'heading');assert.equal(editor.children[1].level,2);
  assert.equal(editor.children[1].__headingList.enabled,false);assert.equal(editor.children[1].__headingList.style,style);assert.equal(Node.string(editor.children[1]),'title');
- assert.equal(editor.children[1].__blockDepth??0,depth);assert.equal(editor.history.undos.length,1);
+ assert.equal(editor.children[1].__blockDepth??0,0);assert.equal(editor.history.undos.length,1);
  editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);editor.redo();assert.equal(editor.children[1].__headingList.enabled,false);
 });
 

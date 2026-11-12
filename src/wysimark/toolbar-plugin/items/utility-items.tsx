@@ -3,13 +3,12 @@ import { MenuItemData } from '../../shared-overlays'
 import { clearFormatting } from '../../marks-plugin/methods/clear-formatting'
 import * as Icon from '../icons'
 import { HistoryEditor } from 'slate-history'
-import { Editor, Range } from 'slate'
-import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../../blocks/model'
+import { Editor } from 'slate'
+import { blockDepth, canIndentBlock, indentSelectedBlocks, selectedRootBlocks } from '../../../blocks/model'
 import { t } from '../../utils/translations'
 function selectedDepths(editor:Editor) {
-  if(editor.wysimark.readOnly||!editor.selection)return []
-  const [start,end]=Range.edges(editor.selection)
-  return editor.children.slice(start.path[0],end.path[0]+1).filter(n=>!isEditorSpacer(n)).map(blockDepth)
+  const nodes=selectedRootBlocks(editor).map(({node})=>node)
+  return nodes.some(node=>!canIndentBlock(node))?[]:nodes.map(blockDepth)
 }
 export const blockIndentItems:MenuItemData[]=[
   {title:t('decreaseDepth'),icon:Icon.DecreaseDepth,hotkey:'shift+tab',disabled:editor=>!selectedDepths(editor).some(depth=>depth>0),action:editor=>{indentSelectedBlocks(editor,-1)}},

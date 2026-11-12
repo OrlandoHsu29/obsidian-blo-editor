@@ -83,7 +83,7 @@ export const $ToolbarButton = styled("div")`
   border-radius: 0.25em;
   text-align: center;
   color: var(--shade-500);
-  transition: all 100ms;
+  transition: background-color 100ms, color 100ms, box-shadow 100ms, opacity 100ms;
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0);
   &.--disabled {

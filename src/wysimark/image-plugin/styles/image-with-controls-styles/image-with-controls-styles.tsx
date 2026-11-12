@@ -77,6 +77,10 @@ export const $Image = styled("img")`
    * to the resize so we remove the transition during drag resizing.
    */
   transition: width 100ms, height 100ms;
+  /* A size tween inside a table reflows every row on each animation frame. */
+  td & {
+    transition: border-radius 250ms;
+  }
   .--dragging > & {
     transition: border-radius 250ms;
   }

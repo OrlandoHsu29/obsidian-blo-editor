@@ -11,7 +11,8 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
     const win = host.ownerDocument.defaultView!
     const controls = [...host.querySelectorAll<HTMLElement>('[data-toolbar-index]')]
     const more = host.querySelector<HTMLElement>('[data-toolbar-overflow-trigger]')!
-    let frame = 0, lastCount = -1
+    let frame = 0, lastCount = -1, widths: number[] | undefined, moreWidth = 0
+    const observedWidths = new WeakMap<Element, number>()
     const measure = () => {
       const style = win.getComputedStyle(host), parentStyle = win.getComputedStyle(parent)
       const px = (value: string) => parseFloat(value) || 0
@@ -19,10 +20,15 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
         - px(style.marginLeft) - px(style.marginRight) - px(style.paddingLeft) - px(style.paddingRight)
         - px(style.borderLeftWidth) - px(style.borderRightWidth)
       if (available <= 0) return
-      const widths = controls.map(control => control.getBoundingClientRect().width)
+      // These controls never flex. A viewport drag changes their budget, not
+      // every icon's width; font/theme changes invalidate through the observer.
+      if (!widths) {
+        widths = controls.map(control => control.getBoundingClientRect().width)
+        moreWidth = more.getBoundingClientRect().width
+      }
       let next = items.length
       if (widths.reduce((sum, width) => sum + width, 0) > available + .5) {
-        const budget = Math.max(0, available - more.getBoundingClientRect().width)
+        const budget = Math.max(0, available - moreWidth)
         let used = 0
         next = 0
         while (next < items.length && used + widths[next] <= budget + .5) used += widths[next++]
@@ -37,7 +43,17 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
     const schedule = () => {
       if (!frame) frame = win.requestAnimationFrame(() => { frame = 0; measure() })
     }
-    const observer = new win.ResizeObserver(schedule)
+    const observer = new win.ResizeObserver(entries => {
+      let changed = false
+      for (const entry of entries) {
+        const width = entry.contentRect.width
+        if (observedWidths.get(entry.target) === width) continue
+        observedWidths.set(entry.target, width); changed = true
+        if (entry.target !== host && entry.target !== parent) widths = undefined
+      }
+      // Image/table height changes do not change the toolbar's width budget.
+      if (changed) schedule()
+    })
     observer.observe(parent); observer.observe(host); observer.observe(more)
     controls.forEach(control => observer.observe(control))
     measure()

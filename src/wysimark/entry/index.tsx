@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef } from "react"
 import { Descendant, Editor, Element } from "slate"
 import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
 import { isPointerSelecting } from '../../blocks/pointer-selection'
+import { tableCellSelection } from '../table-plugin/cell-selection'
+import { isDomElement } from '../../dom-guards'
 
 import { parse, serialize } from "../convert"
 import { throttle } from "../utils/throttle"
@@ -18,10 +20,6 @@ export { useEditor }
 
 function renderLeaf({ children, attributes }: RenderLeafProps) {
   return <span {...attributes}>{children}</span>
-}
-
-function scrollSelectionIntoView(editor: Editor, range: globalThis.Range) {
-  if (!isPointerSelecting(editor)) defaultScrollSelectionIntoView(editor, range)
 }
 
 /**
@@ -61,6 +59,15 @@ export function Editable({
   readOnly = false,
 }: EditableProps) {
   const changeTrackerRef = useRef<MarkdownChangeTracker | undefined>(undefined)
+  const pointerTargetRef = useRef<HTMLElement | null>(null)
+  const clearPointerTarget = useCallback(() => { pointerTargetRef.current = null }, [])
+  const scrollSelectionIntoView = useCallback((editor: Editor, range: globalThis.Range) => {
+    // A mouse click already identifies visible content, including image voids.
+    // Keep that target stationary until typing or keyboard navigation takes over.
+    const target = pointerTargetRef.current
+    if (target?.isConnected && target.contains(range.startContainer) && target.contains(range.endContainer)) return
+    if (!isPointerSelecting(editor) && !tableCellSelection(editor)?.axis) defaultScrollSelectionIntoView(editor, range)
+  }, [])
 
   /**
    * This is a temporary ref that is only used once to store the initial value
@@ -199,13 +206,6 @@ export function Editable({
     }
   }
 
-  const onSinkeEditableMouseDown = useCallback(() => {
-    /**
-     * Obsidian runs on Electron (Chromium-based), so no Firefox workaround needed.
-     * Focus the editor on mouse down to ensure consistent behavior.
-     */
-  }, [editor])
-
   /**
    * When the user exits the editor, we want to call the `onChange` callback
    * immediately.
@@ -227,9 +227,16 @@ export function Editable({
     >
       <SinkEditable
         scrollSelectionIntoView={scrollSelectionIntoView}
+        onMouseDownCapture={event => {
+          const target = isDomElement(event.target) ? event.target : null
+          const anchor = target?.closest<HTMLElement>('td') ?? target?.closest<HTMLElement>('[data-slate-void="true"]')
+          pointerTargetRef.current = anchor && event.currentTarget.contains(anchor) ? anchor : null
+        }}
+        onKeyDownCapture={clearPointerTarget}
+        onBeforeInputCapture={clearPointerTarget}
+        onCompositionStartCapture={clearPointerTarget}
         readOnly={readOnly}
         renderLeaf={renderLeaf}
-        onMouseDown={onSinkeEditableMouseDown}
         onBlur={onBlur}
         placeholder={placeholder}
         className={className}

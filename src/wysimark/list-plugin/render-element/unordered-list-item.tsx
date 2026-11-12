@@ -11,7 +11,7 @@ export function UnorderedListItem({
   attributes,
   children,
 }: ConstrainedRenderElementProps<UnorderedListItemElement>) {
-  const marginLeft = `${2 + element.depth * 2}em`
+  const marginLeft = `${element.depth * 2}em`
   const ref=useRef<HTMLLIElement>(null)
   const attachList=useCallback((node:HTMLLIElement|null)=>{
     ref.current=node
@@ -20,10 +20,10 @@ export function UnorderedListItem({
   const align=useFirstLineAlignment(ref,'--wysimark-list-marker-center')
   return (
     <$UnorderedListItem {...attributes} ref={attachList} style={{ marginLeft }} onMouseEnter={align}>
-      <div className="--list-item-icon" contentEditable={false}>
+      <div className="--list-item-icon" data-list-marker contentEditable={false}>
         <BulletIcon />
       </div>
-      {children}
+      <div className="wysimark-list-content">{children}</div>
     </$UnorderedListItem>
   )
 }

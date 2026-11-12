@@ -17,8 +17,8 @@ export function blockSpacing(node:Node):{before:number;after:number} {
   if(isStructuredBlock(node))return {before:1,after:1}
   return {before:.65,after:.65}
 }
-export function blockGap(nodes:Node[],index:number):string {
-  let previous=index-1;while(previous>=0&&isEditorSpacer(nodes[previous]))previous--
+export function blockGap(nodes:Node[],index:number,previous=index-1):string {
+  while(previous>=0&&isEditorSpacer(nodes[previous]))previous--
   return previous<0?'0px':`${Math.max(blockSpacing(nodes[index]).before,blockSpacing(nodes[previous]).after)}em`
 }
 /** Imported text may carry color, never font/layout/spacing declarations. */

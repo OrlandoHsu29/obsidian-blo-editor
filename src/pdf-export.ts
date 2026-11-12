@@ -112,7 +112,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
     marker.textContent = button.textContent;
     button.replaceWith(marker);
   });
-  clone.querySelectorAll('button,script,style,iframe,object,embed,[data-wysimark-code-controls],.wysimark-block-handle,[data-slate-zero-width],[data-block-boundary="true"],.wysimark-overlay').forEach(el => {
+  clone.querySelectorAll('button,script,style,iframe,object,embed,[data-wysimark-code-controls],.wysimark-block-handle,.wysimark-list-guides,.blo-table-placeholder,[data-slate-zero-width],[data-block-boundary="true"],.wysimark-overlay').forEach(el => {
     // Excalidraw embeds its handwriting fonts inside the SVG's stylesheet.
     if (el.tagName.toLowerCase() === 'style' && el.closest('svg')) return;
     el.remove();
@@ -124,7 +124,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   for (const element of [clone, ...Array.from(clone.querySelectorAll('*'))]) {
     element.classList.remove('--selected', '--focused', '--dragging', 'is-selected');
     for (const attr of Array.from(element.attributes)) {
-      if (/^on/i.test(attr.name) || ['contenteditable','autofocus','data-block-selected','data-cell-selection','data-delete-preview'].includes(attr.name)) element.removeAttribute(attr.name);
+      if (/^on/i.test(attr.name) || ['contenteditable','autofocus','data-block-selected','data-cell-selection','data-delete-preview','data-block-fold-hidden','data-block-collapsed','data-block-foldable','data-table-layout','data-table-placeholder','aria-busy'].includes(attr.name)) element.removeAttribute(attr.name);
       if (['href','xlink:href','src'].includes(attr.name) && /^\s*javascript:/i.test(attr.value)) element.removeAttribute(attr.name);
     }
   }

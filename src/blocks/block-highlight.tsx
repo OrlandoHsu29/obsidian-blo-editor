@@ -1,17 +1,21 @@
 import { useLayoutEffect } from 'react'
 import type { RefObject } from 'react'
-import { Editor, Element } from 'slate'
-import { ReactEditor, useReadOnly, useSlateStatic } from 'slate-react'
-import { isEditorSpacer, rootCache } from './model'
+import type { Editor, Element } from 'slate'
+import { ReactEditor, useReadOnly } from 'slate-react'
+import { isEditorSpacer } from './model'
 import type { BlockDragGroup } from './model'
 import { useBlockSelection } from './use-block-selection'
 import { structuredBlockContent } from './structured-block'
 
-function measureBlockHighlight(editor:Editor,index:number,root:HTMLElement) {
-    const node=editor.children[index]
-    const content=ReactEditor.toDOMNode(editor,node)
+function measureBlockHighlight(root:HTMLElement) {
+    const content=root.querySelector<HTMLElement>('[data-slate-node="element"]')??root
     const structured=structuredBlockContent(root)
-    const rangeBounds=structured?.getBoundingClientRect()??ReactEditor.toDOMRange(editor,Editor.range(editor,[index])).getBoundingClientRect()
+    // A block selection can notify React before Slate commits replacement nodes.
+    // Measure the rendered leaves without resolving the pending model to DOM.
+    const leaves=structured?[]:content.querySelectorAll('[data-slate-string],[data-slate-zero-width]')
+    const range=root.ownerDocument.createRange()
+    if(leaves.length){range.setStartBefore(leaves[0]);range.setEndAfter(leaves[leaves.length-1])}
+    const rangeBounds=structured?.getBoundingClientRect()??(leaves.length?range.getBoundingClientRect():content.getBoundingClientRect())
     const bounds=rangeBounds.height?rangeBounds:content.getBoundingClientRect()
     const tableFrame=structured?.closest<HTMLElement>('.blo-table-frame')
     const clip=tableFrame?.getBoundingClientRect()
@@ -34,15 +38,16 @@ function clearBlockHighlight(root:HTMLElement) {
 }
 
 /** Presentational feedback follows the rendered content without changing its layout. */
-export function highlightBlockDrag(editor:Editor,group:BlockDragGroup) {
+export function highlightBlockDrag(editor:Editor,group:BlockDragGroup,handleIndex=group.from) {
   const roots:HTMLElement[]=[]
   for(let index=group.from;index<group.end;index++) {
     const node=editor.children[index]
     if(isEditorSpacer(node))continue
     const root=ReactEditor.toDOMNode(editor,node).closest<HTMLElement>('[data-wysimark-block]')
     if(!root)continue
-    measureBlockHighlight(editor,index,root)
+    measureBlockHighlight(root)
     root.setAttribute('data-block-dragging','true')
+    if(index===handleIndex)root.setAttribute('data-block-drag-handle','true')
     roots.push(root)
   }
   return {
@@ -50,21 +55,22 @@ export function highlightBlockDrag(editor:Editor,group:BlockDragGroup) {
     clear:()=>{for(const root of roots){
       root.removeAttribute('data-block-drag-source')
       root.removeAttribute('data-block-dragging')
+      root.removeAttribute('data-block-drag-handle')
       clearBlockHighlight(root)
     }},
   }
 }
 
 export function BlockHighlight({element,rootRef}:{element:Element;rootRef:RefObject<HTMLElement|null>}) {
-  const editor=useSlateStatic(),readOnly=useReadOnly(),selected=useBlockSelection(element)
+  const readOnly=useReadOnly(),selected=useBlockSelection(element)
   useLayoutEffect(()=>{
     const root=rootRef.current
     if(!root||!selected||readOnly)return
     root.setAttribute('data-block-selected','true')
-    const place=()=>{const index=rootCache(editor).indices.get(element);if(index!==undefined)measureBlockHighlight(editor,index,root)}
+    const place=()=>measureBlockHighlight(root)
     place()
-    const observer=new ResizeObserver(place);observer.observe(root)
+    const observer=new root.ownerDocument.defaultView!.ResizeObserver(place);observer.observe(root)
     return()=>{observer.disconnect();root.removeAttribute('data-block-selected');clearBlockHighlight(root)}
-  },[editor,element,rootRef,selected,readOnly])
+  },[element,rootRef,selected,readOnly])
   return <span className="wysimark-block-highlight" contentEditable={false} aria-hidden="true" />
 }

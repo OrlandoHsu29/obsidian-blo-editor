@@ -1,4 +1,7 @@
-import { Editor, Element, Path, Transforms } from "slate"
+import { Editor, Element, Node, Path, Transforms } from "slate"
+import { listHeadingLevel, MAX_BODY_LIST_NUMBER, resolveOrderedNumbers, rootCache } from '../../../blocks/model'
+import { setListBlock } from '../../../blocks/list-container'
+import { setListDepth, getListDepth } from './depth'
 
 import { findElementUp, rewrapElement } from "../../sink"
 
@@ -24,11 +27,12 @@ export function insertBreak(editor: Editor): boolean {
    * If we're in an empty list
    */
   if (empty) {
-    if (element.depth > 0) {
+    const depth=getListDepth(editor)
+    if (depth > 0) {
       /**
        * If it's indented, then unindent it
        */
-      Transforms.setNodes(editor, { depth: element.depth - 1 }, { at: path })
+      setListDepth(editor,path,depth-1)
       return true
     } else {
       /**
@@ -44,11 +48,15 @@ export function insertBreak(editor: Editor): boolean {
 
 /** Split through the list container, retaining content and continuing numbering. */
 export function splitListItem(editor: Editor): boolean {
+  const current=findElementUp<ListItemElement>(editor,isListItem)
+  const capped=current&&current[0].type==='ordered-list-item'&&listHeadingLevel(current[0])===undefined&&
+    (rootCache(editor).numbers.get(current[0])??resolveOrderedNumbers(Node.parent(editor,current[1]).children).numbers.get(current[0])??1)>=MAX_BODY_LIST_NUMBER
   Editor.withoutNormalizing(editor, () => {
     Transforms.splitNodes(editor, { always: true, match: isListItem, mode: "lowest" })
     const nextEntry = findElementUp<ListItemElement>(editor, isListItem)
     if (!nextEntry) return
     const [next, path] = nextEntry
+    if('__collapsed' in next&&next.__collapsed)Transforms.unsetNodes(editor,'__collapsed',{at:path})
     if (next.type === "ordered-list-item") {
       Transforms.setNodes(editor, { __numbering: "continue" }, { at: path })
       if (next.start != null) Transforms.unsetNodes(editor, "start", { at: path })
@@ -57,6 +65,7 @@ export function splitListItem(editor: Editor): boolean {
     if (next.type === "task-list-item" && next.checked) {
       Transforms.setNodes(editor, { checked: false }, { at: path })
     }
+    if(capped)setListBlock(editor,next,path)
   })
   return true
 }

@@ -15,6 +15,7 @@ import { createListMethods } from "./methods"
 import { normalizeNode } from "./normalize-node"
 import { renderElement } from "./render-element"
 import { ListItemElement, ListPluginCustomTypes } from "./types"
+import { setListDepth } from './methods/depth'
 
 export * from "./types"
 
@@ -58,12 +59,9 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
           const listItem = findElementUp<ListItemElement>(editor, isListItem)
           if (!listItem) return false
           const [element, path] = listItem
-          if (element.depth > 0) {
-            Transforms.setNodes(
-              editor,
-              { depth: element.depth - 1 },
-              { at: path }
-            )
+          const depth=list.getListDepth()
+          if (depth > 0) {
+            setListDepth(editor,path,depth-1)
             return true
           }
           if (element.blockChildren) {

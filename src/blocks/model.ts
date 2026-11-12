@@ -3,8 +3,10 @@ import { withHistoryBatch as batch } from '../wysimark/utils/with-history-batch'
 import { isStructuredBlock } from './structured-block'
 
 type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart' | 'explicit'; __firstAtDepth?: boolean; depth?: number; start?: number }
+export const MAX_BODY_LIST_NUMBER = 99
 export const blockDepth = (node: Node): number => Element.isElement(node) ? Math.max(0, (node as Block).__blockDepth ?? (node as Block).depth ?? 0) : 0
 export const isListBlock = (node: Node) => Element.isElement(node) && ['ordered-list-item','unordered-list-item','task-list-item'].includes(node.type)
+export const isFoldableList = (node: Node) => Element.isElement(node)&&['ordered-list-item','unordered-list-item'].includes(node.type)
 export const isEditorSpacer = (node: Node) => Element.isElement(node)&&node.type==='paragraph'&&node.__collapsible&&Node.string(node)===''
 export function groupEnd(nodes: Node[], start: number) {
   let end=start+1;while(end<nodes.length&&(isEditorSpacer(nodes[end])||blockDepth(nodes[end])>blockDepth(nodes[start])))end++;return end
@@ -38,15 +40,40 @@ function blockHeadings(node:Node):HeadingProjection {
   }
   return projection
 }
-const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number}>()
+const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number;listGuides:Map<Node,number>;foldable:Set<Node>;foldedBy:Map<Node,Node>;previousVisible:Map<Node,number>}>()
 export function rootCache(editor: Editor) {
   let cache=caches.get(editor)
   if (!cache || cache.children!==editor.children) {
     const {numbers,numberLabels}=resolveOrderedNumbers(editor.children),indices=new Map<Node,number>(),headings:BlockHeading[]=[]
-    let listCount=0
+    const listGuides=new Map<Node,number>()
+    const foldable=new Set<Node>(),foldedBy=new Map<Node,Node>(),previousVisible=new Map<Node,number>()
+    let previous:Node|undefined,visible=-1,collapsed:Node|undefined,collapsedDepth=0
+    let listCount=0,guideMask=0
     editor.children.forEach((node,index)=>{
       indices.set(node,index)
+      if(isEditorSpacer(node)) {
+        if(collapsed)foldedBy.set(node,collapsed)
+      } else {
+        const depth=blockDepth(node)
+        if(previous&&depth>blockDepth(previous)&&isFoldableList(previous))foldable.add(previous)
+        if(collapsed&&depth<=collapsedDepth)collapsed=undefined
+        if(collapsed)foldedBy.set(node,collapsed)
+        else {
+          previousVisible.set(node,visible);visible=index
+          if(Element.isElement(node)&&isFoldableList(node)&&node.__collapsed){collapsed=node;collapsedDepth=depth}
+        }
+        previous=node
+      }
       const projection=blockHeadings(node)
+      if(!isEditorSpacer(node)) {
+        const depth=blockDepth(node)
+        guideMask%=2**depth
+        if(Element.isElement(node)&&!node.__subtitle&&!projection.headings.length) {
+          if(depth>0&&guideMask)listGuides.set(node,guideMask)
+          // Only body list parents start a guide; prose and widgets continue it.
+          if(isListBlock(node)&&node.type!=='task-list-item')guideMask+=2**depth
+        }
+      }
       for(const heading of projection.headings)headings.push({node:heading.node,number:heading.numberedOwner?numbers.get(heading.numberedOwner):undefined,
         numberLabel:heading.numberedOwner?numberLabels.get(heading.numberedOwner):undefined,
         listIndex:heading.listOffset===undefined?undefined:listCount+heading.listOffset})
@@ -54,7 +81,7 @@ export function rootCache(editor: Editor) {
     })
     // Body edits retain the outline projection when heading nodes/numbers are unchanged.
     const unchanged=cache?.headings.length===headings.length&&headings.every((heading,index)=>heading.node===cache!.headings[index].node&&heading.numberLabel===cache!.headings[index].numberLabel&&heading.listIndex===cache!.headings[index].listIndex)
-    cache={children:editor.children,indices,numbers,numberLabels,headings:unchanged?cache!.headings:headings,listCount};caches.set(editor,cache)
+    cache={children:editor.children,indices,numbers,numberLabels,headings:unchanged?cache!.headings:headings,listCount,listGuides,foldable,foldedBy,previousVisible};caches.set(editor,cache)
   }
   return cache
 }
@@ -193,13 +220,14 @@ export function selectedBlockDragGroup(editor:Editor,index:number):BlockDragGrou
 /** Share the exact insertion boundary and depth between the guide and the move. */
 export function blockDropTarget(group:BlockDragGroup,target:number,position:'before'|'inside'|'after',requestedDepth?:number) {
   const {children,from,end}=group
-  if(!children[target]||isEditorSpacer(children[target])||(target>from&&target<end))return
-  const targetDepth=blockDepth(children[target])
+  if(!children[target]||isEditorSpacer(children[target]))return
+  const source=target>=from&&target<end
+  const targetDepth=source?group.depth:blockDepth(children[target])
   const requested=requestedDepth??targetDepth+(position==='inside'?1:0)
   if(!Number.isFinite(requested))return
   const desired=Math.max(0,Math.min(32-group.maxRelativeDepth,Math.round(requested)))
-  let destination=target
-  if(position!=='before') {
+  let destination=source?from:target
+  if(!source&&position!=='before') {
     if(target!==from&&desired>targetDepth)destination=target+1
     else {
       let last=group.ends.get(target)
@@ -216,7 +244,7 @@ export function blockDropTarget(group:BlockDragGroup,target:number,position:'bef
   }
   const maxDepth=Math.min(32-group.maxRelativeDepth,previous<0?0:blockDepth(children[previous])+1)
   const depth=Math.min(desired,maxDepth)
-  return {destination,depth,maxDepth}
+  return {destination,depth,maxDepth,previous}
 }
 export function moveBlockGroup(editor: Editor, from: number, target: number, position:'before'|'inside'|'after',requestedDepth?:number,selectedEnd=from+1) {
   if(editor.wysimark.readOnly)return false
@@ -264,6 +292,7 @@ export function normalizeOrderedText(editor: Editor, [node,path]: NodeEntry): bo
   if(node.__literalOrderedText===Node.string(node))return false
   const match=Node.string(node).match(/^(\d{1,6})\. /)
   if(!match||Number(match[1])<1)return false
+  if(listHeadingLevel(node)===undefined&&Number(match[1])>MAX_BODY_LIST_NUMBER)return false
   let prefixLength=match[0].length
   for(const [text] of Node.texts(node)){if(prefixLength<=0)break;if(text.text.length&&text.code)return false;prefixLength-=text.text.length}
   const start=Editor.start(editor,path),end=Editor.after(editor,start,{distance:match[0].length,unit:'offset'})

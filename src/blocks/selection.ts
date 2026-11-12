@@ -8,6 +8,12 @@ import { isEditableStructure } from './structured-block'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 const staged=new WeakMap<Editor,{index:number;range:Range}>()
+const selectingBlock=new WeakSet<Editor>()
+/** Whole-block ranges include folded descendants without entering their text. */
+export function isBlockSelectionRange(editor:Editor,range:Range):boolean {
+ const pending=staged.get(editor)
+ return selectingBlock.has(editor)||!!pending&&Range.equals(pending.range,range)
+}
 const listeners=new WeakMap<Editor,Set<()=>void>>()
 export function subscribeBlockSelection(editor:Editor,listener:()=>void) {
  let set=listeners.get(editor);if(!set){set=new Set();listeners.set(editor,set)}
@@ -46,10 +52,11 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
  if(deleteWholeBlockSelection(editor))return true
  if(editor.wysimark.readOnly)return false
  if(editor.selection&&Range.isCollapsed(editor.selection)) {
-  const index=editor.selection.anchor.path[0],node=editor.children[index]
-  // Match Shift+Tab on an empty text block before Backspace can merge/delete it.
+  const point=editor.selection.anchor,index=point.path[0],node=editor.children[index]
+  // At the text start, outdent the subtree before Backspace can merge it.
   if(Element.isElement(node)&&!isEditorSpacer(node)&&!isStructuredBlock(node)&&
-   blockDepth(node)>0&&Editor.isEmpty(editor,node))return changeBlockIndent(editor,index,-1)
+   blockDepth(node)>0&&point.offset===0&&
+   (Point.equals(point,Editor.start(editor,[index]))||Editor.before(editor,point,{unit:'character'})?.path[0]!==index))return changeBlockIndent(editor,index,-1)
  }
  const index=boundaryBlockIndex(editor)
  return index===undefined?false:selectBlockContents(editor,index)
@@ -65,7 +72,9 @@ function atVerticalEdge(editor:Editor,index:number,backwards:boolean):boolean {
 export function selectBlockContents(editor:Editor,index:number):boolean {
  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
  let last=groupEnd(editor.children,index)-1;while(last>index&&isEditorSpacer(editor.children[last]))last--
- const range={anchor:Editor.start(editor,[index]),focus:Editor.end(editor,[last])};Transforms.select(editor,range)
+ const range={anchor:Editor.start(editor,[index]),focus:Editor.end(editor,[last])}
+ selectingBlock.add(editor)
+ try{Transforms.select(editor,range)}finally{selectingBlock.delete(editor)}
  setBlockSelection(editor,{index,range})
  return true
 }

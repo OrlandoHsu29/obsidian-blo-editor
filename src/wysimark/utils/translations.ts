@@ -129,6 +129,8 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '折叠子块': { zh:'折叠子块', en:'Collapse children' },
+  '展开子块': { zh:'展开子块', en:'Expand children' },
   '标题列表': { zh: '标题列表', en: 'Heading lists' },
   '标题前缀样式': { zh: '标题前缀样式', en: 'Heading prefix style' },
   '标题级别': { zh: '标题级别', en: 'Heading levels' },
@@ -416,6 +418,14 @@ export const uiMessages = {
   "默认使用富文本编辑器": {
     "zh": "默认使用富文本编辑器",
     "en": "Use rich text editing by default"
+  },
+  "正文列表层级竖线": {
+    "zh": "正文列表层级竖线",
+    "en": "Body list hierarchy guides"
+  },
+  "显示正文列表父子层级的竖线；标题列表不显示竖线。修改后立即生效。": {
+    "zh": "显示正文列表父子层级的竖线；标题列表不显示竖线。修改后立即生效。",
+    "en": "Show vertical guides for nested body lists. Heading lists have no guides. Changes take effect immediately."
   },
   "DevNote 中的 Markdown 笔记使用富文本编辑；阅读视图不受影响。": {
     "zh": "DevNote 中的 Markdown 笔记使用富文本编辑；阅读视图不受影响。",

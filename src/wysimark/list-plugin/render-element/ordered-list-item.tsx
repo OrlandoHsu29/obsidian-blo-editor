@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { ReactEditor, useReadOnly, useSlate } from "slate-react"
 import { Menu } from 'obsidian'
 import { showAnchoredMenu } from '../../use-reposition/native-menu'
-import { listHeadingLevel, resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
+import { listHeadingLevel, MAX_BODY_LIST_NUMBER, resolveOrderedNumbers, rootCache, setNumbering } from '../../../blocks/model'
 import { Element, Node } from 'slate'
 
 import { ConstrainedRenderElementProps } from "../../sink"
@@ -45,8 +45,8 @@ export function OrderedListItem({
   } as React.CSSProperties
   const className = clsx({ "--first-at-depth": element.__firstAtDepth })
   return (
-    <$OrderedListItem {...attributes} data-list-heading-level={heading?.level} className={className} style={style}>
-      <button className="wysimark-list-number" contentEditable={false} disabled={readOnly||index===undefined} data-list-number={number} aria-label={ui('序号 {number}，设置编号',{number:subtitle?label.slice(0,-1):number})} onMouseDown={event=>event.preventDefault()} onClick={event=>{
+    <$OrderedListItem {...attributes} data-list-heading-level={heading?.level??(subtitle?5:undefined)} className={className} style={style}>
+      <button className="wysimark-list-number" contentEditable={false} disabled={readOnly||index===undefined} data-list-number={number} data-list-marker={subtitle||!heading&&number>=1&&number<=MAX_BODY_LIST_NUMBER?true:undefined} aria-description={ui('序号 {number}，设置编号',{number:subtitle?label.slice(0,-1):number})} onMouseDown={event=>event.preventDefault()} onClick={event=>{
         if(index===undefined)return
         event.preventDefault();event.stopPropagation();const menu=new Menu()
         menu.addItem(item=>item.setTitle(ui("继续编号")).setIcon('list-ordered').onClick(()=>setNumbering(editor,index,'continue')))

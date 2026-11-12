@@ -81,6 +81,7 @@ export default class BloEditorPlugin extends Plugin {
     const savedSettings = await this.loadData();
     this.settings = Object.assign(this.settings, savedSettings);
     this.settings.autoLinkTitle = this.settings.autoLinkTitle !== false;
+    this.settings.showListGuides = this.settings.showListGuides !== false;
     this.linkTitlePreferences.setEnabled(this.settings.autoLinkTitle);
     // Do not broaden an old per-type deletion opt-in to every embedded medium.
     if (typeof savedSettings?.deleteEmbeddedAttachments !== 'boolean') this.settings.deleteEmbeddedAttachments = false;
@@ -380,9 +381,15 @@ export default class BloEditorPlugin extends Plugin {
       if (view instanceof MarkdownView && view.file && this.isMemoPanelLeaf(leaf, view.file)) await this.openRichByDefault(leaf, view.file);
     }
   }
+  setListGuidesVisible(visible: boolean) {
+    this.settings.showListGuides = visible;
+    for (const leaf of this.allLeaves()) {
+      if (leaf.view instanceof BloView) leaf.view.contentEl.toggleClass('blo-hide-list-guides', !visible);
+    }
+  }
   private allLeaves(): WorkspaceLeaf[] {
     const leaves: WorkspaceLeaf[] = [];
-    this.app.workspace.iterateAllLeaves(leaf => leaves.push(leaf));
+    this.app.workspace.iterateAllLeaves(leaf => { leaves.push(leaf); });
     return leaves;
   }
   private async releaseMemoPanelViews(): Promise<void> {

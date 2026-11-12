@@ -17,7 +17,7 @@ import { InlineCodePlugin } from "../inline-code-plugin"
 import { MathPlugin } from "../math-plugin"
 import { ListPlugin } from "../list-plugin"
 import { MarksPlugin } from "../marks-plugin"
-import { ColorBoundaryPlugin } from '../marks-plugin/color-boundary'
+import { MarkBoundaryPlugin } from '../marks-plugin/mark-boundary'
 import { BlockStructurePlugin } from '../../blocks/plugin'
 import { NormalizeAfterDeletePlugin } from "../normalize-after-delete-plugin"
 import { ExtractCustomTypes } from "../sink"
@@ -30,8 +30,8 @@ import { PlaceholderPlugin } from "../placeholder-plugin"
 import { WysimarkEditor } from "./types"
 
 export const plugins = [
+  MarkBoundaryPlugin,
   BlockStructurePlugin,
-  ColorBoundaryPlugin,
   PasteMarkdownPlugin,
   ConvertElementPlugin,
   AnchorPlugin,
@@ -62,6 +62,7 @@ export type PluginTypes = ExtractCustomTypes<typeof plugins>
 type CustomEditor = PluginTypes["Editor"]
 type CustomElement = PluginTypes["Element"] & {
   __blockDepth?: number
+  __collapsed?: true
   __subtitle?: true
   /** Heading prefix choice and whether it is applied; persisted in block metadata. */
   __headingList?: { style: 'hash' | 'number'; enabled: boolean }

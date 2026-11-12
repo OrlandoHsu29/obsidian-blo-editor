@@ -26,6 +26,7 @@ export type EditorSettings = {
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   hiddenToolbarButtons: string[]
   autoLinkTitle: boolean
+  showListGuides: boolean
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {
@@ -42,6 +43,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   tableDefaults: { headerRow: true, headerColumn: false },
   hiddenToolbarButtons: [],
   autoLinkTitle: true,
+  showListGuides: true,
 }
 
 export class BloSettingsTab extends PluginSettingTab {
@@ -137,6 +139,13 @@ export class BloSettingsTab extends PluginSettingTab {
           plugin.settings.preferRichEditing = value
           await plugin.saveData(plugin.settings)
         }))
+    new Setting(editorGroup)
+      .setName(ui('正文列表层级竖线'))
+      .setDesc(ui('显示正文列表父子层级的竖线；标题列表不显示竖线。修改后立即生效。'))
+      .addToggle(toggle => toggle.setValue(plugin.settings.showListGuides).onChange(async value => {
+        plugin.setListGuidesVisible(value)
+        await plugin.saveData(plugin.settings)
+      }))
     for (const [feature, key, name, description] of [
       ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；已启用时自动开启，未安装时会自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],
       ['drawings', 'enableDrawings', '启用画板', '依赖 Excalidraw；已启用时自动开启，未安装时会自动安装并启用。支持内嵌预览、缩放及放大绘制。'],

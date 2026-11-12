@@ -1,6 +1,6 @@
 import type { Element } from '../wysimark/convert/types'
 import { Element as SlateElement, Node } from 'slate'
-import { blockDepth, isEditorSpacer, isListBlock, orderedNumbers } from './model'
+import { blockDepth, isEditorSpacer, isFoldableList, isListBlock, orderedNumbers } from './model'
 
 const prefix='<!-- wysimark-block:v1 '
 const formats = new WeakMap<Element, { subtitles:number[][]; headingStyles:({path:number[]} & NonNullable<Element['__headingList']>)[] }>()
@@ -16,12 +16,12 @@ function blockFormats(node:Element) {
   }
   return value
 }
-export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>n.__blockDepth!==undefined||n.__numbering!==undefined||blockFormats(n).subtitles.length>0||blockFormats(n).headingStyles.length>0)}
+export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>n.__collapsed||n.__blockDepth!==undefined||n.__numbering!==undefined||blockFormats(n).subtitles.length>0||blockFormats(n).headingStyles.length>0)}
 export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Element,number?:number)=>string) {
   const numbers=orderedNumbers(nodes)
   return nodes.filter(n=>!isEditorSpacer(n)).map(node=>{
     const {subtitles,headingStyles:styles}=blockFormats(node)
-    const metadata={depth:blockDepth(node),subtitles:subtitles.length?subtitles:undefined,headingStyles:styles.length?styles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
+    const metadata={depth:blockDepth(node),collapsed:node.__collapsed||undefined,subtitles:subtitles.length?subtitles:undefined,headingStyles:styles.length?styles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
     const plain=isListBlock(node)?{...node,depth:0,...(node.type==='ordered-list-item'?{start:numbers.get(node)}:{})}:node
     return `${prefix}${encodeURIComponent(JSON.stringify(metadata))} -->\n\n${serializeOne(plain as Element,numbers.get(node)).trimEnd()}\n\n`
   }).join('').trimEnd()+'\n'
@@ -54,6 +54,7 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
     }
     const parsed=parseOne(chunk.lines.join('\n').trim());const node=parsed[0]
     if(!node)continue
+    if(chunk.metadata.collapsed===true&&isFoldableList(node))node.__collapsed=true
     const depth=Math.max(0,Math.min(32,Number(chunk.metadata.depth)||0))
     const recoveredList=isListBlock(node)&&node.__blockDepth!==undefined
     // A chunk can recover several list items. Keep their relative indentation

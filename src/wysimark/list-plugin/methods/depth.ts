@@ -1,4 +1,5 @@
-import { Editor } from "slate"
+import { Editor, Path, Transforms } from "slate"
+import { blockDepth } from '../../../blocks/model'
 import { findElementUp, isStartOfElement } from "../../sink"
 import { isListItem } from ".."
 import { ListItemElement } from "../types"
@@ -8,7 +9,12 @@ const MAX_DEPTH = 2
 export function getListDepth(editor: Editor): number {
   const listItem = findElementUp<ListItemElement>(editor, isListItem)
   if (!listItem) return 0
-  return listItem[0].depth
+  return blockDepth(listItem[0])
+}
+
+/** Keep the visible list offset and the shared block hierarchy in sync. */
+export function setListDepth(editor:Editor,at:Path,depth:number):void {
+  Transforms.setNodes(editor,{depth,__blockDepth:depth},{at})
 }
 
 export function canIncreaseDepth(editor: Editor): boolean {

@@ -9,15 +9,18 @@ const $ListItem = styled("li")`
 
 export const $UnorderedListItem = styled($ListItem)`
   position: relative;
+  display: flex;
+  align-items: baseline;
   list-style-type: none;
+  .wysimark-list-content { flex: 1; min-width: 0; }
   .--list-item-icon {
-    position: absolute;
-    top: var(--wysimark-list-marker-center, 0.75em);
-    left: -1.5em;
-    display: flex;
+    position: relative;
+    top: calc(var(--wysimark-list-marker-center, 0.825em) - 0.825em);
+    flex: 0 0 auto;
+    align-self: flex-start;
+    display: inline-grid;
     align-items: center;
-    line-height: 1;
-    transform: translateY(-50%);
+    line-height: 1.65;
     svg { display: block; }
     color: var(--shade-600);
   }
@@ -46,15 +49,10 @@ export const $OrderedListItem = styled($ListItem)`
   &::before { content: none; }
 `
 
-export const $TaskListItem = styled($ListItem)`
-  position: relative;
-  list-style-type: none;
+export const $TaskListItem = styled($UnorderedListItem)`
   .--list-item-icon {
-    position: absolute;
-    top: 0.25em;
-    left: -1.5em;
-    line-height: 1.5em;
     color: var(--shade-300);
+    .theme-dark & { color: var(--text-muted); }
     .--checkmark {
       color: green;
       stroke-width: 3px;

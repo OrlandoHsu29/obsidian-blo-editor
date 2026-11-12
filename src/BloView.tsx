@@ -12,6 +12,7 @@ import { isWikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from './wysimark
 import { getLineEnding, withLineEnding, LineEnding } from './wysimark/convert/line-endings';
 import { handleScopedHotkey } from './wysimark/entry/scoped-hotkeys';
 import { selectBoundaryFromPointer } from './blocks/boundary-pointer';
+import { revealFoldedSelection } from './blocks/folding';
 import { consumePointerSelectionClick, resetPointerSelection } from './blocks/pointer-selection';
 import { selectDocumentEndFromPointer } from './blocks/document-end-pointer';
 import { insertDocumentStartParagraph } from './blocks/document-start';
@@ -643,6 +644,7 @@ export class BloView extends FileView {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('wysimark-container');
+    contentEl.toggleClass('blo-hide-list-guides', this.plugin.settings.showListGuides === false);
     const transfer = (event: ClipboardEvent | DragEvent) => {
       const editor = this.editor, file = this.currentFile;
       if (!editor || !file || this.readOnly || !(event.target as HTMLElement).closest('[data-slate-editor="true"]')) return;
@@ -798,6 +800,7 @@ export class BloView extends FileView {
       const target=typeof headingIndex==='number'?headings[headingIndex]:index>=0?sourceHeadings[index]:headings.find(entry=>Node.string(entry.node).trim()===heading);
       const match=target?[target.node,ReactEditor.findPath(this.editor,target.node)] as const:undefined;
       if (match) {
+        const revealed=revealFoldedSelection(this.editor,Editor.range(this.editor,match[1]));
         const target = ReactEditor.toDOMNode(this.editor, match[0]);
         const toolbar = this.containerEl.querySelector<HTMLElement>('[data-wysimark-toolbar]');
         // Native scrollIntoView accounts for scroll-margin in each scroll container.
@@ -806,7 +809,8 @@ export class BloView extends FileView {
           Transforms.select(this.editor, Editor.start(this.editor, match[1]));
           ReactEditor.focus(this.editor);
         }
-        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+        if(revealed)target.ownerDocument.defaultView?.requestAnimationFrame(()=>{if(target.isConnected)target.scrollIntoView({block:'start',behavior:'auto'})});
+        else target.scrollIntoView({ block: 'start', behavior: 'auto' });
       }
     };
     scroll();

@@ -49,11 +49,16 @@ Alongside Obsidian's native Markdown editor, Blo offers:
 
 **Parent and child blocks.** Drag a parent together with its text, lists, quotes,
 tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
-adjust indentation. On an indented empty text block, Backspace removes one level
-of indentation before deleting the line. Repeating the active paragraph-style shortcut restores body text.
+adjust indentation. At the start of indented body text, Backspace removes one level
+of indentation before deleting or merging. Repeating the active paragraph-style shortcut restores body text.
+Fold ordered/unordered list children with the arrow beside the block handle; folding
+persists with the note. Body list hierarchy guides can be toggled in settings; heading lists have no guides.
+Body ordered-list shortcuts recognize `1.` through `99.`. Ordered, unordered and task
+lists share a text indent. Enter starts a new block without inline color, bold or other marks while retaining its list type.
 
-**Hierarchical heading numbers.** Combine heading levels and indentation to
-display `1.2.3`, counting only numbered ancestors. Continue/restart rules respect
+**Hierarchical heading numbers.** Combine heading levels to display `1.2.3`,
+counting only numbered ancestors. Headings and subtitles stay at root depth;
+Tab, menus and dragging cannot indent them, but dragging can reorder them. Continue/restart rules respect
 heading and parent-block boundaries; intervening text and code do not restart
 same-level numbering. Restart manually when needed; body lists keep ordinary `1.` markers.
 Heading numbers also appear in the native outline.
@@ -65,6 +70,9 @@ Tab moves between cells; Shift+arrows extend a rectangle. Backspace/Delete clear
 contents; select row/column handles to remove rows/columns. Set default header styles.
 Narrow panes allow horizontal table overflow, with fading edge hints and a scrollbar
 that appears on selection, focus, or hovering its track.
+Mouse selection of cells, rows, columns and images keeps the viewport stationary.
+Initial layout and pane resizing use a grid placeholder transition; refitting existing
+tables waits for scrolling to pause. Clicking images outside tables also keeps their scroll position.
 
 <details>
 <summary>View table selection and floating controls</summary>

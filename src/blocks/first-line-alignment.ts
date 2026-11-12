@@ -29,7 +29,7 @@ function measurements(root:HTMLElement,target:Target) {
   if(target.inViewport===false)return
   if(target.visibleOnly&&!root.matches(':hover,:focus-within'))return
   const text=firstTextRect(root);if(!text)return
-  const rect=root.getBoundingClientRect(),style=getComputedStyle(root)
+  const rect=root.getBoundingClientRect(),style=root.ownerDocument.defaultView!.getComputedStyle(root)
   // offsetWidth includes padding and borders; computed width needs the box model.
   const width=parseFloat(style.width)+(style.boxSizing==='border-box'?0:parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)+parseFloat(style.borderLeftWidth)+parseFloat(style.borderRightWidth))
   const scale=width>0?rect.width/width:1

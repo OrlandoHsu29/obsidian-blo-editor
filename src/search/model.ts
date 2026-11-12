@@ -5,7 +5,9 @@ import { HistoryEditor } from 'slate-history'
 export function findText(editor: Editor, query: string, matchCase = false): Range[] {
   if (!query) return []
   const results: Range[] = []
-  const needle = query
+  // Compile once per search, rather than once per block/void boundary.
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escaped, matchCase ? 'g' : 'gi')
   for (const [block, path] of Editor.nodes(editor, {
     at: [], mode: 'lowest', match: node => Element.isElement(node) && Editor.isBlock(editor, node),
   })) {
@@ -13,8 +15,6 @@ export function findText(editor: Editor, query: string, matchCase = false): Rang
     const flush = () => {
       const text = parts.map(part => part.text).join('')
       // RegExp /i keeps UTF-16 offsets stable for case folding (e.g. İ).
-      const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const regex = new RegExp(escaped, matchCase ? 'g' : 'gi')
       const point = (offset: number, end: boolean): Point => {
         for (let i=0;i<parts.length;i++) {
           if (offset < parts[i].text.length || (end && offset === parts[i].text.length) || i===parts.length-1) return {path:parts[i].path,offset}

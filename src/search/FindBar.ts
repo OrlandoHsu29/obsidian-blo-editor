@@ -19,6 +19,10 @@ export class FindBar {
   private name = `wysimark-find-${++nextId}`
   private style: HTMLStyleElement
   private resize: ResizeObserver
+  private win: Window & typeof globalThis
+  private toolbar: HTMLElement | null = null
+  private search?: {editor: Editor; children: Editor['children']; query: string; matchCase: boolean}
+  private highlighted?: Range[]
   constructor(private host: HTMLElement, private getEditor: () => Editor | null, private readonlyMode: () => boolean) {
     this.panel = host.createDiv({cls:'wysimark-find-panel'}); this.panel.hidden=true
     this.panel.setAttribute('role','search'); this.panel.setAttribute('aria-labelledby',this.name+'-label')
@@ -44,8 +48,9 @@ export class FindBar {
     // Highlight rules and the registry belong to this view's window, so a
     // popout (the quick memo panel) highlights its own text.
     const doc = host.ownerDocument
+    this.win = doc.defaultView!
     this.style=doc.head.createEl('style');this.style.textContent=`::highlight(${this.name}){background-color:var(--text-highlight-bg);color:inherit}::highlight(${this.name}-active){background-color:var(--interactive-accent);color:var(--text-on-accent)}`
-    this.resize=new ResizeObserver(()=>this.updateHeight());this.resize.observe(host)
+    this.resize=new this.win.ResizeObserver(()=>this.updateHeight());this.resize.observe(host)
   }
   private button(row:HTMLElement,title:string,icon:string,action:()=>void) {
     const button=row.createEl('button',{type:'button',attr:{'aria-label':title,'data-tooltip-position':'bottom'}});setIcon(button,icon);button.addEventListener('click',action);return button
@@ -58,16 +63,26 @@ export class FindBar {
     }
     this.panel.hidden=false;this.replaceRow.hidden=!replace||this.readonlyMode();this.updateHeight();this.refresh(true);this.query.focus();this.query.select()
   }
-  attach(){const slot=this.host.querySelector('[data-wysimark-find-slot]');if(slot&&this.panel.parentElement!==slot){slot.append(this.panel);const toolbar=this.host.querySelector('[data-wysimark-toolbar]');if(toolbar)this.resize.observe(toolbar)}this.updateHeight()}
-  private updateHeight(){const toolbar=this.host.querySelector('[data-wysimark-toolbar]');this.host.style.setProperty('--wysimark-toolbar-height',`${toolbar?.getBoundingClientRect().height||0}px`)}
+  attach(){
+    const slot=this.host.querySelector('[data-wysimark-find-slot]')
+    if(slot&&this.panel.parentElement!==slot)slot.append(this.panel)
+    const toolbar=this.host.querySelector<HTMLElement>('[data-wysimark-toolbar]')
+    if(toolbar!==this.toolbar){if(this.toolbar)this.resize.unobserve(this.toolbar);this.toolbar=toolbar;if(toolbar)this.resize.observe(toolbar)}
+    this.updateHeight()
+  }
+  private updateHeight(){const value=`${this.toolbar?.getBoundingClientRect().height||0}px`;if(this.host.style.getPropertyValue('--wysimark-toolbar-height')!==value)this.host.style.setProperty('--wysimark-toolbar-height',value)}
   refresh(reset=false) {
     if(this.panel.hidden)return
-    const editor=this.getEditor();this.results=editor?findText(editor,this.query.value,this.matchCase):[]
+    const editor=this.getEditor(),query=this.query.value,previous=this.search
+    if(!previous||previous.editor!==editor||previous.children!==editor?.children||previous.query!==query||previous.matchCase!==this.matchCase){
+      this.results=editor?findText(editor,query,this.matchCase):[]
+      this.search=editor?{editor,children:editor.children,query,matchCase:this.matchCase}:undefined
+    }
     this.index=reset?0:Math.min(this.index,Math.max(0,this.results.length-1))
     this.count.textContent=this.query.value?(this.results.length?`${this.index+1} / ${this.results.length}`:ui("无结果")):''
     this.replaceRow.hidden=this.replaceRow.hidden||this.readonlyMode()
     for(const button of this.replaceRow.querySelectorAll('button'))button.disabled=this.readonlyMode()||!this.results.length
-    cancelAnimationFrame(this.frame);this.frame=requestAnimationFrame(()=>this.highlight(reset))
+    this.win.cancelAnimationFrame(this.frame);this.frame=this.win.requestAnimationFrame(()=>{this.frame=0;this.highlight(reset)})
   }
   navigate(direction:number) {
     if(!this.results.length)return
@@ -78,10 +93,15 @@ export class FindBar {
     const editor=this.getEditor();if(!editor||this.panel.hidden)return
     const view=this.host.ownerDocument.defaultView as any
     const highlights=view?.CSS?.highlights,Highlight=view?.Highlight
-    const domRanges=this.results.slice(0,1000).flatMap(range=>{try{return [ReactEditor.toDOMRange(editor,range)]}catch{return []}})
     let active:globalThis.Range|undefined
     try {if(this.results[this.index])active=ReactEditor.toDOMRange(editor,this.results[this.index])}catch {/* Render may still be updating. */}
-    if(highlights&&Highlight){highlights.set(this.name,new Highlight(...domRanges));highlights.set(this.name+'-active',new Highlight(...(active?[active]:[])))}
+    if(highlights&&Highlight){
+      if(this.highlighted!==this.results){
+        const domRanges=this.results.slice(0,1000).flatMap(range=>{try{return [ReactEditor.toDOMRange(editor,range)]}catch{return []}})
+        highlights.set(this.name,new Highlight(...domRanges));this.highlighted=this.results
+      }
+      highlights.set(this.name+'-active',new Highlight(...(active?[active]:[])))
+    }
     if(scroll&&active) {
       const scroller=this.host.querySelector<HTMLElement>('.wysimark-editor-container')||this.host;
       const rect=active.getBoundingClientRect(),bounds=scroller.getBoundingClientRect(),toolbar=this.host.querySelector('[data-wysimark-toolbar]')?.getBoundingClientRect();
@@ -96,6 +116,6 @@ export class FindBar {
     const current=this.results[Math.min(this.index,this.results.length-1)]
     replaceMatches(editor,all?this.results:(current?[current]:[]),this.replacement.value);this.refresh(false)
   }
-  close(focus=false){this.panel.hidden=true;this.host.style.removeProperty('--wysimark-find-height');cancelAnimationFrame(this.frame);const highlights=(this.host.ownerDocument.defaultView?.CSS as any)?.highlights;highlights?.delete(this.name);highlights?.delete(this.name+'-active');const editor=this.getEditor();if(focus&&editor&&!this.readonlyMode())ReactEditor.focus(editor)}
+  close(focus=false){this.panel.hidden=true;this.host.style.removeProperty('--wysimark-find-height');this.win.cancelAnimationFrame(this.frame);this.frame=0;this.search=undefined;this.highlighted=undefined;this.results=[];const highlights=(this.win.CSS as any)?.highlights;highlights?.delete(this.name);highlights?.delete(this.name+'-active');const editor=this.getEditor();if(focus&&editor&&!this.readonlyMode())ReactEditor.focus(editor)}
   destroy(){this.resize.disconnect();this.close();this.panel.remove();this.style.remove();this.host.style.removeProperty('--wysimark-toolbar-height')}
 }

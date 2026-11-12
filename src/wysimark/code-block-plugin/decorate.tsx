@@ -89,6 +89,7 @@ function decorateCodeBlock(
   const text = textLines.join("")
 
   const lineOffsets: number[] = getLineOffsets(textLines)
+  const lineLeaves = codeLineElements.map(line => Array.from(Node.texts(line)))
 
   /**
    * Takes a character offset from the beginning of the `code-block` and
@@ -97,17 +98,19 @@ function decorateCodeBlock(
    */
 
   function getPointFromOffset(offset: number) {
-    for (let i = lineOffsets.length - 1; i >= 0; i--) {
-      const lineOffset = lineOffsets[i]
-      if (lineOffset <= offset) {
-        let remaining = Math.min(offset - lineOffset, Node.string(codeLineElements[i]).length)
-        const leaves = Array.from(Node.texts(codeLineElements[i]))
-        for (let j = 0; j < leaves.length; j++) {
-          const [leaf, relativePath] = leaves[j]
-          if (remaining <= leaf.text.length || j === leaves.length - 1) return { path: [...path, i, ...relativePath], offset: Math.min(remaining, leaf.text.length) }
-          remaining -= leaf.text.length
-        }
-      }
+    let low = 0, high = lineOffsets.length
+    while (low < high) {
+      const middle = (low + high) >>> 1
+      if (lineOffsets[middle] <= offset) low = middle + 1
+      else high = middle
+    }
+    const index = low - 1, leaves = lineLeaves[index]
+    // The synthetic newline belongs to the preceding line's final text leaf.
+    let remaining = Math.min(offset - lineOffsets[index], textLines[index].length - 1)
+    for (let j = 0; j < leaves.length; j++) {
+      const [leaf, relativePath] = leaves[j]
+      if (remaining <= leaf.text.length || j === leaves.length - 1) return { path: [...path, index, ...relativePath], offset: Math.min(remaining, leaf.text.length) }
+      remaining -= leaf.text.length
     }
     throw new Error("This shouldn't happen and indicates a bug in the logic")
   }

@@ -129,6 +129,8 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  "Alt+A 分级选择": { zh: "Alt+A 分级选择", en: "Progressive selection with Alt+A" },
+  "首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。": { zh: "首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。", en: "Press Alt+A to select the current block and its children; press again with the whole block selected to select the document. Changes apply immediately." },
   '复制块链接': { zh: '复制块链接', en: 'Copy block link' },
   '块链接已复制': { zh: '块链接已复制', en: 'Block link copied' },
   '无法复制块链接，请重试': { zh: '无法复制块链接，请重试', en: 'Could not copy the block link. Please try again.' },

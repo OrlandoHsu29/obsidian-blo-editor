@@ -516,6 +516,7 @@ export class BloView extends FileView {
       await this.contentEl.ownerDocument.defaultView!.navigator.clipboard.writeText(link);
     };
     editor.wysimark.openSearch = replace => this.showSearch(replace);
+    editor.wysimark.getBlockSelectShortcut = () => this.plugin.settings.blockSelectShortcut;
     editor.wysimark.toggleReading = () => this.toggleReading();
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
     editor.wysimark.insertDrawing = async () => {

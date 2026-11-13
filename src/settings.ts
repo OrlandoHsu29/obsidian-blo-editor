@@ -22,6 +22,7 @@ export type EditorSettings = {
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
   autoLinkTitle: boolean
   showListGuides: boolean
+  blockSelectShortcut: boolean
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {
@@ -38,6 +39,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   tableDefaults: { headerRow: true, headerColumn: false },
   autoLinkTitle: true,
   showListGuides: true,
+  blockSelectShortcut: true,
 }
 
 export class BloSettingsTab extends PluginSettingTab {
@@ -107,6 +109,13 @@ export class BloSettingsTab extends PluginSettingTab {
       .setDesc(ui('显示正文列表父子层级的竖线；标题列表不显示竖线。修改后立即生效。'))
       .addToggle(toggle => toggle.setValue(plugin.settings.showListGuides).onChange(async value => {
         plugin.setListGuidesVisible(value)
+        await plugin.saveData(plugin.settings)
+      }))
+    new Setting(editorGroup)
+      .setName(ui('Alt+A 分级选择'))
+      .setDesc(ui('首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。'))
+      .addToggle(toggle => toggle.setValue(plugin.settings.blockSelectShortcut).onChange(async value => {
+        plugin.settings.blockSelectShortcut = value
         await plugin.saveData(plugin.settings)
       }))
     for (const [feature, key, name, description] of [

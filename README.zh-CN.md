@@ -119,6 +119,8 @@ Ctrl+B 加粗，Ctrl+I 斜体，Ctrl+U 下划线，Ctrl+Alt+C 切换字体颜色
 Ctrl+F 查找，Ctrl+H 替换，Ctrl+Alt+P 切换阅读与编辑。
 更多快捷键在 Obsidian 设置中搜索 **Blo Editor**。
 
+Alt+A 首次选中当前块及其子块；当前块已完整选中时，再按一次选中全文。可在插件设置中关闭「Alt+A 分级选择」，修改立即生效。
+
 ### 让 AI 按 Blo 格式写笔记
 
 在 **设置 → Blo Editor → AI 写笔记** 点击「复制安装提示词」，粘贴给能够访问本地文件的 AI。AI 会按其客户端的安装方式安装随插件提供的 `blo-editor-notes` Skill，学习父子块缩进、折叠、标题编号、颜色、表格及可编辑画板附件格式。插件更新后可再次复制提示词，让 AI 更新 Skill。

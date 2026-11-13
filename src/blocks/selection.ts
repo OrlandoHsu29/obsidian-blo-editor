@@ -85,13 +85,31 @@ function atVerticalEdge(editor:Editor,index:number,backwards:boolean):boolean {
   return !!edge&&caret.bottom>=edge.top&&caret.top<=edge.bottom
  }catch{return false}
 }
+function blockSelectionRange(editor:Editor,index:number):Range {
+ let last=groupEnd(editor.children,index)-1;while(last>index&&isEditorSpacer(editor.children[last]))last--
+ return {anchor:Editor.start(editor,[index]),focus:Editor.end(editor,[last])}
+}
 export function selectBlockContents(editor:Editor,index:number):boolean {
  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
- let last=groupEnd(editor.children,index)-1;while(last>index&&isEditorSpacer(editor.children[last]))last--
- const range={anchor:Editor.start(editor,[index]),focus:Editor.end(editor,[last])}
+ const range=blockSelectionRange(editor,index)
  selectingBlock.add(editor)
  try{Transforms.select(editor,range)}finally{selectingBlock.delete(editor)}
  setBlockSelection(editor,{index,range})
+ return true
+}
+/** Escalate an exact block selection to the document without unfolding children. */
+export function selectBlockOrDocument(editor:Editor):boolean {
+ if(editor.wysimark.readOnly||!editor.selection)return false
+ const range=editor.selection,index=boundaryBlockIndex(editor)??Range.start(range).path[0]
+ if(!editor.children[index]||isEditorSpacer(editor.children[index]))return false
+ const block=blockSelectionRange(editor,index)
+ const [start,end]=Range.edges(range)
+ const whole=isWholeBlockSelected(editor,index)||!Range.isCollapsed(range)&&
+  Point.equals(start,block.anchor)&&Point.equals(end,block.focus)
+ if(!whole&&!(Point.equals(start,Editor.start(editor,[]))&&Point.equals(end,Editor.end(editor,[]))&&!Range.isCollapsed(range)))return selectBlockContents(editor,index)
+ clearBlockSelection(editor)
+ selectingBlock.add(editor)
+ try{Transforms.select(editor,Editor.range(editor,[]))}finally{selectingBlock.delete(editor)}
  return true
 }
 function enterStructure(editor:Editor,index:number,backwards:boolean):void {

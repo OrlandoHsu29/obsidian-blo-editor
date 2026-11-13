@@ -193,6 +193,8 @@ Leave **Editing scope** empty to include new notes created anywhere in the vault
 
 Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
+
+Alt+A selects the current block and its children; press again with the whole block selected to select the document. Turn off **Progressive selection with Alt+A** in the plugin settings to disable it immediately.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
 ## Write Blo notes with AI

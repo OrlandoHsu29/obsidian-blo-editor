@@ -1,9 +1,13 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Editor } from "slate"
 import { indentSelectedBlocks } from '../../blocks/model'
+import { selectBlockOrDocument } from '../../blocks/selection'
 
 /** Run editor shortcuts before Obsidian's global commands consume them. */
 export function handleScopedHotkey(editor: Editor, event: KeyboardEvent): boolean {
+  if (!event.isComposing && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key.toLowerCase() === 'a' && editor.wysimark.getBlockSelectShortcut?.()) {
+    if (event.repeat || selectBlockOrDocument(editor)) { event.preventDefault(); event.stopPropagation(); return true }
+  }
   if (event.isComposing || (!event.metaKey && !event.ctrlKey)) return false
   const key = event.key.toLowerCase()
   let action: (() => void) | undefined

@@ -24,6 +24,7 @@ export type WysimarkEditor = {
   wysimark: {
     documentTitle?: ReactNode
     openSearch?: (replace?: boolean) => void
+    getBlockSelectShortcut?: () => boolean
     normalizeInternalLink?: (value: string) => { target: string; display?: string }
     resolveInternalMedia?: (target: string) => string | undefined
     getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined

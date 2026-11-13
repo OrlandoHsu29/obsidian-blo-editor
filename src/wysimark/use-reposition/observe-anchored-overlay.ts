@@ -6,6 +6,12 @@ import type { Rect } from './types'
 export type AnchoredOverlayOptions = BlockToolbarOptions & { getAnchorRect?: () => Rect }
 export type AnchoredOverlayPosition = ReturnType<typeof blockToolbarPosition>
 
+function borderBoxSize(style: CSSStyleDeclaration, axis: 'width' | 'height'): number {
+  const sides = axis === 'width' ? ['Left', 'Right'] : ['Top', 'Bottom']
+  return parseFloat(style[axis]) + (style.boxSizing === 'border-box' ? 0 : sides.reduce((total, side) =>
+    total + (parseFloat(style[`padding${side}`]) || 0) + (parseFloat(style[`border${side}Width`]) || 0), 0))
+}
+
 /** The editor's visible client area, excluding its own toolbar and find panel. */
 export function editorOverlayViewport(anchor: HTMLElement, avoidChrome = true): Rect {
   const viewport = getFixedViewport(anchor), win = anchor.ownerDocument.defaultView!
@@ -54,9 +60,21 @@ export function observeAnchoredOverlay(anchor: HTMLElement, panel: HTMLElement, 
       try { rect = options.getAnchorRect() } catch { return /* Slate may still be committing its DOM selection. */ }
     }
     const box = panel.getBoundingClientRect()
-    const scaleX = panel.offsetWidth ? box.width / panel.offsetWidth : 1
-    const scaleY = panel.offsetHeight ? box.height / panel.offsetHeight : 1
-    const height = options.allowResize ? Math.max(box.height, (panel.scrollHeight + panel.offsetHeight - panel.clientHeight) * scaleY) : box.height
+    const style = win.getComputedStyle(panel)
+    // offset/client sizes are integer-rounded. Using their difference as a
+    // border thickness makes max-height alternate by 1px, toggling scrollbars
+    // and rewrapping preview text on every ResizeObserver notification.
+    const cssWidth = borderBoxSize(style, 'width') || panel.offsetWidth
+    const cssHeight = borderBoxSize(style, 'height') || panel.offsetHeight
+    const scaleX = cssWidth ? box.width / cssWidth : 1
+    const scaleY = cssHeight ? box.height / cssHeight : 1
+    const borderHeight = (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0)
+    const horizontalScrollbar = panel.scrollWidth > panel.clientWidth + 1
+      ? Math.max(0, panel.offsetHeight - panel.clientHeight - borderHeight) : 0
+    // Round the intrinsic CSS height up so fractional borders/content cannot
+    // create a spurious outer scrollbar when all content already fits.
+    const naturalHeight = Math.ceil(panel.scrollHeight + borderHeight + horizontalScrollbar) * scaleY
+    const height = options.allowResize ? Math.max(box.height, naturalHeight) : box.height
     const visibleBounds = anchor.closest('[data-wysimark-toolbar]') ? editorOverlayViewport(anchor, false) : viewport
     const anchorVisible = anchor.isConnected && rect.bottom > visibleBounds.top && rect.top < visibleBounds.bottom && rect.right > visibleBounds.left && rect.left < visibleBounds.right
     const position = blockToolbarPosition(rect, { width: box.width, height }, viewport, { ...options, anchorVisible })

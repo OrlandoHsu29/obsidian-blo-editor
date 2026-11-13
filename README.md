@@ -182,6 +182,14 @@ Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 Commands and custom bindings are available in Obsidian's hotkey settings.
 
+## Write Blo notes with AI
+
+In **Settings → Blo Editor → Write notes with AI**, click **Copy installation prompt** and paste it into an AI client with local file access. The AI can install the bundled `blo-editor-notes` Skill using its own supported installation mechanism, learning parent/child blocks, indentation, folding, heading numbering, colors, tables and editable drawing attachments. Copy the prompt again after plugin updates to update the Skill.
+
+The complete folder is available at `skills/blo-editor-notes/` inside the plugin directory; you can also provide that folder to your AI. Click **View prompt** to open a preview. It contains local paths, but no note content. The Skill does not grant file access; chat-only clients need you to provide the files. Drawings still require Excalidraw.
+
+To make Blo the default note format in this directory, click **Generate AGENTS.md** in the same section. The file is generated in the configured editing folder, or at the vault root when the scope is empty. Existing files receive only a marked Blo section; other instructions are preserved. The rules link to the bundled Skill, which can be read without installing it separately. Your AI client must support directory instructions and include the relevant directory in its workspace; existing sessions may need reopening. Installing or starting the plugin does not generate this file. After changing the editing scope, generate it again at the new location; old rules are not moved or deleted automatically.
+
 ## Optional integrations
 
 Blo Editor works on its own. Enable the following integrations in its settings

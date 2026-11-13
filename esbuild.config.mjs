@@ -62,7 +62,8 @@ const context = await esbuild.context({
 	loader: {
 		".ts": "ts",
 		".tsx": "tsx",
-		".css": "css"
+		".css": "css",
+		".md": "text"
 	}
 });
 

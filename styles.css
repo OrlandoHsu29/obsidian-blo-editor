@@ -842,3 +842,52 @@
 .wysimark-image-toolbar > span > span.--selected { color:var(--text-accent); background:var(--background-modifier-hover); }
 .wysimark-image-toolbar > span > span.--disabled { color:var(--text-faint); background:transparent; cursor:default; }
 .wysimark-image-toolbar svg { position:static; top:auto; display:block; width:17px; height:17px; }
+.blo-settings .blo-ai-skill-setting {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--size-4-3) var(--size-4-4);
+}
+.blo-settings .blo-ai-skill-setting .setting-item-info {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin-inline-end: 0;
+}
+.blo-settings .blo-ai-skill-setting .setting-item-control {
+  align-self: center;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: var(--size-4-2);
+}
+.blo-ai-skill-modal {
+  width: min(640px, calc(100vw - 32px));
+}
+.blo-ai-skill-modal .blo-ai-skill-help {
+  margin: 0 0 var(--size-4-4);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-normal);
+}
+.blo-ai-skill-modal .blo-ai-skill-preview {
+  max-height: 45vh;
+  margin: 0;
+  padding: var(--size-4-4);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  user-select: text;
+}
+.blo-ai-skill-modal .blo-ai-skill-actions {
+  padding: var(--size-4-4) 0 0;
+  border-top: none;
+}
+.blo-ai-skill-modal .blo-ai-skill-actions .setting-item-control {
+  flex-wrap: wrap;
+}

@@ -25,6 +25,12 @@ await mkdir(destination, { recursive: true })
 for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'README.zh-CN.md', 'LICENSE', 'UPSTREAM.json']) {
   await copyFile(resolve(root, file), resolve(destination, file))
 }
+// Only the maintained Skill resources belong in the distribution.
+for (const file of ['SKILL.md', 'references/format.md', 'references/drawings.md', 'assets/example-note.md', 'assets/example.excalidraw.md']) {
+  const target = resolve(destination, 'skills/blo-editor-notes', file)
+  await mkdir(dirname(target), { recursive: true })
+  await copyFile(resolve(root, 'skills/blo-editor-notes', file), target)
+}
 await mkdir(resolve(destination, 'assets'), { recursive: true })
 for (const asset of await readdir(resolve(root, 'assets'), { withFileTypes: true })) {
   if (asset.isFile() && /\.(png|jpe?g|gif|webp|svg)$/i.test(asset.name)) {

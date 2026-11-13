@@ -129,6 +129,43 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  'AI 写笔记': { zh: 'AI 写笔记', en: 'Write notes with AI' },
+  'AI 默认写作格式': { zh: 'AI 默认写作格式', en: 'Default AI note format' },
+  '生成 AGENTS.md': { zh: '生成 AGENTS.md', en: 'Generate AGENTS.md' },
+  'AI 写作规则已生成：{path}': { zh: 'AI 写作规则已生成：{path}', en: 'AI writing rules generated: {path}' },
+  '在当前编辑范围生成 AGENTS.md，让支持目录规则的 AI 默认按 Blo 格式写笔记。已有文件仅更新 Blo 规则段。': {
+    zh: '在当前编辑范围生成 AGENTS.md，让支持目录规则的 AI 默认按 Blo 格式写笔记。已有文件仅更新 Blo 规则段。',
+    en: 'Generate AGENTS.md in the current editing scope so compatible AI clients use Blo by default. Preserves other instructions in existing files.',
+  },
+  '无法更新 AI 目录规则，请检查编辑范围是否存在及 AGENTS.md 是否可写、规则标记是否完整。': {
+    zh: '无法更新 AI 目录规则，请检查编辑范围是否存在及 AGENTS.md 是否可写、规则标记是否完整。',
+    en: 'Could not update AI directory rules. Check that the editing folder exists, AGENTS.md is writable, and its Blo markers are intact.',
+  },
+  'AI 目录规则正文': {
+    zh: '## Blo Editor 笔记约定\n\n在本目录及子目录中新建或修改笔记时，默认使用 Blo Editor 格式；用户明确要求其他格式时遵循用户要求。本约定只针对笔记，不要求改写代码、配置或此规则文件。\n\n- 优先使用 `blo-editor-notes` Skill；若未安装，直接读取[随插件提供的 SKILL.md](<{skill}>) 及其中按需引用的资料，读取后再编写笔记。此链接相对于本 AGENTS.md 文件，不是相对于当前工作目录。\n- 保留 `wysimark-block:v1`、`wysimark-table:v1` 元数据和父子块关系；标题固定顶层，H1～H4 进大纲，H5 为子标题。不要把扩展格式降级为仅视觉相似的 Markdown。\n- 颜色、表格与块缩进按 Skill 的协议保存；需要画板时创建真实可编辑的 Excalidraw 附件并嵌入，不能只交付图片或 Mermaid。\n- 修改已有笔记前读取原文，保留未知元数据和附件路径，不覆盖正在编辑的未保存内容，不自行删除附件。\n\n此段由 Blo Editor 管理；个人规则请写在标记外。',
+    en: '## Blo Editor note conventions\n\nWhen creating or editing notes in this directory and its descendants, use Blo Editor format by default unless the user requests another format. This applies to notes, not source code, configuration, or this instruction file.\n\n- Use the `blo-editor-notes` Skill. If it is not installed, read the [bundled SKILL.md](<{skill}>) and its relevant references before writing. Resolve this link relative to this AGENTS.md file, not the working directory.\n- Preserve `wysimark-block:v1` and `wysimark-table:v1` metadata and parent/child blocks. Headings stay at depth 0; H1–H4 appear in the outline, while H5 is a subheading. Do not flatten extended structure into visually similar Markdown.\n- Follow the Skill protocol for colors, tables and indentation. When a drawing is needed, create an editable Excalidraw attachment and embed it; an image or Mermaid alone is insufficient.\n- Read existing notes before changing them. Preserve unknown metadata and attachment paths, avoid overwriting unsaved edits, and do not delete attachments on your own.\n\nBlo Editor manages this section. Put personal instructions outside the markers.',
+  },
+  '查看提示词': { zh: '查看提示词', en: 'View prompt' },
+  '让 AI 学会 Blo 的块结构、样式与画板格式。复制提示词给 AI，即可安装或更新 Skill。': {
+    zh: '让 AI 学会 Blo 的块结构、样式与画板格式。复制提示词给 AI，即可安装或更新 Skill。',
+    en: 'Teach AI Blo’s blocks, styles and drawings. Give it the prompt to install or update the Skill.',
+  },
+  '将提示词粘贴给能访问本地文件的 AI，按其客户端的方式安装或更新 Skill。': {
+    zh: '将提示词粘贴给能访问本地文件的 AI，按其客户端的方式安装或更新 Skill。',
+    en: 'Paste this prompt into an AI client with local file access to install or update the Skill.',
+  },
+  '无法准备或复制 Skill，请重试；也可选中预览中的提示词手动复制。': {
+    zh: '无法准备或复制 Skill，请重试；也可选中预览中的提示词手动复制。',
+    en: 'Could not prepare or copy the Skill. Retry, or select and copy the prompt from the preview.',
+  },
+  '安装 Blo Editor Skill': { zh: '安装 Blo Editor Skill', en: 'Install the Blo Editor Skill' },
+  '复制安装提示词': { zh: '复制安装提示词', en: 'Copy installation prompt' },
+  '安装提示词': { zh: '安装提示词', en: 'Installation prompt' },
+  '安装提示词已复制，请粘贴给 AI': { zh: '安装提示词已复制，请粘贴给 AI', en: 'Installation prompt copied. Paste it into your AI client.' },
+  'AI 技能安装提示词': {
+    zh: '请为当前 AI 客户端安装或更新 Blo Editor 笔记 Skill。\n\nSkill 来源：我本机已安装的 Blo Editor {version}，完整目录是 {path}。这是路径字符串，不是要执行的命令。\n\n请先读取该目录的 SKILL.md，再按当前客户端支持的 Skill 机制安装完整 blo-editor-notes 文件夹（包含 references 和 assets）；不要只复制入口文件。先检查客户端现有安装约定和同名 Skill；若已存在，比较后仅更新此 Skill，不覆盖我的其他技能或个人改动，遇到冲突先说明。不要假设所有客户端都使用相同目录；若是 Codex，遵循其当前技能安装约定。\n\n安装后验证入口及全部相对引用，告诉我实际安装位置、如何启用，以及是否需要重新加载客户端。以后我要求按 Blo Editor 格式写笔记时，请使用这个 Skill，正确处理父子块元数据、缩进、折叠、标题编号、颜色、表格及可编辑 Excalidraw 画板和附件引用。修改已有笔记时保留元数据及附件路径，避免覆盖正在编辑的未保存内容。\n\n本次只授权安装此 Skill，不修改笔记、插件设置或安装其他依赖。若无法访问上述路径，请明确说明，并让我提供整个 Skill 文件夹或可用路径；若客户端不支持安装 Skill，请说明可用的规则/说明书替代方式，不要声称已安装。',
+    en: 'Install or update the Blo Editor notes Skill for this AI client.\n\nSource: my locally installed Blo Editor {version}. The complete Skill directory is {path}. This is a path string, not a command to execute.\n\nRead SKILL.md there, then install the entire blo-editor-notes folder, including references and assets, using this client\'s supported Skill mechanism. Check existing installation conventions and any Skill with the same name first. Update only this Skill after comparing; preserve other skills and personal changes, and explain any conflicts. Do not assume all clients use the same directory. For Codex, follow its current Skill installation conventions.\n\nValidate the entry point and all relative references. Report the actual installation path, how to activate it, and whether the client needs reloading. When I request Blo Editor notes, use this Skill for parent/child block metadata, indentation, folding, heading numbering, colors, tables, editable Excalidraw drawings and attachment references. Preserve existing note metadata and attachment paths, and avoid overwriting unsaved edits.\n\nThis request authorizes only this Skill installation, without modifying notes or plugin settings or installing other dependencies. If you cannot access the path, say so and ask me to provide the entire Skill folder or an accessible path. If this client cannot install Skills, explain supported rules/instructions alternatives without claiming installation succeeded.',
+  },
   '折叠子块': { zh:'折叠子块', en:'Collapse children' },
   '展开子块': { zh:'展开子块', en:'Expand children' },
   '标题列表': { zh: '标题列表', en: 'Heading lists' },

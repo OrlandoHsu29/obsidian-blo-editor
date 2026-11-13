@@ -23,6 +23,8 @@ import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from '.
 import { isMemoPanelLeaf, isMemoPanelDocument, memoPanelEnabled, memoPanelStatus, popoutDocument, toggleMemoPanel } from './memo-panel';
 import { MemoPanelSetupModal, setupMemoPanel } from './memo-panel-setup';
 import { canInsertMath } from './wysimark/math-plugin';
+import { writeAiSkill } from './ai-skill';
+import { writeDirectoryRules } from './ai-directory-rules';
 
 const INTEGRATION_SETTINGS = {
   imageViewer: { key: 'enableImageViewer', name: 'Image Toolkit' },
@@ -40,6 +42,15 @@ export default class BloEditorPlugin extends Plugin {
   private memoSetup: MemoPanelSetupModal | null = null;
   private memoWindows = new Map<Document, MutationObserver>();
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
+  private aiSkillWrite: Promise<void> | null = null;
+  ensureAiSkill(): Promise<void> {
+    if (!this.aiSkillWrite) this.aiSkillWrite = writeAiSkill(this.app, this.manifest).finally(() => { this.aiSkillWrite = null; });
+    return this.aiSkillWrite;
+  }
+  async generateAiDirectoryRules(): Promise<string> {
+    await this.ensureAiSkill();
+    return writeDirectoryRules(this.app, this.manifest, this.settings.richEditingFolder);
+  }
   private nativeLeaves = new WeakSet<WorkspaceLeaf>();
   private openingLeaves = new WeakSet<WorkspaceLeaf>();
   private pdfExportLeaves = new WeakSet<WorkspaceLeaf>();
@@ -91,6 +102,7 @@ export default class BloEditorPlugin extends Plugin {
     this.syncIntegrations();
     this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
+    void this.ensureAiSkill().catch(error => console.error('Blo Editor: could not prepare AI skill', error));
     installDrawingNavigation(this);
     installImageViewerIntegration(this, () => {
       const editors: Editor[] = [];

@@ -1,5 +1,5 @@
 import { normalizeEditingFolder } from './editing-scope'
-import { PluginSettingTab, Setting, SettingGroup } from 'obsidian'
+import { Notice, PluginSettingTab, Setting, SettingGroup } from 'obsidian'
 import { createElement } from 'react'
 import { createPortal } from 'react-dom'
 import { createRoot, Root } from 'react-dom/client'
@@ -10,6 +10,7 @@ import { DEFAULT_ATTACHMENT_FOLDER, normalizeAttachmentFolder } from './attachme
 import { toolbarGroups } from './wysimark/toolbar-plugin/items'
 import { isFixedToolbarButton } from './toolbar-preferences'
 import { memoPanelStatus } from './memo-panel'
+import { AiSkillPromptModal, copyAiSkillPrompt } from './ai-skill-modal'
 
 export type EditorSettings = {
   preferRichEditing: boolean
@@ -77,6 +78,35 @@ export class BloSettingsTab extends PluginSettingTab {
     const scopeGroup = group(ui('编辑范围'))
     const attachmentGroup = group(ui('附件'))
     const integrationGroup = group(ui('扩展功能'))
+    const aiGroup = group(ui('AI 写笔记'))
+    new Setting(aiGroup)
+      .setName(ui('AI 默认写作格式'))
+      .setClass('blo-ai-skill-setting')
+      .setDesc(ui('在当前编辑范围生成 AGENTS.md，让支持目录规则的 AI 默认按 Blo 格式写笔记。已有文件仅更新 Blo 规则段。'))
+      .addButton(button => button.setButtonText(ui('生成 AGENTS.md')).onClick(async () => {
+        button.setDisabled(true)
+        try {
+          const path = await plugin.generateAiDirectoryRules()
+          new Notice(ui('AI 写作规则已生成：{path}', { path }))
+        } catch (error) {
+          console.error('Blo Editor: could not generate AI directory rules', error)
+          new Notice(ui('无法更新 AI 目录规则，请检查编辑范围是否存在及 AGENTS.md 是否可写、规则标记是否完整。'))
+        } finally { button.setDisabled(false) }
+      }))
+    new Setting(aiGroup)
+      .setName(ui('安装 Blo Editor Skill'))
+      .setClass('blo-ai-skill-setting')
+      .setDesc(ui('让 AI 学会 Blo 的块结构、样式与画板格式。复制提示词给 AI，即可安装或更新 Skill。'))
+      .addButton(button => button.setButtonText(ui('查看提示词')).onClick(() => new AiSkillPromptModal(plugin).open()))
+      .addButton(button => button.setButtonText(ui('复制安装提示词')).onClick(async () => {
+        button.setDisabled(true)
+        try {
+          await copyAiSkillPrompt(plugin)
+        } catch (error) {
+          console.error('Blo Editor: could not copy AI skill prompt', error)
+          new Notice(ui('无法准备或复制 Skill，请重试；也可选中预览中的提示词手动复制。'))
+        } finally { button.setDisabled(false) }
+      }))
     const toolbarHeader = toolbarGroup.createDiv({ cls: 'blo-toolbar-header' })
     toolbarHeader.createEl('p', { cls: 'setting-item-description blo-toolbar-description', text: ui('勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。'), attr: { id: 'blo-toolbar-config-description' } })
     const selectAllLabel = toolbarHeader.createEl('label', { cls: 'blo-toolbar-select-all' })

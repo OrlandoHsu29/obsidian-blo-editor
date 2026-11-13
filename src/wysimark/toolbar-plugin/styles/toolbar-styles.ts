@@ -58,17 +58,18 @@ export const $Toolbar = styled("div")`
 `
 
 export const $ToolbarDividerContainer = styled("div")`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   height: 3em;
   padding: 0 0.375em;
 `
 
 export const $ToolbarDivider = styled("div")`
-  display: inline-block;
+  display: block;
   background: var(--background-modifier-border);
   opacity: 35%;
   width: 1px;
-  height: 3em;
+  height: 1.5em;
 `
 
 export const $ToolbarButton = styled("div")`

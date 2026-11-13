@@ -683,10 +683,9 @@
 /* Toolbar overrides for Obsidian theme compatibility */
 .blo-toolbar-item { display:inline-flex; flex:0 0 auto; }
 .blo-toolbar-item-hidden { position:absolute; top:0; left:0; visibility:hidden; clip-path:inset(50%); pointer-events:none; }
-.blo-toolbar-overflow-menu { display:flex; flex-wrap:wrap; align-items:center; gap:2px; width:max-content; min-width:0; max-width:calc(100vw - 32px); }
-.blo-toolbar-overflow-menu .blo-toolbar-overflow-item { display:flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; margin:0; padding:7px; border:0; font-size:var(--font-ui-small); }
-.blo-toolbar-overflow-item > svg { flex:0 0 18px; width:18px; height:18px; }
-.blo-toolbar-overflow-menu .blo-toolbar-overflow-divider { flex:0 0 1px; width:1px; height:22px; margin:0 4px; }
+.blo-toolbar-overflow-menu { display:flex; flex-wrap:wrap; align-items:flex-start; gap:0; width:max-content; min-width:0; max-width:calc(100vw - 32px); }
+.blo-toolbar-overflow-menu .blo-toolbar-overflow-item { flex:0 0 auto; }
+.blo-toolbar-overflow-menu .blo-toolbar-overflow-divider { flex:0 0 auto; }
 .wysimark-editor [class*="toolbar"] {
     background-color: var(--background-secondary);
     border-color: var(--background-modifier-border);

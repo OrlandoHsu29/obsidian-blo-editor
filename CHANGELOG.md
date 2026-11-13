@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.32 — 2026-11-13
+
+### 中文
+
+- 移除设置中的工具栏图标显隐配置及相关订阅、图标渲染与样式；旧的隐藏配置不再影响工具栏，窄窗口继续自动收纳。
+- 主窗口和 Glimmer Memo 共用工具优先级与收纳逻辑。主窗口先从右到左收纳画板、缩进、分割线、行内公式等非必要工具，全部收纳后再从右到左收纳必要工具，保留主栏原有顺序。
+- Glimmer Memo 保留精简主栏，其余工具放进「三点」菜单；窗口继续变窄时，放不下的必要工具也收进同一菜单。按分组整理分割线，避免遗漏或重复工具。
+- 展开栏沿用主栏的图标、按钮尺寸、间距、圆角和阴影，不再套用速记弹窗的小尺寸缩放。主栏与展开栏共用居中的短细分割线，深浅色保持一致。
+- 工具栏按布局像素计算宽度，修正缩放窗口中的收纳预算；保留已有过渡动画和减少动态效果设置。
+- 工具栏和列表标记、块柄在尺寸观察回调中完成测量，减少额外等待下一帧；避免屏幕外块和未显示块柄进入测量队列，移除重复的窗口级测量扫描，保留内容与字体变化后的定位更新。
+
+### English
+
+- Remove manual toolbar visibility settings and their subscriptions, settings icon rendering and styles. Legacy hidden-button preferences no longer hide tools; narrow windows still collect overflowing controls automatically.
+- Share overflow priorities between the main editor and Glimmer Memo. Collect optional tools from right to left before collecting primary tools, preserving the order of controls that remain visible.
+- Keep Glimmer Memo's compact primary row and expose all additional tools through the three-dot menu. Narrower windows collect primary controls into the same menu without dropping or duplicating tools.
+- Match expanded toolbar buttons, icons, spacing, corners and shadows to the main row instead of applying the smaller quick-memo dialog scale. Reuse centered, short dividers in both rows and themes.
+- Fit controls using layout pixels in scaled windows while preserving toolbar transitions and reduced-motion support.
+- Measure toolbar fit and list-marker/block-handle positions directly in resize observation callbacks. Skip offscreen blocks and inactive handles, remove duplicate window-wide measurement sweeps, and retain alignment updates after content and font changes.
+
+Validation: type checking, 394 automated tests and production packaging passed.
+Live checks covered priority overflow while narrowing and widening the editor,
+menu completeness, matching toolbar metrics in both themes, and the same
+559-block note in the main editor and Glimmer Memo. Native memo resizing caused
+no repeated settings writes or ResizeObserver loop errors. Occasional native
+window long frames remain; these changes do not claim to eliminate all stutter.
+
+Installation: extract `blo-editor-0.1.32.zip` into the vault's
+`.obsidian/plugins/`, preserving an existing `data.json`. Requires desktop
+Obsidian 1.8.7 or later.
+
 ## 0.1.31 — 2026-11-13
 
 ### 中文

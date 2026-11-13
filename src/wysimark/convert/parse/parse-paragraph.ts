@@ -32,17 +32,20 @@ export function parseParagraph(
     const recovered = parseExportedListSource(content.data.yuqueListSource, 0, options)
     if (recovered) return recovered
   }
-  return splitSegmentLines(parsePhrasingContents(content.children, {}, options)).map(segments => {
+  return splitSegmentLines(parsePhrasingContents(content.children, {}, options)).map((segments, index) => {
+    const metadata = index === 0 && typeof content.data?.blockId === 'string' ? { __blockId: content.data.blockId } : {}
     if (isImageBlock(segments)) {
       const imageSegment = segments[1] as ImageInlineElement
       const imageBlockElement: ImageBlockElement = {
         ...imageSegment,
+        ...metadata,
         type: "image-block",
       }
       return imageBlockElement
     }
     return {
       type: "paragraph",
+      ...metadata,
       children: segments,
       ...(content.data?.escapedOrderedPrefix ? {__literalOrderedText:segments.map(n=>Node.string(n)).join('')} : {}),
     }

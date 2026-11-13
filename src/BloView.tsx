@@ -1,9 +1,9 @@
 import type BloEditorPlugin from './main';
 import { ui } from "./wysimark/utils/translations"
-import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice, MarkdownView } from 'obsidian';
+import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice, MarkdownView, resolveSubpath } from 'obsidian';
 import { NoteSync, NoteSyncConflict, NoteSyncView, validateWrite, lockElement } from './note-sync';
 import { getLanguage } from './wysimark/utils/translations';
-import { Editor, Node, Transforms } from 'slate';
+import { Editor, Node, Transforms, Element as SlateElement } from 'slate';
 import { ReactEditor } from 'slate-react';
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
@@ -32,6 +32,7 @@ import { downloadAttachment } from './remote-attachments';
 import { NoteExportModal } from './note-export/modal';
 import { CacheProvider } from '@emotion/react';
 import { MermaidPreview } from './MermaidPreview';
+import { ensureBlockId } from './blocks/block-reference';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -140,7 +141,17 @@ function InternalLinkPreview({
         return;
       }
 
-      const markdown = await app.vault.cachedRead(targetFile);
+      let markdown = await app.vault.cachedRead(targetFile);
+      const hash = target.indexOf('#');
+      if (hash >= 0 && target.slice(hash).startsWith('#^')) {
+        const cache = app.metadataCache.getFileCache(targetFile);
+        const resolved = cache && resolveSubpath(cache, target.slice(hash));
+        if (!resolved || resolved.type !== 'block') {
+          if (!cancelled) previewEl.setText(ui('未找到：{target}', { target }));
+          return;
+        }
+        markdown = markdown.slice(resolved.start.offset, resolved.end?.offset ?? markdown.length);
+      }
       if (!markdown.trim()) {
         if (!cancelled) previewEl.setText(ui("Empty note"));
         return;
@@ -444,6 +455,8 @@ export class BloView extends FileView {
   plugin: BloEditorPlugin;
   root: Root | null = null;
   currentFile: TFile | null = null;
+  private editorFile: TFile | null = null;
+  private blockNavigationTimer: number | null = null;
   private openingFile: TFile | null = null;
   private stateReady = false;
   fileContent: string = '';
@@ -477,6 +490,7 @@ export class BloView extends FileView {
 
   private connectEditor = (editor: Editor) => {
     this.editor = editor;
+    this.editorFile = this.currentFile;
     const stopWatchingAttachments = this.currentFile ? watchAttachments(this.app, this.currentFile, editor,
       () => (this.plugin as Plugin & { settings: EditorSettings }).settings) : () => {};
     this.findBar?.attach();
@@ -492,6 +506,16 @@ export class BloView extends FileView {
       });
     }
     editor.wysimark.save = () => this.saveFile();
+    editor.wysimark.copyBlockLink = async element => {
+      const file = this.currentFile;
+      if (!file || this.readOnly || this.editor !== editor) throw new Error('Source document changed');
+      const id = ensureBlockId(editor, element);
+      await this.saveFile();
+      if (this.currentFile !== file || this.editor !== editor ||
+        !Array.from(Node.elements(editor)).some(([node]) => node.__blockId === id)) throw new Error('Source block changed');
+      const link = this.app.fileManager.generateMarkdownLink(file, '', `#^${id}`);
+      await this.contentEl.ownerDocument.defaultView!.navigator.clipboard.writeText(link);
+    };
     editor.wysimark.openSearch = replace => this.showSearch(replace);
     editor.wysimark.toggleReading = () => this.toggleReading();
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
@@ -520,7 +544,7 @@ export class BloView extends FileView {
     return () => {
       stopRemoteImages();
       stopWatchingAttachments();
-      if (this.editor === editor) this.editor = null;
+      if (this.editor === editor) { this.editor = null; this.editorFile = null; }
     };
   };
 
@@ -659,6 +683,8 @@ export class BloView extends FileView {
   }
 
   async onClose() {
+    if (this.blockNavigationTimer !== null) window.clearTimeout(this.blockNavigationTimer);
+    this.blockNavigationTimer = null;
     if (this.viewRedirect !== null) {
       window.clearTimeout(this.viewRedirect);
       this.viewRedirect = null;
@@ -738,13 +764,47 @@ export class BloView extends FileView {
     this.app.workspace.requestSaveLayout();
   }
   setEphemeralState(state: { subpath?: string; line?: number }) {
+    if (this.blockNavigationTimer !== null) window.clearTimeout(this.blockNavigationTimer);
+    this.blockNavigationTimer = null;
     super.setEphemeralState(state);
     if (!state.subpath?.startsWith('#')) {
       if (typeof state.line === 'number') this.navigateToHeading('', state.line);
       return;
     }
+    if (state.subpath.startsWith('#^')) {
+      this.navigateToBlock(state.subpath.slice(2));
+      return;
+    }
     const heading = decodeURIComponent(state.subpath.slice(1)).trim();
     this.navigateToHeading(heading, state.line);
+  }
+  navigateToBlock(id: string) {
+    if (this.blockNavigationTimer !== null) window.clearTimeout(this.blockNavigationTimer);
+    const file = this.currentFile;
+    const scroll = (attempt = 0) => {
+      this.blockNavigationTimer = null;
+      if (this.currentFile !== file) return;
+      if (!this.editor || this.editorFile !== file) {
+        if (attempt < 20) this.blockNavigationTimer = window.setTimeout(() => scroll(attempt + 1), 20);
+        return;
+      }
+      const match = Editor.nodes(this.editor, { at: [], match: node => SlateElement.isElement(node) && node.__blockId === id }).next().value;
+      if (match) this.revealNavigationTarget(match[0] as import('slate').Element, match[1]);
+    };
+    scroll();
+  }
+  private revealNavigationTarget(node: import('slate').Element, path: number[]) {
+    if (!this.editor) return;
+    const revealed = revealFoldedSelection(this.editor, Editor.range(this.editor, path));
+    const target = ReactEditor.toDOMNode(this.editor, node);
+    const toolbar = this.containerEl.querySelector<HTMLElement>('[data-wysimark-toolbar]');
+    target.style.scrollMarginTop = `${toolbar ? toolbar.getBoundingClientRect().height + 14 + 16 : 16}px`;
+    if (!this.readOnly) {
+      Transforms.select(this.editor, Editor.start(this.editor, path));
+      ReactEditor.focus(this.editor);
+    }
+    if (revealed) target.ownerDocument.defaultView?.requestAnimationFrame(() => { if (target.isConnected) target.scrollIntoView({ block: 'start', behavior: 'auto' }); });
+    else target.scrollIntoView({ block: 'start', behavior: 'auto' });
   }
   navigateToHeading(heading: string, line?: number, headingIndex?: number) {
     const scroll = (attempt = 0) => {
@@ -756,17 +816,7 @@ export class BloView extends FileView {
       const target=typeof headingIndex==='number'?headings[headingIndex]:index>=0?sourceHeadings[index]:headings.find(entry=>Node.string(entry.node).trim()===heading);
       const match=target?[target.node,ReactEditor.findPath(this.editor,target.node)] as const:undefined;
       if (match) {
-        const revealed=revealFoldedSelection(this.editor,Editor.range(this.editor,match[1]));
-        const target = ReactEditor.toDOMNode(this.editor, match[0]);
-        const toolbar = this.containerEl.querySelector<HTMLElement>('[data-wysimark-toolbar]');
-        // Native scrollIntoView accounts for scroll-margin in each scroll container.
-        target.style.scrollMarginTop = `${toolbar ? toolbar.getBoundingClientRect().height + 14 + 16 : 16}px`;
-        if (!this.readOnly) {
-          Transforms.select(this.editor, Editor.start(this.editor, match[1]));
-          ReactEditor.focus(this.editor);
-        }
-        if(revealed)target.ownerDocument.defaultView?.requestAnimationFrame(()=>{if(target.isConnected)target.scrollIntoView({block:'start',behavior:'auto'})});
-        else target.scrollIntoView({ block: 'start', behavior: 'auto' });
+        this.revealNavigationTarget(match[0], match[1]);
       }
     };
     scroll();

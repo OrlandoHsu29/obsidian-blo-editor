@@ -24,16 +24,19 @@ export function rewrapElement<T extends Element = Element>(
     const source = originalEntry[0]
     const nextElement = {
       ...createTargetElement(source, targetElement),
+      ...(source.__blockId ? { __blockId: source.__blockId } : {}),
       ...(source.__blockDepth !== undefined || isList(source.type) ? { __blockDepth: blockDepth(source) } : {}),
     }
     if(originalEntry[0].__subtitle&&(nextElement.type==='paragraph'||isList(nextElement.type)))nextElement.__subtitle=true
     // Lists provide structure; a heading remains an independently editable child.
     if (originalEntry[0].type === 'heading' && isList(nextElement.type)) {
       Transforms.wrapNodes(editor, {...nextElement,blockChildren:true} as T, {at})
+      if (source.__blockId) Transforms.unsetNodes(editor, '__blockId', { at: [...at, 0] })
       reflowFollowingLists(editor,at,blockDepth(Editor.node(editor,at)[0]))
       return
     }
     if (isList(originalEntry[0].type) && nextElement.type === 'heading') {
+      delete nextElement.__blockId
       Transforms.wrapNodes(editor, nextElement as T, {
         at: Editor.range(editor,at),
         match: node => Text.isText(node) || (Element.isElement(node) && editor.isInline(node)),

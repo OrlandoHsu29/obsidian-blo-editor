@@ -19,7 +19,13 @@ export function parseContents(
   options: InternalLinkOptions = {}
 ): Element[] {
   const elements: Element[] = []
+  let previousBlockStart = 0
   for (let i = 0; i < contents.length; i++) {
+    const standalone = contents[i].data?.blockIdStandalone
+    if (typeof standalone === 'string' && elements.length && !elements[previousBlockStart].__blockId) {
+      elements[previousBlockStart].__blockId = standalone
+      continue
+    }
     /**
      * Detect extra blank lines between MDAST nodes using position info.
      * remark-parse collapses consecutive blank lines, but we can recover
@@ -44,6 +50,7 @@ export function parseContents(
       }
     }
     const content=contents[i],next=contents[i+1]
+    previousBlockStart = elements.length
     if(content.type==='html'&&next?.type==='table') {
       const metadata=content.value.match(/^<!-- wysimark-table:v1 (\S+) -->$/)
       if(metadata)try {

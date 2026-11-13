@@ -124,6 +124,22 @@ export function parseToAst(
    * Takes linkReference and imageReference and turns them into link and image.
    */
   transformInlineLinks(ast)
+  // Native Obsidian IDs belong to blocks, not their visible text. Inspect raw
+  // source as well as the final text node so escaped carets/code stay literal.
+  visit(ast, node => {
+    if (node.type !== 'paragraph' && node.type !== 'heading') return
+    const start = node.position?.start.offset, end = node.position?.end.offset
+    if (start === undefined || end === undefined) return
+    const raw = source.slice(start, end), match = raw.match(/(?:^|\s)\^([A-Za-z0-9-]+)[ \t]*$/)
+    const last = node.children[node.children.length - 1]
+    if (!match || last?.type !== 'text' || !last.value.trimEnd().endsWith(`^${match[1]}`)) return
+    if (raw.trim() === `^${match[1]}`) {
+      node.data = { ...node.data, blockIdStandalone: match[1] }
+    } else {
+      last.value = last.value.replace(/[\s]*\^[A-Za-z0-9-]+[ \t]*$/, '')
+      node.data = { ...node.data, blockId: match[1] }
+    }
+  })
   return ast
 }
 

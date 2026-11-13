@@ -184,6 +184,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
   handlers.current={over:onDragOver,drop:onDrop}
 
   return <div ref={ref} data-wysimark-block data-block-type={element.type}
+    data-block-id={element.__blockId}
     data-block-foldable={foldable||undefined} data-block-collapsed={foldable&&element.__collapsed||undefined} data-block-fold-hidden={foldHidden||undefined}
     data-block-depth={depth} data-subtitle={element.__subtitle || undefined} data-block-fold-animated={animateFold||undefined}
     className={drop ? `wysimark-block drop-${drop.position}` : 'wysimark-block'}

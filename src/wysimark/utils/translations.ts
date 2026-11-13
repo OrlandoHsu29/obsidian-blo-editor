@@ -129,6 +129,9 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '复制块链接': { zh: '复制块链接', en: 'Copy block link' },
+  '块链接已复制': { zh: '块链接已复制', en: 'Block link copied' },
+  '无法复制块链接，请重试': { zh: '无法复制块链接，请重试', en: 'Could not copy the block link. Please try again.' },
   'AI 写笔记': { zh: 'AI 写笔记', en: 'Write notes with AI' },
   'AI 默认写作格式': { zh: 'AI 默认写作格式', en: 'Default AI note format' },
   '生成 AGENTS.md': { zh: '生成 AGENTS.md', en: 'Generate AGENTS.md' },

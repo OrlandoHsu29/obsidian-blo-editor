@@ -1,4 +1,4 @@
-import { Descendant } from "slate"
+import { Descendant, Element } from "slate"
 import type { ReactNode } from "react"
 import type { ToolbarPreferences } from '../../toolbar-preferences'
 import type { LinkTitlePreferences } from '../../link-title-preferences'
@@ -35,6 +35,7 @@ export type WysimarkEditor = {
     integrationPreferences?: IntegrationPreferences
     resolveImageUrl?: (url: string) => string
     save?: () => Promise<void>
+    copyBlockLink?: (element: Element) => Promise<void>
     toggleReading?: () => Promise<void>
     readOnly?: boolean
     /** Captured by asynchronous imports so switching the view's file invalidates them. */

@@ -15,6 +15,7 @@ export function setListBlock(editor:Editor,node:Element,path:Path,type?:ListType
     node.children.forEach((child,index)=>{
       if(Element.isElement(child))Transforms.setNodes(editor,{__blockDepth:canIndentBlock(child)?Math.max(blockDepth(node),blockDepth(child)):0},{at:[...path,index]})
     })
+    if (node.__blockId && Element.isElement(node.children[0])) Transforms.setNodes(editor, { __blockId: node.__blockId }, { at: [...path, 0] })
     Transforms.unwrapNodes(editor,{at:path})
   } else {
     Transforms.setNodes(editor,{type,...(type==='ordered-list-item'?{__numbering:'continue' as const}:{}),...(type==='task-list-item'?{checked:false}:{})},{at:path})

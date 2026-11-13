@@ -185,6 +185,8 @@ export function escapeText(s: string, options: EscapeTextOptions = {}) {
   result = result.replace(/^( {0,3})([-_])(?=(?:[ \t]*\2){2,}[ \t]*$)/gm, "$1\\$2")
   // Setext heading underlines: any run of `=` or `-` alone on a line
   result = result.replace(/^( {0,3})([=-])(?=\2*[ \t]*$)/gm, "$1\\$2")
+  // Literal caret suffixes are text; native block IDs are emitted separately.
+  result = result.replace(/(^|\s)\^([A-Za-z0-9-]+)(?=[ \t]*$)/g, "$1\\^$2")
 
   return result
 }

@@ -3,6 +3,7 @@ import { Node } from "slate"
 import { orderedNumbers } from '../../../blocks/model'
 import { InternalLinkOptions } from "../obsidian-links"
 import { serializeElement } from "./serialize-element"
+import { serializeBlockId } from '../../../blocks/block-reference'
 
 export function serializeElements(
   elements: Element[],
@@ -49,7 +50,7 @@ export function serializeElements(
     }
 
     // Get the serialized element
-    let serialized = serializeElement(element, orders, options);
+    let serialized = serializeBlockId(element, serializeElement(element, orders, options));
 
     // If this is a list item and the next element is not a list item,
     // add an extra newline to create proper spacing between list and paragraph

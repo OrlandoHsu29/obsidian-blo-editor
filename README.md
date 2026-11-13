@@ -45,6 +45,8 @@ Markdown simplifies Blo-specific formatting; cloud editors determine image and f
 
 ## A block editing workflow
 
+Choose **Copy block link** from a block handle menu to reference a specific block, including paragraphs, lists, quotes, tables and code. The first copy creates and saves a native Obsidian block ID. Paste the link into another note to jump to the block, or prefix `[[...]]` with `!` to embed its content.
+
 Alongside Obsidian's native Markdown editor, Blo offers:
 
 **Parent and child blocks.** Drag a parent together with its text, lists, quotes,

@@ -15,6 +15,7 @@ const stub=new Proxy(identity,{get:()=>identity});
 const obsidian={FileView,MarkdownView,TFile,Notice:class {},Scope:class {}};
 const loaded=compile('src/BloView.tsx',['./*','obsidian','react','react/*','react-dom/*','slate','slate-react','@emotion/*'],id=>{
  if(id==='obsidian')return obsidian;
+ if(id==='slate')return require('slate');
  if(id==='./note-sync')return sync;
  return new Proxy({__esModule:true,default:stub},{get:(o,k)=>k in o?o[k]:stub});
 });
@@ -50,4 +51,19 @@ test('save requests serialize and retain edits made during a write',async()=>{
  const f=fixture(),v=f.view();v.fileContent='one';v.isDirty=true;
  await v.saveFile();v.fileContent='two';v.isDirty=true;await v.saveFile();
  assert.equal(f.disk,'two');assert.equal(v.isDirty,false);
+});
+
+test('block navigation waits for the target document editor and cancels if the view changes files',()=>{
+ const {createEditor}=require('slate');
+ const f=fixture(),v=f.view(),editor=createEditor(),timers=new Map();let next=0,calls=0;
+ const beforeWindow=global.window;
+ global.window={setTimeout:fn=>{timers.set(++next,fn);return next},clearTimeout:id=>timers.delete(id)};
+ try{
+  editor.children=[{type:'paragraph',__blockId:'target',children:[{text:'Target'}]}];
+  v.editor=editor;v.editorFile={};v.revealNavigationTarget=()=>calls++;
+  v.navigateToBlock('target');assert.equal(calls,0);assert.equal(timers.size,1);
+  v.editorFile=f.file;const callback=timers.values().next().value;timers.clear();callback();assert.equal(calls,1);
+  v.editorFile={};v.navigateToBlock('target');const stale=timers.values().next().value;timers.clear();v.currentFile={path:'other.md'};stale();
+  assert.equal(calls,1);assert.equal(timers.size,0);
+ }finally{global.window=beforeWindow}
 });

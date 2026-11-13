@@ -20,12 +20,16 @@ export function parseListItem(
   const complex = listItem.children.filter((child) => child.type === "paragraph").length > 1 ||
     listItem.children.some((child) => child.type !== "paragraph" && child.type !== "list")
   if (complex) {
+    const children = parseContents(listItem.children, internalLinkOptions)
+    const id = children[0]?.__blockId
+    if (id) delete children[0].__blockId
     return [{
       type,
+      ...(id ? { __blockId: id } : {}),
       depth: options.depth,
       blockChildren: true,
       ...(type === "task-list-item" ? { checked: !!listItem.checked } : {}),
-      children: parseContents(listItem.children, internalLinkOptions),
+      children,
     } as Element]
   }
   const elements: Element[] = []

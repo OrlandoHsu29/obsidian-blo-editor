@@ -61,6 +61,7 @@ export type PluginTypes = ExtractCustomTypes<typeof plugins>
 
 type CustomEditor = PluginTypes["Editor"]
 type CustomElement = PluginTypes["Element"] & {
+  __blockId?: string
   __blockDepth?: number
   __collapsed?: true
   __subtitle?: true

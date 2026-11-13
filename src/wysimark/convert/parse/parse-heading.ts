@@ -12,6 +12,7 @@ export function parseHeading(
     {
       type:'heading',
       level:content.depth,
+      ...(typeof content.data?.blockId === 'string' ? { __blockId: content.data.blockId } : {}),
       children: parsePhrasingContents(content.children, {}, options),
     },
   ]

@@ -1,10 +1,11 @@
-import { Menu } from 'obsidian'
+import { Menu, Notice } from 'obsidian'
 import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
 import { blockDepth, canIndentBlock, changeBlockIndent, deleteBlockGroup } from './model'
 import { indentBlockSelection } from './selection'
 import { showAnchoredMenu } from '../wysimark/use-reposition/native-menu'
+import { canReferenceBlock } from './block-reference'
 
 /** Both mouse buttons use the same native menu and the existing block selection. */
 export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement) {
@@ -13,6 +14,22 @@ export function showBlockMenu(editor: Editor, index: number, anchor: HTMLElement
     changeBlockIndent(editor, index, delta)
     ReactEditor.focus(editor)
   }
+
+  const block = editor.children[index]
+  menu.addItem(item => item
+    .setTitle(ui('复制块链接'))
+    .setIcon('link')
+    .setDisabled(!block || !canReferenceBlock(block) || !editor.wysimark.copyBlockLink)
+    .onClick(async () => {
+      try {
+        if (block && canReferenceBlock(block)) await editor.wysimark.copyBlockLink?.(block)
+        new Notice(ui('块链接已复制'))
+      } catch (error) {
+        console.error('Blo Editor: could not copy block link', error)
+        new Notice(ui('无法复制块链接，请重试'))
+      }
+    }))
+  menu.addSeparator()
 
   menu.addItem(item => item
     .setTitle(ui('缩进为子块'))

@@ -18,10 +18,12 @@ export function parseListItemChild(
 ): Element[] {
   switch (child.type) {
     case "paragraph":
-      return splitSegmentLines(parsePhrasingContents(child.children, {}, options)).map(children => {
+      return splitSegmentLines(parsePhrasingContents(child.children, {}, options)).map((children, index) => {
+        const metadata = index === 0 && typeof child.data?.blockId === 'string' ? { __blockId: child.data.blockId } : {}
         if (checked === true || checked === false) {
           return {
             type: "task-list-item",
+            ...metadata,
             depth,
             checked,
             children,
@@ -29,12 +31,14 @@ export function parseListItemChild(
         } else if (ordered) {
           return {
             type: "ordered-list-item",
+            ...metadata,
             depth,
             children,
           }
         } else {
           return {
             type: "unordered-list-item",
+            ...metadata,
             depth,
             children,
           }

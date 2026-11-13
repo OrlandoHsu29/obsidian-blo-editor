@@ -109,7 +109,7 @@ export function createToolbarMotion(host: HTMLElement) {
   }
 }
 
-export function useToolbarMotion(toolbar: RefObject<HTMLElement | null>, items: readonly unknown[], count: number, enabled: boolean) {
+export function useToolbarMotion(toolbar: RefObject<HTMLElement | null>, items: readonly unknown[], layout: ReadonlySet<number>, enabled: boolean) {
   const state = useRef<{ host: HTMLElement; motion: ReturnType<typeof createToolbarMotion> } | null>(null)
   useLayoutEffect(() => {
     const host = toolbar.current
@@ -119,6 +119,6 @@ export function useToolbarMotion(toolbar: RefObject<HTMLElement | null>, items: 
       state.current = { host, motion: createToolbarMotion(host) }
     }
     state.current.motion.update()
-  }, [toolbar, items, count, enabled])
+  }, [toolbar, items, layout, enabled])
   useLayoutEffect(() => () => { state.current?.motion.dispose(); state.current = null }, [])
 }

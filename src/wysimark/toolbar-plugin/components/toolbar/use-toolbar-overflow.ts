@@ -1,18 +1,20 @@
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useMemo, useState } from 'react'
 import type { RefObject } from 'react'
 import type { MenuItemData } from '../../../shared-overlays/types'
 import { toolbarWidthMotion } from './use-toolbar-motion'
+import { fitToolbar, toolbarIndices } from './fit-toolbar'
 
 /** Measure controls only on layout changes, including theme/font/zoom changes. */
-export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, items: MenuItemData[], enabled: boolean, closeMenus: () => void) {
-  const [count, setCount] = useState(items.length)
+export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, items: MenuItemData[], enabled: boolean, closeMenus: () => void, maxVisible = items.length, collapseOrder?: readonly number[]) {
+  const limit = Math.min(maxVisible, items.length)
+  const [indices, setIndices] = useState(() => toolbarIndices(items, index => index < limit))
   useLayoutEffect(() => {
     const host = toolbar.current, parent = host?.parentElement
     if (!host || !parent || !enabled) return
     const win = host.ownerDocument.defaultView!
     const controls = [...host.querySelectorAll<HTMLElement>('[data-toolbar-index]')]
     const more = host.querySelector<HTMLElement>('[data-toolbar-overflow-trigger]')!
-    let frame = 0, lastCount = -1, widths: number[] | undefined, moreWidth = 0
+    let frame = 0, lastKey: string | undefined, widths: number[] | undefined, moreWidth = 0
     const observedWidths = new WeakMap<Element, number>()
     const measure = () => {
       const style = win.getComputedStyle(host), parentStyle = win.getComputedStyle(parent)
@@ -24,26 +26,22 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
       // These controls never flex. A viewport drag changes their budget, not
       // every icon's width; font/theme changes invalidate through the observer.
       if (!widths) {
-        widths = controls.map(control => control.getBoundingClientRect().width)
-        moreWidth = more.getBoundingClientRect().width
+        const cssWidth = px(style.width) + (style.boxSizing === 'border-box' ? 0 :
+          px(style.paddingLeft) + px(style.paddingRight) + px(style.borderLeftWidth) + px(style.borderRightWidth))
+        const scale = cssWidth > 0 ? host.getBoundingClientRect().width / cssWidth : 1
+        // The budget is in layout pixels; client rects also include window zoom.
+        widths = controls.map(control => control.getBoundingClientRect().width / (scale || 1))
+        moreWidth = more.getBoundingClientRect().width / (scale || 1)
       }
-      let next = items.length
-      if (widths.reduce((sum, width) => sum + width, 0) > available + .5) {
-        const budget = Math.max(0, available - moreWidth)
-        let used = 0
-        next = 0
-        while (next < items.length && used + widths[next] <= budget + .5) used += widths[next++]
-        while (next > 0 && items[next - 1] === 'divider') next--
-      }
-      if (next !== lastCount) {
-        if (lastCount !== -1) closeMenus()
-        lastCount = next
-        setCount(next)
+      const next = fitToolbar(items, widths, available, moreWidth, limit, collapseOrder)
+      const key = next.join(',')
+      if (key !== lastKey) {
+        if (lastKey !== undefined) closeMenus()
+        lastKey = key
+        setIndices(next)
       }
     }
-    const schedule = () => {
-      if (!frame) frame = win.requestAnimationFrame(() => { frame = 0; measure() })
-    }
+    const schedule = () => { if (!frame) frame = win.requestAnimationFrame(() => { frame = 0; measure() }) }
     const observer = new win.ResizeObserver(entries => {
       let changed = false
       for (const entry of entries) {
@@ -60,6 +58,6 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
     controls.forEach(control => observer.observe(control))
     measure()
     return () => { observer.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
-  }, [toolbar, items, enabled])
-  return Math.min(count, items.length)
+  }, [toolbar, items, enabled, limit, collapseOrder])
+  return useMemo(() => new Set(indices.filter(index => index < limit)), [indices, limit])
 }

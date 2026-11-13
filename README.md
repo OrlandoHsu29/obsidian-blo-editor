@@ -154,8 +154,11 @@ reuse the existing file. **Content description** describes the attachment and
 is kept as image alt text or a preview description. Supported file types show
 their content; other files use Obsidian's file embed display.
 The separate image button and `/image` command have been removed.
-Narrow panes collect overflowing controls
-in a horizontal icon menu under the three-dot button; click again to collapse it.
+Narrow panes collect overflowing controls in a horizontal icon menu under the
+three-dot button; click again to collapse it. Optional tools are collected first,
+from right to left. Only after all optional tools are collected do the primary
+tools retained in Glimmer Memo begin moving into the menu, also from right to left.
+The remaining controls keep their original order.
 
 <details>
 <summary>View the responsive toolbar</summary>
@@ -210,7 +213,9 @@ Enter or focus loss saves; Escape cancels. Changes are saved in the note and sup
 
 **Enable quick memo panel** connects the desktop-only [Glimmer Memo](https://github.com/OrlandoHsu29/obsidian-glimmer-memo).
 Use **Show/hide quick memo panel** to open a floating note with Blo editing,
-a compact toolbar, and no duplicate file title. Notes save before the panel hides.
+a compact toolbar, and no duplicate file title. Additional tools are available
+under the three-dot button; narrower windows collect overflowing primary tools
+in the same menu. Notes save before the panel hides.
 Menus share the main editor's layout and scale together in the memo window.
 Activating the window restores editor focus while preserving focus in open dialog inputs.
 New memo windows connect automatically; turning the integration off returns

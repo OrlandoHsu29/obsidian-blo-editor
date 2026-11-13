@@ -54,6 +54,22 @@ export function visibleToolbarItems(show: (item: ToolbarEntry['item']) => boolea
   }
   return result;
 }
+export function toolbarItemLayout(show: (item: ToolbarEntry['item']) => boolean, compact = false) {
+  const all = visibleToolbarItems(show);
+  const primary = visibleToolbarItems(show, true), primaryItems = new Set(primary);
+  const secondary: MenuItemData[] = [];
+  for (const item of all) {
+    if (item === 'divider') {
+      if (secondary.length && secondary[secondary.length - 1] !== 'divider') secondary.push(item);
+    } else if (!primaryItems.has(item)) secondary.push(item);
+  }
+  while (secondary[secondary.length - 1] === 'divider') secondary.pop();
+  const items = compact ? secondary.length ? [...primary, ...(primary.length ? ['divider' as const] : []), ...secondary] : primary : all;
+  const buttons = items.flatMap((item, index) => item === 'divider' ? [] : [index]).reverse();
+  const collapseOrder = [...buttons.filter(index => !primaryItems.has(items[index])),
+    ...buttons.filter(index => primaryItems.has(items[index]))];
+  return { items, primaryCount: compact ? primary.length : items.length, collapseOrder };
+}
 export const items = visibleToolbarItems();
 // Preserve upstream exports without maintaining different button orders.
 export const largeItems=items,mediumItems=items,smallItems=items,initialItems=items

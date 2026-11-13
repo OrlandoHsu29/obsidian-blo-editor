@@ -18,7 +18,7 @@ function fixture(){
  const host=Object.assign(makeNode('host',0),{width:60,isConnected:true,parentElement:parent,ownerDocument:{defaultView:win},items:[a,b],
   getClientRects(){return this.isConnected?[{}]:[]},append(node){ghosts.add(node)},
   querySelectorAll(selector){return selector==='[data-toolbar-index]'?[a,b]:this.items},querySelector(){return more}});
- const loaded=new Module('toolbar-motion.cjs');loaded.require=id=>id==='react'?{useLayoutEffect:fn=>{effectCleanup=fn()},useState:value=>[value,()=>{}],useRef:value=>({current:value})}:require(id);
+ const loaded=new Module('toolbar-motion.cjs');loaded.require=id=>id==='react'?{useLayoutEffect:fn=>{effectCleanup=fn()},useState:value=>[typeof value==='function'?value():value,()=>{}],useMemo:fn=>fn(),useRef:value=>({current:value})}:require(id);
  loaded._compile(buildSync({stdin:{contents:`export * from './src/wysimark/toolbar-plugin/components/toolbar/use-toolbar-motion';export * from './src/wysimark/toolbar-plugin/components/toolbar/use-toolbar-overflow';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['react'],write:false}).outputFiles[0].text,'toolbar-motion.cjs');
  const api=loaded.exports;
  return {host,a,b,media,animations,ghosts,listeners,frames,api,get styleReads(){return styleReads},

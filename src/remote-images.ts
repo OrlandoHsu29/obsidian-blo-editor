@@ -12,9 +12,11 @@ export function watchRemoteImages(app: App, sourcePath: string, editor: Editor,
   createSaver: () => OnImageSaveHandler, current: () => boolean): () => void {
   type Job = { url: string; refs: PathRef[]; local?: string; queued: boolean; failed?: boolean }
   const jobs = new Map<string, Job>(), queue: Job[] = []
-  let active = 0, disposed = false, warned = false
+  let active = 0, disposed = false, warned = false, needsFullScan = true
   const valid = (ref: PathRef, url: string) => {
-    if (!current() || disposed || editor.wysimark.readOnly || !ref.current || !Node.has(editor, ref.current)) return false
+    if (disposed) return false
+    if (!current() || editor.wysimark.readOnly) { needsFullScan = true; return false }
+    if (!ref.current || !Node.has(editor, ref.current)) return false
     const node = Node.get(editor, ref.current)
     return Element.isElement(node) && (node.type === 'image-block' || node.type === 'image-inline') && node.url === url
   }
@@ -58,7 +60,10 @@ export function watchRemoteImages(app: App, sourcePath: string, editor: Editor,
     }
   }
   const enqueue = (at: Path = []) => {
-    if (disposed || !current() || editor.wysimark.readOnly || !Node.has(editor, at)) return
+    if (disposed) return
+    if (!current() || editor.wysimark.readOnly) { needsFullScan = true; return }
+    if (!Node.has(editor, at)) return
+    if (!at.length) needsFullScan = false
     for (const [node, path] of Editor.nodes(editor, { at, match: imageNode })) {
       if (!Element.isElement(node) || !('url' in node)) continue
       let job = jobs.get(node.url)
@@ -75,7 +80,9 @@ export function watchRemoteImages(app: App, sourcePath: string, editor: Editor,
     if (operation.type === 'insert_node' || operation.type === 'set_node' && 'url' in operation.newProperties) enqueue(operation.path)
   }
   editor.apply = wrapped
-  const activated = app.workspace.on('active-leaf-change', () => enqueue())
+  // Active edits inspect only the affected subtree. Revisit the whole document
+  // on activation only when initial loading or background changes need it.
+  const activated = app.workspace.on('active-leaf-change', () => { if (needsFullScan) enqueue() })
   queueMicrotask(() => enqueue())
   return () => {
     disposed = true

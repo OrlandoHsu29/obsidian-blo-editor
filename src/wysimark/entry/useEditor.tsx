@@ -3,8 +3,8 @@ import { createEditor, Editor } from "slate"
 import { withHistory } from "slate-history"
 import { ReactEditor, withReact } from "slate-react"
 
-import { parse, serialize } from "../convert"
-import { Element } from "./plugins"
+import { parse } from "../convert"
+import { createMarkdownReader } from './markdown-reader'
 import { withSink } from "./SinkEditable"
 import { replaceDocument } from "./replace-document"
 import { OpenInternalLinkHandler, RenderInternalEmbed, RenderInternalLinkPreview, RenderMermaidPreview, WysimarkEditor } from "./types"
@@ -52,9 +52,7 @@ export function useEditor({
     })
     nextEditor.convertElement.addConvertElementType("paragraph")
     nextEditor.getChunkSize=node=>Editor.isEditor(node)?16:null
-    editor.getMarkdown = () => {
-      return serialize(editor.children as Element[])
-    }
+    editor.getMarkdown = createMarkdownReader(editor)
     editor.setMarkdown = (markdown: string) => {
       const documentValue = parse(markdown)
       replaceDocument(editor, documentValue)

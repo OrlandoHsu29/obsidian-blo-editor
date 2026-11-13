@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from "react"
-import { Descendant, Editor, Element } from "slate"
+import { Descendant, Editor } from "slate"
 import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
 import { isPointerSelecting } from '../../blocks/pointer-selection'
 import { tableCellSelection } from '../table-plugin/cell-selection'
 import { isDomElement } from '../../dom-guards'
 
-import { parse, serialize } from "../convert"
+import { parse } from "../convert"
 import { throttle } from "../utils/throttle"
 import { SinkEditable } from "./SinkEditable"
 import { replaceDocument } from "./replace-document"
@@ -113,7 +113,7 @@ export function Editable({
   const onThrottledSlateChange = useCallback(
     throttle(
       () => {
-        const markdown = serialize(editor.children as Element[])
+        const markdown = editor.getMarkdown()
         const changed = changeTrackerRef.current?.next(markdown)
         if (changed === undefined) return
         editor.wysimark.prevValue = {
@@ -168,7 +168,7 @@ export function Editable({
     editor.children = children
     Editor.normalize(editor, { force: true })
     prevValueRef.current = initialValueRef.current = editor.children
-    changeTrackerRef.current = new MarkdownChangeTracker(value, serialize(editor.children as Element[]))
+    changeTrackerRef.current = new MarkdownChangeTracker(value, editor.getMarkdown())
     editor.wysimark.prevValue = {
       markdown: value, // Store the original unescaped value
       children: editor.children,
@@ -198,7 +198,7 @@ export function Editable({
       const documentValue = parse(value)
       replaceDocument(editor, documentValue)
       prevValueRef.current = editor.children
-      changeTrackerRef.current = new MarkdownChangeTracker(value, serialize(editor.children as Element[]))
+      changeTrackerRef.current = new MarkdownChangeTracker(value, editor.getMarkdown())
       editor.wysimark.prevValue = {
         markdown: value,
         children: editor.children,

@@ -329,7 +329,6 @@ function KnowledgeSpaceEditorComponent({
     renderMermaidPreview,
   });
   editor.wysimark.readOnly = readOnly;
-  editor.wysimark.toolbarPreferences = plugin.toolbarPreferences;
   editor.wysimark.linkTitlePreferences = plugin.linkTitlePreferences;
   editor.wysimark.setAutoLinkTitle = enabled => {
     plugin.settings.autoLinkTitle = enabled;

@@ -154,11 +154,7 @@ reuse the existing file. **Content description** describes the attachment and
 is kept as image alt text or a preview description. Supported file types show
 their content; other files use Obsidian's file embed display.
 The separate image button and `/image` command have been removed.
-In **Toolbar configuration**, shared
-icons and checkboxes control visibility immediately. Paragraph style, clear
-formatting, undo, redo, text color, find/replace, table, link, and attachment stay
-visible; their settings remain checked, gray, and disabled.
-**Select all** toggles optional buttons. Narrow panes collect overflowing controls
+Narrow panes collect overflowing controls
 in a horizontal icon menu under the three-dot button; click again to collapse it.
 
 <details>

@@ -18,9 +18,6 @@ function ToolbarItem({item, menuAnchor}:{item:MenuItemData; menuAnchor?: HTMLEle
   if(item.show&&!item.show(editor))return null
   return <ToolbarButton item={item} menuAnchor={menuAnchor} />
 }
-const emptyHidden: readonly string[] = []
-const getEmptyHidden = () => emptyHidden
-const subscribeEmpty = () => () => {}
 export function Toolbar() {
   const editor=useSlateStatic()
   const toolbar=useRef<HTMLDivElement>(null)
@@ -43,9 +40,7 @@ export function Toolbar() {
   },[editor])
   const integrations=editor.wysimark.integrationPreferences
   const integrationState=useSyncExternalStore(integrations?.subscribe ?? subscribeDefaultIntegrations, integrations?.getSnapshot ?? getDefaultIntegrations)
-  const preferences = editor.wysimark.toolbarPreferences
-  const hidden = useSyncExternalStore(preferences?.subscribe ?? subscribeEmpty, preferences?.getSnapshot ?? getEmptyHidden, getEmptyHidden)
-  const items = useMemo(() => visibleToolbarItems(hidden, item => !item.show || item.show(editor), editor.wysimark.memoPanel), [hidden, integrationState, editor, editor.wysimark.memoPanel])
+  const items = useMemo(() => visibleToolbarItems(item => !item.show || item.show(editor), editor.wysimark.memoPanel), [integrationState, editor, editor.wysimark.memoPanel])
   const count=useToolbarOverflow(toolbar,items,!editor.wysimark.readOnly,menuLayer.close)
   useToolbarMotion(toolbar,items,count,!editor.wysimark.readOnly)
   const overflow=count<items.length

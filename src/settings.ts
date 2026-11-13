@@ -1,14 +1,9 @@
 import { normalizeEditingFolder } from './editing-scope'
 import { Notice, PluginSettingTab, Setting, SettingGroup } from 'obsidian'
-import { createElement } from 'react'
-import { createPortal } from 'react-dom'
-import { createRoot, Root } from 'react-dom/client'
 import type BloEditorPlugin from './main'
 import { ui } from './wysimark/utils/translations'
 import { DEFAULT_TEXT_COLOR } from './wysimark/marks-plugin/methods/text-color'
 import { DEFAULT_ATTACHMENT_FOLDER, normalizeAttachmentFolder } from './attachments'
-import { toolbarGroups } from './wysimark/toolbar-plugin/items'
-import { isFixedToolbarButton } from './toolbar-preferences'
 import { memoPanelStatus } from './memo-panel'
 import { AiSkillPromptModal, copyAiSkillPrompt } from './ai-skill-modal'
 
@@ -25,7 +20,6 @@ export type EditorSettings = {
   /** Integrations the user turned off on purpose; detection leaves them off. */
   integrationOptOut: string[]
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
-  hiddenToolbarButtons: string[]
   autoLinkTitle: boolean
   showListGuides: boolean
 }
@@ -42,24 +36,17 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   enableMemoPanel: false,
   integrationOptOut: [],
   tableDefaults: { headerRow: true, headerColumn: false },
-  hiddenToolbarButtons: [],
   autoLinkTitle: true,
   showListGuides: true,
 }
 
 export class BloSettingsTab extends PluginSettingTab {
-  private iconRoot: Root | null = null
   constructor(private readonly editorPlugin: BloEditorPlugin) {
     super(editorPlugin.app, editorPlugin)
-    editorPlugin.register(() => this.clearIcons())
   }
-
-  private clearIcons() { this.iconRoot?.unmount(); this.iconRoot = null }
-  hide() { this.clearIcons() }
 
   display() {
     const plugin = this.editorPlugin
-    this.clearIcons()
     this.containerEl.empty()
     this.containerEl.addClass('blo-settings')
     // A dependency enabled during this session should show up as already on.
@@ -74,7 +61,6 @@ export class BloSettingsTab extends PluginSettingTab {
       return this.containerEl.createDiv()
     }
     const editorGroup = group(ui('编辑器'))
-    const toolbarGroup = group(ui('工具栏配置'))
     const scopeGroup = group(ui('编辑范围'))
     const attachmentGroup = group(ui('附件'))
     const integrationGroup = group(ui('扩展功能'))
@@ -107,59 +93,6 @@ export class BloSettingsTab extends PluginSettingTab {
           new Notice(ui('无法准备或复制 Skill，请重试；也可选中预览中的提示词手动复制。'))
         } finally { button.setDisabled(false) }
       }))
-    const toolbarHeader = toolbarGroup.createDiv({ cls: 'blo-toolbar-header' })
-    toolbarHeader.createEl('p', { cls: 'setting-item-description blo-toolbar-description', text: ui('勾选显示对应按钮；灰色勾选项固定显示。悬停查看功能名称，修改立即生效。'), attr: { id: 'blo-toolbar-config-description' } })
-    const selectAllLabel = toolbarHeader.createEl('label', { cls: 'blo-toolbar-select-all' })
-    const selectAll = selectAllLabel.createEl('input', { type: 'checkbox' })
-    selectAllLabel.createSpan({ text: ui('全选') })
-    toolbarGroup.before(toolbarHeader)
-    const toolbarRow = toolbarGroup.createDiv({ cls: 'blo-toolbar-settings', attr: { role: 'group', 'aria-describedby': 'blo-toolbar-config-description' } })
-    const controls = new Map<string, HTMLInputElement>()
-    const syncSelectAll = () => {
-      const optional = [...controls.values()].filter(control => !control.disabled)
-      const checked = optional.filter(control => control.checked).length
-      selectAll.checked = optional.length > 0 && checked === optional.length
-      selectAll.indeterminate = checked > 0 && checked < optional.length
-      selectAll.disabled = optional.length === 0
-    }
-    const updateHidden = (hidden: Set<string>) => {
-      plugin.settings.hiddenToolbarButtons = [...hidden]
-      plugin.toolbarPreferences.setHidden(plugin.settings.hiddenToolbarButtons)
-      for (const [id, control] of controls) control.checked = control.disabled || !hidden.has(id)
-      syncSelectAll()
-      void plugin.saveData(plugin.settings)
-    }
-    selectAll.addEventListener('change', () => {
-      const hidden = new Set(plugin.toolbarPreferences.getSnapshot())
-      for (const [id, control] of controls) {
-        if (control.disabled) continue
-        if (selectAll.checked) hidden.delete(id)
-        else hidden.add(id)
-      }
-      updateHidden(hidden)
-    })
-    const icons: ReturnType<typeof createPortal>[] = []
-    toolbarGroups.forEach((entries, index) => {
-      if (index) toolbarRow.createDiv({ cls: 'blo-toolbar-settings-divider', attr: { 'aria-hidden': 'true' } })
-      for (const entry of entries) {
-        const label = toolbarRow.createEl('label', { cls: 'blo-toolbar-setting', attr: { 'aria-label': entry.item.title } })
-        const icon = label.createSpan({ cls: 'blo-toolbar-setting-icon', attr: { 'aria-hidden': 'true' } })
-        icons.push(createPortal(createElement(entry.settingsIcon), icon, entry.id))
-        const checkbox = label.createEl('input', { type: 'checkbox', attr: { 'aria-label': entry.item.title, 'data-toolbar-id': entry.id } })
-        checkbox.disabled = isFixedToolbarButton(entry.id)
-        checkbox.checked = checkbox.disabled || !plugin.toolbarPreferences.getSnapshot().includes(entry.id)
-        controls.set(entry.id, checkbox)
-        checkbox.addEventListener('change', () => {
-          const hidden = new Set(plugin.toolbarPreferences.getSnapshot())
-          if (checkbox.checked) hidden.delete(entry.id)
-          else hidden.add(entry.id)
-          updateHidden(hidden)
-        })
-      }
-    })
-    syncSelectAll()
-    this.iconRoot = createRoot(toolbarGroup.createDiv({ attr: { hidden: 'true' } }))
-    this.iconRoot.render(icons)
     new Setting(editorGroup)
       .setName(ui('默认使用富文本编辑器'))
       .setDesc(ui('Markdown 笔记默认使用富文本编辑；阅读视图不受影响。'))

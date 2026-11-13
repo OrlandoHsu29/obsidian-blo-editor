@@ -15,7 +15,6 @@ import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formattin
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
 import { NoteExportModal } from './note-export/modal';
-import { ToolbarPreferences } from './toolbar-preferences';
 import { LinkTitlePreferences } from './link-title-preferences';
 import { parseBlockDocument } from './blocks/persistence';
 import { IntegrationPreferences } from './integration-preferences';
@@ -35,7 +34,6 @@ type IntegrationFeature = keyof typeof INTEGRATION_SETTINGS;
 
 export default class BloEditorPlugin extends Plugin {
   readonly styleCache=createEditorStyleCache();
-  readonly toolbarPreferences = new ToolbarPreferences();
   readonly linkTitlePreferences = new LinkTitlePreferences();
   readonly integrationPreferences = new IntegrationPreferences();
   private disposed = false;
@@ -100,7 +98,6 @@ export default class BloEditorPlugin extends Plugin {
     delete (this.settings as any).deleteDrawingAttachments;
     if (!Array.isArray(this.settings.integrationOptOut)) this.settings.integrationOptOut = [];
     this.syncIntegrations();
-    this.toolbarPreferences.setHidden(Array.isArray(this.settings.hiddenToolbarButtons) ? this.settings.hiddenToolbarButtons : []);
     this.addSettingTab(new BloSettingsTab(this));
     void this.ensureAiSkill().catch(error => console.error('Blo Editor: could not prepare AI skill', error));
     installDrawingNavigation(this);

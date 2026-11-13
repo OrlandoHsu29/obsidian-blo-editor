@@ -44,14 +44,21 @@ export function CodeBlock({
         data-block-selected={blockSelected && !readOnly || undefined}
         className={blockSelected && !readOnly ? "--selected" : ""}
         {...attributes}
-        onMouseDown={(event) => {
-          event.preventDefault()
-          const path = ReactEditor.findPath(editor, element)
-          Transforms.select(editor, Editor.start(editor, path))
-          ReactEditor.focus(editor)
-        }}
       >
-        <div contentEditable={false} style={{ padding: "1em", overflowX: "auto" }}>
+        <div contentEditable={false} data-wysimark-mermaid-scroller style={{ padding: "1em", overflowX: "auto" }}
+          onMouseDown={event => {
+            // Native scrollbar events target the scrolling element itself.
+            // Keep their default action and prevent Slate from selecting the
+            // hidden source. Renderer-owned scroll containers follow the same rule.
+            event.stopPropagation()
+            const target = event.target as HTMLElement
+            if (readOnly || event.button !== 0 || target === event.currentTarget ||
+              target.scrollWidth > target.clientWidth || target.scrollHeight > target.clientHeight) return
+            event.preventDefault()
+            const path = ReactEditor.findPath(editor, element)
+            Transforms.select(editor, Editor.start(editor, path))
+            ReactEditor.focus(editor)
+          }}>
           {editor.wysimark.renderMermaidPreview(code)}
         </div>
         <div aria-hidden="true" style={{ display: "none" }}>{children}</div>

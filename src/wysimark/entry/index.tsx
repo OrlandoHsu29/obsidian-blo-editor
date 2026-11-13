@@ -62,7 +62,8 @@ export function Editable({
   const pointerTargetRef = useRef<HTMLElement | null>(null)
   const clearPointerTarget = useCallback(() => { pointerTargetRef.current = null }, [])
   const scrollSelectionIntoView = useCallback((editor: Editor, range: globalThis.Range) => {
-    // A mouse click already identifies visible content, including image voids.
+    // A mouse click already identifies visible content, including image voids
+    // and a Mermaid block switching from its diagram to source code.
     // Keep that target stationary until typing or keyboard navigation takes over.
     const target = pointerTargetRef.current
     if (target?.isConnected && target.contains(range.startContainer) && target.contains(range.endContainer)) return
@@ -229,7 +230,8 @@ export function Editable({
         scrollSelectionIntoView={scrollSelectionIntoView}
         onMouseDownCapture={event => {
           const target = isDomElement(event.target) ? event.target : null
-          const anchor = target?.closest<HTMLElement>('td') ?? target?.closest<HTMLElement>('[data-slate-void="true"]')
+          const anchor = target?.closest<HTMLElement>('td') ?? target?.closest<HTMLElement>('[data-slate-void="true"]') ??
+            target?.closest('[data-wysimark-mermaid-scroller]')?.closest<HTMLElement>('[data-wysimark-code-block]')
           pointerTargetRef.current = anchor && event.currentTarget.contains(anchor) ? anchor : null
         }}
         onKeyDownCapture={clearPointerTarget}

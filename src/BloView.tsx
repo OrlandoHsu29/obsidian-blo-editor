@@ -31,6 +31,7 @@ import { watchRemoteImages } from './remote-images';
 import { downloadAttachment } from './remote-attachments';
 import { NoteExportModal } from './note-export/modal';
 import { CacheProvider } from '@emotion/react';
+import { MermaidPreview } from './MermaidPreview';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -241,51 +242,6 @@ function InternalEmbedView({
     return <VideoEmbed app={app} file={targetFile} />;
   }
   return <div ref={embedRef} className="wysimark-internal-embed" />;
-}
-
-function MermaidPreview({
-  app,
-  sourcePath,
-  code,
-}: {
-  app: App;
-  sourcePath: string;
-  code: string;
-}) {
-  const previewRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const previewEl = previewRef.current;
-    if (!previewEl) return;
-
-    const component = new Component();
-    component.load();
-    previewEl.empty();
-    previewEl.setText(ui("Rendering diagram..."));
-
-    void MarkdownRenderer.render(
-      app,
-      `\`\`\`mermaid\n${code}\n\`\`\``,
-      previewEl,
-      sourcePath,
-      component
-    ).then(() => {
-      if (cancelled) previewEl.empty();
-    }).catch((error: unknown) => {
-      if (!cancelled) {
-        previewEl.setText(error instanceof Error ? error.message : ui("Invalid Mermaid diagram"));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      component.unload();
-      previewEl.empty();
-    };
-  }, [app, code, sourcePath]);
-
-  return <div ref={previewRef} className="wysimark-mermaid-preview" />;
 }
 
 // React component for the editor

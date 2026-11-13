@@ -10,6 +10,7 @@ import { TablerIcon } from '../../../sink'
 import { useLayer } from '../../../use-layer'
 import { ToolbarOverflowMenu } from './overflow-menu'
 import { useToolbarOverflow } from './use-toolbar-overflow'
+import { useToolbarMotion } from './use-toolbar-motion'
 const MoreToolsIcon = () => <TablerIcon><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></TablerIcon>
 function ToolbarItem({item, menuAnchor}:{item:MenuItemData; menuAnchor?: HTMLElement}) {
   const editor=useSlateStatic()
@@ -46,17 +47,21 @@ export function Toolbar() {
   const hidden = useSyncExternalStore(preferences?.subscribe ?? subscribeEmpty, preferences?.getSnapshot ?? getEmptyHidden, getEmptyHidden)
   const items = useMemo(() => visibleToolbarItems(hidden, item => !item.show || item.show(editor), editor.wysimark.memoPanel), [hidden, integrationState, editor, editor.wysimark.memoPanel])
   const count=useToolbarOverflow(toolbar,items,!editor.wysimark.readOnly,menuLayer.close)
+  useToolbarMotion(toolbar,items,count,!editor.wysimark.readOnly)
   const overflow=count<items.length
   const moreItem=useMemo(() => ({title:ui('更多工具'),icon:MoreToolsIcon,
     Component:({dest,close}:{dest:HTMLElement;close:()=>void})=><ToolbarOverflowMenu dest={dest} items={items.slice(count)} close={close}/>
   }),[items,count])
   if(editor.wysimark.readOnly)return null
   return <$ToolbarContainer ref={toolbar} data-wysimark-toolbar><$Toolbar>
-    {items.map((item,index)=><div key={item==='divider'?index:item.title} data-toolbar-index={index}
+    {items.map((item,index)=>{
+      const next=item==='divider'?items.slice(index+1).find(item=>item!=='divider'):undefined
+      const key=item==='divider'?`divider:${next&&next!=='divider'?next.title:index}`:`item:${item.title}`
+      return <div key={key} data-toolbar-index={index} data-toolbar-motion-key={key}
       className={`blo-toolbar-item${index>=count?' blo-toolbar-item-hidden':''}`} aria-hidden={index>=count||undefined} inert={index>=count||undefined}>
       <ToolbarItem item={item} menuAnchor={index>=count?more.current??undefined:undefined}/>
-    </div>)}
-    <div ref={more} data-toolbar-overflow-trigger className={`blo-toolbar-item${overflow?'':' blo-toolbar-item-hidden'}`} aria-hidden={!overflow||undefined} inert={!overflow||undefined}>
+    </div>})}
+    <div ref={more} data-toolbar-overflow-trigger data-toolbar-motion-key="overflow" className={`blo-toolbar-item${overflow?'':' blo-toolbar-item-hidden'}`} aria-hidden={!overflow||undefined} inert={!overflow||undefined}>
       <ToolbarButton item={moreItem} menuToggle/>
     </div>
   </$Toolbar></$ToolbarContainer>

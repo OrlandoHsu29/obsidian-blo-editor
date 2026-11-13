@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react'
 import type { RefObject } from 'react'
 import type { MenuItemData } from '../../../shared-overlays/types'
+import { toolbarWidthMotion } from './use-toolbar-motion'
 
 /** Measure controls only on layout changes, including theme/font/zoom changes. */
 export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, items: MenuItemData[], enabled: boolean, closeMenus: () => void) {
@@ -46,6 +47,7 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
     const observer = new win.ResizeObserver(entries => {
       let changed = false
       for (const entry of entries) {
+        if (entry.target === host && toolbarWidthMotion.has(host)) continue
         const width = entry.contentRect.width
         if (observedWidths.get(entry.target) === width) continue
         observedWidths.set(entry.target, width); changed = true

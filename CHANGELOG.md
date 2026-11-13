@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.1.31 — 2026-11-13
+
+### 中文
+
+- 随插件提供完整的 Blo 笔记 Skill，在设置中查看或复制安装／更新提示词；路径随实际安装位置生成。可手动在编辑范围生成或更新 AGENTS.md，仅维护 Blo 规则段，保留已有个人规则。
+- 块柄菜单新增「复制块链接」，为正文、列表、引用、表格和代码等块保存原生 Obsidian 块 ID；支持跨笔记跳转与目标块预览，拆分、粘贴和转换时保护引用标识。
+- 粘贴表格时从单格或选区左上角逐格填入，按需扩展行列，保留目标区域外的内容并支持整次撤销；兼容 Blo、HTML、Markdown 和制表符表格。标题行、标题列默认居中。
+- 工具栏隐藏图标与收纳时增加过渡动画，支持减少动态效果设置，结束或卸载时清理动画与临时节点；动画期间避免重复计算溢出范围。
+- 修复 Mermaid 滚动条误触代码编辑、绘制完成后仍显示加载状态、预览切换源码时页面跳动，以及过期异步绘制影响新图表的问题。
+- 修复链接预览在小数尺寸和缩放下反复变化、闪烁抖动的问题；折叠列表末尾回车在隐藏子块之后新建同级块，空正文退格返回可见父项，保留撤销／重做。
+- 编辑回调与保存检查共享未变化内容的 Markdown 转换结果；切换笔记时仅在初始化或遗漏的后台变更后扫描远程图片，保留下载重试逻辑。
+
+### English
+
+- Bundle the complete Blo note-writing Skill, with settings to preview or copy an installation/update prompt using the actual plugin path. Generate directory AGENTS.md rules on demand while preserving existing personal instructions.
+- Add **Copy block link** to block menus using native Obsidian block IDs, with cross-note navigation and targeted previews. Preserve IDs through splitting, pasting and conversion.
+- Paste table grids from the selected cell or selection's top-left corner, expanding rows and columns as needed and supporting one-step undo. Support Blo, HTML, Markdown and tab-separated tables. Center header rows and columns by default.
+- Animate toolbar visibility and overflow transitions, respect reduced motion, clean up animation resources, and skip redundant overflow measurements during width animations.
+- Fix Mermaid scrollbar clicks entering source editing, stuck loading indicators, viewport jumps when entering source, and stale asynchronous renders affecting newer diagrams.
+- Stabilize link previews at fractional sizes and zoom levels. Keep hidden list descendants folded when pressing Enter or Backspace, with undo/redo preserved.
+- Share Markdown serialization across unchanged-content callbacks and saves; avoid repeated full-document image scans on tab activation while recovering background changes and interrupted downloads.
+
+Validation: type checking, 381 automated tests and production packaging passed.
+Live Obsidian checks used a 2,000-paragraph note to verify toolbar animation,
+overflow resizing, unchanged Markdown, and cleanup after transitions.
+
+Installation: extract `blo-editor-0.1.31.zip` into the vault's
+`.obsidian/plugins/`, preserving an existing `data.json`. Requires desktop
+Obsidian 1.8.7 or later.
+
 ## 0.1.21 — 2026-10-26
 
 - Connect to Glimmer Memo using its renamed plugin ID, window marker and GitHub

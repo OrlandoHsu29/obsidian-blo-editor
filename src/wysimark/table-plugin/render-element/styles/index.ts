@@ -16,6 +16,7 @@ export const $Table = styled("table")<{ columns: TableColumn[] }>`
           `td:nth-of-type(${index + 1}) { text-align: ${column.align}; }`
       )
       .join("\n")}
+  td[data-table-header="true"] { text-align: center; }
 `
 
 /**

@@ -59,7 +59,7 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
           const header = (node.headerRow !== false && y === 0) || (node.headerColumn && x === 0)
           const td = document.createElement(header ? 'th' : 'td')
           td.style.border = '1px solid #aaa'; td.style.padding = '6px 10px'
-          td.style.textAlign = node.columns[x]?.align || 'left'
+          td.style.textAlign = header ? 'center' : node.columns[x]?.align || 'left'
           flow(cell.children, td); tr.append(td)
         })
       })

@@ -70,6 +70,7 @@ handles and adjust alignment and headers from the floating toolbar. Click to sel
 a cell; double-click, Enter, or Space to edit, or type to replace its contents.
 Tab moves between cells; Shift+arrows extend a rectangle. Backspace/Delete clear
 contents; select row/column handles to remove rows/columns. Set default header styles.
+Pasting a table into an existing table starts at the selected cell or the top-left cell of the selection. The clipboard grid overwrites the corresponding cells without cropping to the selection; rows and columns are added when needed. Blo, HTML, Markdown and tab-separated tables are supported, with one-step undo for the entire paste.
 Narrow panes allow horizontal table overflow, with fading edge hints and a scrollbar
 that appears on selection, focus, or hovering its track.
 Mouse selection of cells, rows, columns and images keeps the viewport stationary.

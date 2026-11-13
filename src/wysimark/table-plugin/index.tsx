@@ -15,6 +15,7 @@ import { createTableMethods } from "./methods"
 import { normalizeTableIndexes } from "./normalize/normalize-table"
 import { normalizeTableCell } from "./normalize/normalize-table-cell"
 import { renderElement } from "./render-element"
+import { pasteTableFragment } from './paste-table'
 import {
   TableCellElement,
   TableContentElement,
@@ -63,7 +64,7 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
         },
         deleteFragment: () => deleteSelectedTableAxis(editor) || replaceSelectedCells(editor) || deleteFragmentWithProtectedTypes(editor, ["table-cell"]),
         insertText: text => replaceSelectedCells(editor, () => editor.insertText(text)),
-        insertFragment: fragment => replaceSelectedCells(editor, () => editor.insertFragment(fragment as unknown as Parameters<typeof editor.insertFragment>[0])),
+        insertFragment: fragment => pasteTableFragment(editor, fragment as unknown as Parameters<typeof editor.insertFragment>[0]) || replaceSelectedCells(editor, () => editor.insertFragment(fragment as unknown as Parameters<typeof editor.insertFragment>[0])),
         insertBreak: () => {
           if (beginTableCellEdit(editor)) return true
           /**

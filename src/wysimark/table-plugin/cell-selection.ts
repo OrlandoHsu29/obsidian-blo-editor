@@ -33,12 +33,19 @@ export function isTableCellEditing(editor: Editor, path: Path): boolean {
 }
 
 export function selectTableCell(editor: Editor, cellPath: Path): void {
+  const path = cellPath.slice(0, -2)
+  const cell = { x: cellPath[cellPath.length - 1], y: cellPath[cellPath.length - 2] }
+  selectTableCellRange(editor, path, cell, cell)
+}
+
+export function selectTableCellRange(editor: Editor, path: Path, anchorCell: { x: number; y: number }, focusCell: { x: number; y: number }): void {
   clearEditingCell(editor); clearBlockSelection(editor)
-  const path = cellPath.slice(0, -2), table = Node.get(editor, path) as TableElement
-  const x = cellPath[cellPath.length - 1], y = cellPath[cellPath.length - 2]
-  const range = Editor.range(editor, cellPath)
+  const table = Node.get(editor, path) as TableElement
+  const left = Math.min(anchorCell.x, focusCell.x), right = Math.max(anchorCell.x, focusCell.x)
+  const top = Math.min(anchorCell.y, focusCell.y), bottom = Math.max(anchorCell.y, focusCell.y)
+  const range = { anchor: Editor.start(editor, [...path, top, left]), focus: Editor.end(editor, [...path, bottom, right]) }
   withoutAutomaticCellSelection(editor,()=>Transforms.select(editor, range))
-  axisSelections.set(editor, { cells: { table, path, left:x, right:x, top:y, bottom:y, kind:'cell', anchorCell:{x,y}, focusCell:{x,y} }, range })
+  axisSelections.set(editor, { cells: { table, path, left, right, top, bottom, kind:'cell', anchorCell, focusCell }, range })
   notifyAxis(editor)
 }
 

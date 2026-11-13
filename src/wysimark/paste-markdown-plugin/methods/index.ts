@@ -3,6 +3,7 @@ import { Editor, Element, Range, Transforms } from "slate"
 import { curryOne } from "../../sink"
 
 import { parse } from "../../convert"
+import { pasteTableFragment } from '../../table-plugin/paste-table'
 
 function pasteMarkdown(editor: Editor, markdown: string) {
 
@@ -11,6 +12,7 @@ function pasteMarkdown(editor: Editor, markdown: string) {
     delete element.__markdownLeadingNewlines
     delete element.__markdownTrailingNewlines
   }
+  if (pasteTableFragment(editor, fragment)) return
   // Paragraph fragments merge their edges with the text around the selection.
   // Explicit Markdown blocks (headings, tables, etc.) retain their own structure.
   const emptyParagraph = editor.selection && Range.isCollapsed(editor.selection) &&

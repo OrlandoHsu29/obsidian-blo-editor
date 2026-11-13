@@ -35,19 +35,37 @@ function measurements(root:HTMLElement,target:Target) {
   const scale=width>0?rect.width/width:1
   return `${(text.top+text.height/2-rect.top)/(scale||1)}px`
 }
-function registry(doc:Document) {
-  let entry=documents.get(doc);if(entry)return entry
+export function createFirstLineAlignmentRegistry(doc:Document) {
   const targets=new Map<HTMLElement,Target>(),pending=new Set<HTMLElement>(),win=doc.defaultView!;let frame=0
   const flush=()=>{frame=0;const updates=Array.from(pending,root=>({root,target:targets.get(root)})).filter(item=>item.target).map(({root,target})=>({root,target:target!,value:measurements(root,target!)}));pending.clear();for(const {root,target,value} of updates)if(value&&root.style.getPropertyValue(target.variable)!==value)root.style.setProperty(target.variable,value)}
-  const schedule=(root:HTMLElement)=>{pending.add(root);if(!frame)frame=win.requestAnimationFrame(flush)}
+  const enqueue=(root:HTMLElement)=>{
+    const target=targets.get(root)
+    if(!target||target.inViewport===false||target.visibleOnly&&!root.matches(':hover,:focus-within'))return
+    pending.add(root)
+  }
+  const schedule=(root:HTMLElement)=>{enqueue(root);if(pending.size&&!frame)frame=win.requestAnimationFrame(flush)}
   const refresh=()=>targets.forEach((_target,root)=>schedule(root))
-  const observer=new win.ResizeObserver(entries=>entries.forEach(({target})=>schedule(target as HTMLElement)))
+  const observer=new win.ResizeObserver(entries=>{
+    entries.forEach(({target})=>enqueue(target as HTMLElement))
+    if(!pending.size)return
+    // Marker/handle offsets do not size the observed blocks. Read together,
+    // then update before this frame paints instead of following one frame late.
+    if(frame)win.cancelAnimationFrame(frame)
+    flush()
+  })
   const visibility=new win.IntersectionObserver(entries=>{
     for(const {target,isIntersecting}of entries){const config=targets.get(target as HTMLElement);if(!config)continue;config.inViewport=isIntersecting;if(isIntersecting)schedule(target as HTMLElement)}
   })
-  const attach=()=>{win.addEventListener('resize',refresh);doc.fonts?.addEventListener('loadingdone',refresh)}
-  const detach=()=>{win.removeEventListener('resize',refresh);doc.fonts?.removeEventListener('loadingdone',refresh);if(frame)win.cancelAnimationFrame(frame);frame=0;pending.clear()}
-  entry={schedule,add:(root,target)=>{if(!targets.size)attach();target.inViewport=false;targets.set(root,target);observer.observe(root);visibility.observe(root);return()=>{observer.unobserve(root);visibility.unobserve(root);targets.delete(root);pending.delete(root);if(!targets.size)detach()}}};documents.set(doc,entry);return entry
+  // Width changes already reach the block observer; a window-wide sweep
+  // repeats the work and queues roots that are not visible.
+  const attach=()=>{doc.fonts?.addEventListener('loadingdone',refresh)}
+  const detach=()=>{doc.fonts?.removeEventListener('loadingdone',refresh);if(frame)win.cancelAnimationFrame(frame);frame=0;pending.clear()}
+  return {schedule,add:(root:HTMLElement,target:Target)=>{if(!targets.size)attach();target.inViewport=false;targets.set(root,target);observer.observe(root);visibility.observe(root);return()=>{observer.unobserve(root);visibility.unobserve(root);targets.delete(root);pending.delete(root);if(!targets.size)detach()}}}
+}
+function registry(doc:Document) {
+  let entry=documents.get(doc)
+  if(!entry){entry=createFirstLineAlignmentRegistry(doc);documents.set(doc,entry)}
+  return entry
 }
 export function useFirstLineAlignment(ref:RefObject<HTMLElement|null>,variable:string,visibleOnly=false,enabled=true) {
   const align=useCallback(()=>{const root=ref.current;if(!root)return;const value=measurements(root,{variable,visibleOnly:false});if(value)root.style.setProperty(variable,value)},[ref,variable])

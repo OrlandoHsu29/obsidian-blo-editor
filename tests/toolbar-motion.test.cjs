@@ -54,10 +54,11 @@ test('settled layouts avoid per-control style reads; reduced motion and hidden h
 test('overflow ignores animated host widths while still reacting to parent and control widths',()=>{
  const f=fixture();f.api.useToolbarOverflow({current:f.host},[{title:'a'},{title:'b'}],true,()=>{});
  f.api.toolbarWidthMotion.set(f.host,{});
- f.notify(f.host,45);assert.equal(f.frames.size,0);
- f.notify(f.host.parentElement,280);assert.equal(f.frames.size,1);f.flush();
- f.notify(f.a,35);assert.equal(f.frames.size,1);f.flush();
- f.api.toolbarWidthMotion.delete(f.host);f.notify(f.host,60);assert.equal(f.frames.size,1);
+ let reads=f.styleReads;f.notify(f.host,45);assert.equal(f.styleReads,reads);
+ f.notify(f.host.parentElement,280);assert.ok(f.styleReads>reads);reads=f.styleReads;
+ f.notify(f.a,35);assert.ok(f.styleReads>reads);reads=f.styleReads;
+ f.api.toolbarWidthMotion.delete(f.host);f.notify(f.host,60);assert.ok(f.styleReads>reads);
+ assert.equal(f.frames.size,0);
  f.disposeObserver();assert.equal(f.frames.size,0);
 });
 

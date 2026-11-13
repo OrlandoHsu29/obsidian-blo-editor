@@ -21,8 +21,8 @@ test('resizing the toolbar budget reuses fixed control widths',()=>{
 test('theme or font changes invalidate control width caching',()=>{
  const e=fixture();e.width=100;e.resize([{target:e.parent}]);e.flush();assert.equal(e.count,2);const reads=e.reads;e.controls[0].width=48;e.resize([{target:e.controls[0]}]);e.flush();assert.equal(e.count,1);assert(e.reads>reads);e.cleanup();
 });
-test('unmount cancels pending toolbar measurements',()=>{
- const e=fixture();e.width=90;e.resize([{target:e.parent}]);e.cleanup();e.flush();assert.equal(e.count,5);assert.equal(e.frames.size,0);assert.equal(e.disconnected,true);
+test('resize updates toolbar fit without waiting for a frame; unmount disconnects observation',()=>{
+ const e=fixture();e.width=90;e.resize([{target:e.parent}]);assert.equal(e.count,1);assert.equal(e.frames.size,0);e.cleanup();assert.equal(e.disconnected,true);
 });
 
 test('height-only document resizes do not schedule toolbar measurement',()=>{

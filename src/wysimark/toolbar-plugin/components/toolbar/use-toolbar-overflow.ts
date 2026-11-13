@@ -14,7 +14,7 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
     const win = host.ownerDocument.defaultView!
     const controls = [...host.querySelectorAll<HTMLElement>('[data-toolbar-index]')]
     const more = host.querySelector<HTMLElement>('[data-toolbar-overflow-trigger]')!
-    let frame = 0, lastKey: string | undefined, widths: number[] | undefined, moreWidth = 0
+    let lastKey: string | undefined, widths: number[] | undefined, moreWidth = 0
     const observedWidths = new WeakMap<Element, number>()
     const measure = () => {
       const style = win.getComputedStyle(host), parentStyle = win.getComputedStyle(parent)
@@ -41,7 +41,6 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
         setIndices(next)
       }
     }
-    const schedule = () => { if (!frame) frame = win.requestAnimationFrame(() => { frame = 0; measure() }) }
     const observer = new win.ResizeObserver(entries => {
       let changed = false
       for (const entry of entries) {
@@ -52,12 +51,14 @@ export function useToolbarOverflow(toolbar: RefObject<HTMLDivElement | null>, it
         if (entry.target !== host && entry.target !== parent) widths = undefined
       }
       // Image/table height changes do not change the toolbar's width budget.
-      if (changed) schedule()
+      // ResizeObserver already batches layout changes before paint. Deferring
+      // this to another frame makes popout toolbars visibly trail the window.
+      if (changed) measure()
     })
     observer.observe(parent); observer.observe(host); observer.observe(more)
     controls.forEach(control => observer.observe(control))
     measure()
-    return () => { observer.disconnect(); if (frame) win.cancelAnimationFrame(frame) }
+    return () => { observer.disconnect() }
   }, [toolbar, items, enabled, limit, collapseOrder])
   return useMemo(() => new Set(indices.filter(index => index < limit)), [indices, limit])
 }

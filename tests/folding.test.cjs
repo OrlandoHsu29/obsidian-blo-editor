@@ -12,10 +12,10 @@ loaded._compile(buildSync({stdin:{contents:`
  export {BlockStructurePlugin} from './src/blocks/plugin';
  export {parse,serialize} from './src/wysimark/convert';
  export {portableDocument} from './src/note-export/portable-document';
- export {splitListItem} from './src/wysimark/list-plugin/methods/insert-break';
+ export {splitListItem,insertBreak as insertListBreak} from './src/wysimark/list-plugin/methods/insert-break';
  export {selectBlockContents,isWholeBlockSelected,deleteWholeBlockSelection,indentBlockSelection} from './src/blocks/selection';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react'],write:false}).outputFiles[0].text,'folding.cjs');
-const {rootCache,toggleBlockFold,revealFoldedSelection,BlockStructurePlugin,parse,serialize,portableDocument,splitListItem}=loaded.exports;
+const {rootCache,toggleBlockFold,revealFoldedSelection,BlockStructurePlugin,parse,serialize,portableDocument,splitListItem,insertListBreak}=loaded.exports;
 const {selectBlockContents,isWholeBlockSelected,deleteWholeBlockSelection,indentBlockSelection}=loaded.exports;
 const item=(depth,text='item',extra={})=>({type:'unordered-list-item',depth,children:[{text,bold:true}],...extra});
 function fixture(nodes){const editor=withHistory(createEditor());editor.wysimark={readOnly:false};editor.isMaster=()=>false;BlockStructurePlugin.fn(editor);editor.children=nodes;return editor}
@@ -57,8 +57,28 @@ test('portable exports retain all descendants and strip private fold state',()=>
 test('selection can reveal the maximum supported nested depth',()=>{
  const editor=fixture(Array.from({length:33},(_,depth)=>item(depth,'level '+depth,depth<32?{__collapsed:true}:{})));Transforms.select(editor,Editor.start(editor,[32]));assert(hidden(editor).every(value=>!value));
 });
-test('new split list items do not inherit collapsed state',()=>{
- const editor=fixture([item(0,'parent',{type:'ordered-list-item',__collapsed:true}),item(1,'child')]);Transforms.select(editor,Editor.end(editor,[0]));splitListItem(editor);assert.equal(editor.children[1].__collapsed,undefined);assert(!rootCache(editor).foldedBy.has(editor.children[2]));
+for(const type of ['ordered-list-item','unordered-list-item'])for(const depth of [0,1])test(`Enter at the end of folded ${type} at depth ${depth} inserts a sibling after all hidden children`,()=>{
+ const editor=fixture([item(depth,'parent',{type,__collapsed:true}),item(depth+1,'child',{__collapsed:true}),item(depth+2,'grandchild'),item(depth,'next')]);Transforms.select(editor,Editor.end(editor,[0]));
+ const before=structuredClone(editor.children),selection=structuredClone(editor.selection);splitListItem(editor);
+ assert.deepEqual(editor.children.map(Node.string),['parent','child','grandchild','','next']);assert.equal(editor.children[0].__collapsed,true);assert.equal(editor.children[1].__collapsed,true);
+ assert.equal(editor.children[3].type,type);assert.equal(editor.children[3].depth,depth);assert.equal(editor.children[3].__collapsed,undefined);assert.deepEqual(hidden(editor),[false,true,true,false,false]);assert.deepEqual(editor.selection.anchor,Editor.start(editor,[3]));
+ const after=structuredClone(editor.children);assert.equal(editor.history.undos.length,1);editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);editor.redo();assert.deepEqual(editor.children,after);assert.deepEqual(hidden(editor),[false,true,true,false,false]);
+ const restored=fixture(parse(serialize(editor.children)));assert.deepEqual(restored.children.map(Node.string),editor.children.map(Node.string));assert.deepEqual(hidden(restored),[false,true,true,false,false]);
+});
+
+test('Enter after a folded item numbered 99 creates body text after its descendants',()=>{
+ const editor=fixture([item(0,'parent',{type:'ordered-list-item',start:99,__numbering:'explicit',__collapsed:true}),item(1,'child')]);Transforms.select(editor,Editor.end(editor,[0]));splitListItem(editor);
+ assert.equal(editor.children[2].type,'paragraph');assert.equal(editor.children[0].__collapsed,true);assert.deepEqual(hidden(editor),[false,true,false]);assert.deepEqual(editor.selection.anchor,Editor.start(editor,[2]));
+});
+
+test('an empty folded parent also creates a sibling without outdenting or unfolding',()=>{
+ const editor=fixture([item(1,'',{__collapsed:true}),item(2,'child')]);Transforms.select(editor,Editor.start(editor,[0]));assert.equal(insertListBreak(editor),true);
+ assert.deepEqual(editor.children.map(Node.string),['','child','']);assert.equal(editor.children[2].depth,1);assert.equal(editor.children[0].__collapsed,true);assert.deepEqual(hidden(editor),[false,true,false]);
+});
+
+test('a mid-line split keeps the ordinary editing behavior',()=>{
+ const editor=fixture([item(0,'parent',{__collapsed:true}),item(1,'child')]);Transforms.select(editor,{path:[0,0],offset:3});splitListItem(editor);
+ assert.deepEqual(editor.children.map(Node.string),['par','ent','child']);assert.equal(editor.children[1].__collapsed,undefined);assert.deepEqual(hidden(editor),[false,false,false]);
 });
 
 test('whole-block selection preserves nested folds and includes all descendants',()=>{

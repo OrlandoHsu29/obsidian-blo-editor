@@ -1,5 +1,6 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
-import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer } from './model'
+import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, rootCache } from './model'
+import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
@@ -53,6 +54,21 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
  if(editor.wysimark.readOnly)return false
  if(editor.selection&&Range.isCollapsed(editor.selection)) {
   const point=editor.selection.anchor,index=point.path[0],node=editor.children[index]
+  if(Element.isElement(node)&&node.type==='paragraph'&&!node.__subtitle&&
+   Editor.isEmpty(editor,node)&&Point.equals(point,Editor.start(editor,[index]))) {
+   const cache=rootCache(editor),previous=cache.previousVisible.get(node)
+   const parent=previous===undefined?undefined:editor.children[previous]
+   if(previous!==undefined&&Element.isElement(parent)&&parent.__collapsed&&cache.foldable.has(parent)) {
+    // Merge the empty visible row with the visible parent, never a hidden child.
+    withHistoryBatch(editor,()=>{
+     // Make the visible rows adjacent before using Slate's normal merge. The
+     // caret then follows the merge on both the initial edit and history replay.
+     Transforms.moveNodes(editor,{at:[index],to:[previous+1]})
+     Transforms.mergeNodes(editor,{at:[previous+1]})
+    })
+    return true
+   }
+  }
   // At the text start, outdent the subtree before Backspace can merge it.
   if(Element.isElement(node)&&!isEditorSpacer(node)&&!isStructuredBlock(node)&&
    blockDepth(node)>0&&point.offset===0&&

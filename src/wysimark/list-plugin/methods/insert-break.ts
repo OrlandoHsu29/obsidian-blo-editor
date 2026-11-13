@@ -1,5 +1,5 @@
-import { Editor, Element, Node, Path, Transforms } from "slate"
-import { listHeadingLevel, MAX_BODY_LIST_NUMBER, resolveOrderedNumbers, rootCache } from '../../../blocks/model'
+import { Editor, Element, Node, Path, Range, Transforms } from "slate"
+import { groupEnd, listHeadingLevel, MAX_BODY_LIST_NUMBER, resolveOrderedNumbers, rootCache } from '../../../blocks/model'
 import { setListBlock } from '../../../blocks/list-container'
 import { setListDepth, getListDepth } from './depth'
 
@@ -27,6 +27,7 @@ export function insertBreak(editor: Editor): boolean {
    * If we're in an empty list
    */
   if (empty) {
+    if (foldedListEnd(editor, entry) !== undefined) return splitListItem(editor)
     const depth=getListDepth(editor)
     if (depth > 0) {
       /**
@@ -46,9 +47,18 @@ export function insertBreak(editor: Editor): boolean {
   return splitListItem(editor)
 }
 
+/** Enter after a folded parent must skip its hidden descendants. */
+function foldedListEnd(editor: Editor, [node,path]: [ListItemElement, Path]): number | undefined {
+  if (path.length !== 1 || !Element.isElement(node) || !node.__collapsed ||
+    !editor.selection || !Range.isCollapsed(editor.selection) ||
+    !Editor.isEnd(editor, editor.selection.focus, path) || !rootCache(editor).foldable.has(node)) return
+  return groupEnd(editor.children, path[0])
+}
+
 /** Split through the list container, retaining content and continuing numbering. */
 export function splitListItem(editor: Editor): boolean {
   const current=findElementUp<ListItemElement>(editor,isListItem)
+  const siblingIndex=current?foldedListEnd(editor,current):undefined
   const capped=current&&current[0].type==='ordered-list-item'&&listHeadingLevel(current[0])===undefined&&
     (rootCache(editor).numbers.get(current[0])??resolveOrderedNumbers(Node.parent(editor,current[1]).children).numbers.get(current[0])??1)>=MAX_BODY_LIST_NUMBER
   Editor.withoutNormalizing(editor, () => {
@@ -66,6 +76,9 @@ export function splitListItem(editor: Editor): boolean {
       Transforms.setNodes(editor, { checked: false }, { at: path })
     }
     if(capped)setListBlock(editor,next,path)
+    // Split first to reuse normal list/mark rules, then move only the newborn
+    // sibling. Its selection follows the move; the parent's children stay folded.
+    if(siblingIndex!==undefined)Transforms.moveNodes(editor,{at:path,to:[siblingIndex]})
   })
   return true
 }

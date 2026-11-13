@@ -1,3 +1,5 @@
+import { normalizeLinkLabel } from './link-label'
+
 const WIKI_LINK_PREFIX = "wysimark:wiki-link:"
 const WIKI_EMBED_PREFIX = "wysimark:wiki-embed:"
 const ESCAPED_WIKI_OPEN = "\uE000WYSIMARK_ESCAPED_WIKI_OPEN\uE000"
@@ -56,7 +58,7 @@ export function splitWikiSpec(rawSpec: string): { target: string; display?: stri
   if (pipeIndex < 0) return { target: rawSpec.trim() }
   return {
     target: rawSpec.slice(0, pipeIndex).trim(),
-    display: rawSpec.slice(pipeIndex + 1).trim(),
+    display: normalizeLinkLabel(rawSpec.slice(pipeIndex + 1)),
   }
 }
 
@@ -70,7 +72,7 @@ export function normalizeWikiLinkInput(value: string): {
 } {
   const trimmed = value.trim()
   const wikiMatch = trimmed.match(/^!?\[\[([\s\S]+)\]\]$/)
-  return splitWikiSpec(wikiMatch ? wikiMatch[1] : trimmed)
+  return splitWikiSpec(wikiMatch ? wikiMatch[1] : value)
 }
 
 export function wikiLinkDisplayText(rawSpec: string): string {
@@ -103,7 +105,7 @@ export function serializeWikiLinkHref(href: string, label: string): string {
   const rawSpec = wikiLinkSpecFromHref(href)
   const { target, display } = splitWikiSpec(rawSpec)
 
-  const trimmedLabel = label.trim()
+  const trimmedLabel = normalizeLinkLabel(label)
   if (display && trimmedLabel === display) return `[[${target}|${display}]]`
 
   const defaultLabel = wikiLinkDisplayText(target)

@@ -2,6 +2,7 @@ import { Editor, Node, Transforms } from "slate"
 
 import { BetterAt, findElementUp } from "../../sink"
 import { AnchorElement } from ".."
+import { normalizeLinkLabel } from '../../convert/link-label'
 
 export function editLink(
   editor: Editor,
@@ -17,6 +18,7 @@ export function editLink(
 
   // Update text if provided and different from current
   if (text !== undefined) {
+    text = normalizeLinkLabel(text)
     const currentText = Node.string(element)
     if (text !== currentText) {
       // Remove all children and insert new text

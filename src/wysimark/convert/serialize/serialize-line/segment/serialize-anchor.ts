@@ -1,5 +1,6 @@
 import { AnchorElement } from "../../../../anchor-plugin"
-import { Text } from "slate"
+import { Node, Text } from "slate"
+import { isSpaceOnlyLinkLabel } from '../../../link-label'
 import { isWikiLinkHref, serializeWikiLinkHref } from "../../../obsidian-links"
 
 import { Segment } from "../../../types"
@@ -17,12 +18,13 @@ export function serializeAnchor(
       return anchor.markdownSyntax === "autolink" ? `<${label}>` : label
     }
   }
+  const blankLabel = isSpaceOnlyLinkLabel(Node.string(anchor)) ? ' ' : undefined
   if (options?.enableInternalLinks && isWikiLinkHref(anchor.href)) {
     const commonAnchorMarks = getCommonAnchorMarks(anchor.children as Segment[])
     const labelOptions: EscapeTextOptions = { ...options, inAnchorLabel: true }
     return serializeWikiLinkHref(
       anchor.href,
-      serializeLine(
+      blankLabel ?? serializeLine(
         anchor.children as Segment[],
         commonAnchorMarks,
         commonAnchorMarks,
@@ -59,7 +61,7 @@ export function serializeAnchor(
        *   inline images as that is an acceptable inline value which is
        *   currently not defined as part of Segment.
        */
-      `[${serializeLine(
+      `[${blankLabel ?? serializeLine(
         anchor.children as Segment[],
         commonAnchorMarks,
         commonAnchorMarks,
@@ -81,7 +83,7 @@ export function serializeAnchor(
        *   inline images as that is an acceptable inline value which is
        *   currently not defined as part of Segment.
        */
-      `[${serializeLine(
+      `[${blankLabel ?? serializeLine(
         anchor.children as Segment[],
         commonAnchorMarks,
         commonAnchorMarks,

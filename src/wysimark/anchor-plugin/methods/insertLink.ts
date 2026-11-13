@@ -1,4 +1,5 @@
 import { Editor, Element, Range, Text, Transforms } from "slate"
+import { normalizeLinkLabel } from '../../convert/link-label'
 
 export function insertLink(
   editor: Editor,
@@ -6,6 +7,7 @@ export function insertLink(
   text: string = href,
   { select = true, title }: { select?: boolean; title?: string } = {}
 ) {
+  text = normalizeLinkLabel(text)
   /**
    * If there is no selection, we default by inserting at the start of document.
    */

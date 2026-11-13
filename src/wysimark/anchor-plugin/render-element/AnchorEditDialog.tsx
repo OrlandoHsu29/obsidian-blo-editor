@@ -9,6 +9,7 @@ import { useLayer } from '../../use-layer'
 import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import type { AnchorElement } from '../index'
 import { DraggableHeader } from '../../toolbar-plugin/components/dialog/DraggableHeader'
+import { normalizeLinkLabel } from '../../convert/link-label'
 import { $AnchorDialog } from '../../toolbar-plugin/styles/anchor-dialog-styles'
 import { isWikiLinkHref, normalizeWikiLinkInput, splitWikiSpec, wikiLinkDisplayText, wikiLinkHref, wikiLinkSpecFromHref } from '../../convert/obsidian-links'
 
@@ -23,7 +24,11 @@ export function AnchorEditDialog({ destAnchor, element, initialEmbed = false, on
   const [mode, setMode] = useState(internal ? 'internal' : 'external')
   const [href, setHref] = useState(internal ? '' : element.href)
   const [target, setTarget] = useState(parts.target)
-  const [text, setText] = useState(parts.display || Node.string(element))
+  const [text, setText] = useState(() => {
+    const label = parts.display || Node.string(element)
+    const original = internal ? wikiLinkDisplayText(parts.target) : element.href
+    return label === original ? '' : label
+  })
   const [title, setTitle] = useState(element.title || '')
   const [error, setError] = useState('')
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -40,7 +45,7 @@ export function AnchorEditDialog({ destAnchor, element, initialEmbed = false, on
     if (!valid || editor.wysimark.readOnly) return
     const at = location.current?.current
     if (!at) { setError(ui('原插入位置已失效，请关闭弹窗后重试。')); return }
-    const label = text.trim()
+    const label = normalizeLinkLabel(text)
     const spec = label && label !== wikiLinkDisplayText(target.trim()) ? `${target.trim()}|${label}` : target.trim()
     const apply = () => Editor.withoutNormalizing(editor, () => {
       if (initialEmbed) editor.anchor.convertToEmbed(spec, { at })
@@ -81,7 +86,7 @@ export function AnchorEditDialog({ destAnchor, element, initialEmbed = false, on
           </label>
           {mode === 'internal' && <datalist id={id}>{vaultPaths.map(path => <option key={path} value={path} />)}</datalist>}
           <label className="wysimark-reference-field">
-            <span>{ui(initialEmbed ? '内容描述（可选）' : '显示文字（可选）')}</span>
+            <span>{ui(initialEmbed ? '内容描述（可选）' : '显示文字（可选）')}{!initialEmbed && <small className="wysimark-link-label-hint">{ui('留空使用链接地址')}</small>}</span>
             <input type="text" value={text} onChange={event => setText(event.target.value)} />
           </label>
           {!initialEmbed && <label className="wysimark-reference-field">

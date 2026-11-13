@@ -1,6 +1,8 @@
 import { Segment } from "../../../../types"
 import { isElement, isPlainSpace, isText } from "../../utils"
 import { NormalizeOptions } from "../types"
+import { Node } from 'slate'
+import { isSpaceOnlyLinkLabel } from '../../../../link-label'
 
 export function moveSpacesAtStartOfAnchor({
   node,
@@ -10,6 +12,7 @@ export function moveSpacesAtStartOfAnchor({
 }: NormalizeOptions): boolean {
   if (!isElement(node)) return false
   if (node.type !== "anchor") return false
+  if (isSpaceOnlyLinkLabel(Node.string(node))) return false
   const firstChild = node.children[0] as Segment
   if (isText(firstChild) && isPlainSpace(firstChild)) {
     // remove the first child from the anchor
@@ -33,6 +36,7 @@ export function moveSpacesAtEndOfAnchor({
 }: NormalizeOptions): boolean {
   if (!isElement(node)) return false
   if (node.type !== "anchor") return false
+  if (isSpaceOnlyLinkLabel(Node.string(node))) return false
   const lastChild = node.children[node.children.length - 1] as Segment
   if (isText(lastChild) && isPlainSpace(lastChild)) {
     // remove the first child from the anchor

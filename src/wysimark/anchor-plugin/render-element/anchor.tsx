@@ -1,7 +1,6 @@
-import { clsx } from "clsx"
 import React, { useCallback, useEffect, useRef } from "react"
-import { Editor, Element, Node, Path, Range } from "slate"
-import { useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
+import { Editor, Element, Path, Range } from "slate"
+import { ReactEditor, useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -10,14 +9,14 @@ import { useLayer } from "../../use-layer"
 import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
 import { AnchorDialog } from "./AnchorDialog"
-import { remoteMediaUrl } from '../../../media-url-paste'
+import { isIconOnlyLink, isLinkFullySelected, pointBeforeLink, selectLink, selectedLink } from '../link-keyboard'
+import { setPointerSelection } from '../../../blocks/pointer-selection'
 
 function isPreciseLinkSelection(editor: Editor): boolean {
   const selection = editor.selection
   if (!selection) return false
   if (Range.isCollapsed(selection)) return true
-  const link = Editor.above(editor, { at: selection.anchor, match: node => Element.isElement(node) && node.type === 'anchor' })
-  if (link && Range.equals(Editor.range(editor, link[1]), { anchor: Range.start(selection), focus: Range.end(selection) })) return true
+  if (selectedLink(editor)) return true
   const anchorCell = Editor.above(editor, {
     at: selection.anchor, match: node => Element.isElement(node) && node.type === 'table-cell',
   })?.[1]
@@ -36,16 +35,20 @@ export function Anchor({
     anchorRef.current = node
     attributes.ref(node)
   }, [attributes.ref])
-  const clickIntent = useRef<{ open: boolean; x: number; y: number } | null>(null)
   const selected = useSelected()
   const editor = useSlateStatic()
   const preciseSelection = useSlateSelector(isPreciseLinkSelection)
+  const expandedSelection = useSlateSelector(editor => !!editor.selection && Range.isExpanded(editor.selection))
+  const fullSelection = useSlateSelector(useCallback(editor => {
+    try { return isLinkFullySelected(editor, ReactEditor.findPath(editor, element)) }
+    catch { return false }
+  }, [element]))
   const dialog = useLayer("dialog")
   const dialogRef = useRef(dialog)
   const ownedDialog = useRef<React.FunctionComponent<Record<string, never>> | null>(null)
   dialogRef.current = dialog
   const isInternalLink = isWikiLinkHref(element.href)
-  const hasTitle = !isInternalLink && /^https?:\/\//i.test(element.href) && !remoteMediaUrl(element.href) && Node.string(element).trim() !== element.href.trim()
+  const iconOnly = isIconOnlyLink(element)
   const readOnly = useReadOnly()
 
   useEffect(() => {
@@ -73,26 +76,27 @@ export function Anchor({
 
   return (
     <$Anchor
-      className={clsx({
-        "--selected": selected,
-        "--internal-link": isInternalLink,
-      })}
+      className={selected ? '--selected' : undefined}
       href={isInternalLink ? undefined : element.href}
       target={isInternalLink ? undefined : element.target}
       data-internal-link={isInternalLink ? "true" : undefined}
-      data-titled-link={hasTitle ? "true" : undefined}
+      data-link-icon="true"
+      data-link-icon-only={iconOnly ? "true" : undefined}
+      data-link-expanded={expandedSelection ? "true" : undefined}
+      data-link-full={fullSelection ? "true" : undefined}
       data-link-precise={!readOnly && selected && preciseSelection ? "true" : undefined}
       onMouseDown={event => {
-        // Remember selection before Slate moves the caret on this mousedown.
-        clickIntent.current = { open: readOnly || event.ctrlKey || event.metaKey || selected && preciseSelection, x: event.clientX, y: event.clientY }
         if (readOnly || event.ctrlKey || event.metaKey) { event.preventDefault(); event.stopPropagation() }
+        else if (event.button === 0 && !event.shiftKey && !event.altKey &&
+          (iconOnly || (event.target as HTMLElement).closest?.('.wysimark-link-icon'))) {
+          event.preventDefault();event.stopPropagation()
+          selectLink(editor, ReactEditor.findPath(editor, element))
+          ReactEditor.focus(editor)
+        }
       }}
       onClick={event => {
         event.preventDefault()
-        const intent = clickIntent.current
-        clickIntent.current = null
-        const clickWithoutDragging = intent?.open && Math.hypot(event.clientX - intent.x, event.clientY - intent.y) <= 4
-        if (!(readOnly || event.ctrlKey || event.metaKey || event.detail === 0 || clickWithoutDragging)) return
+        if (!(readOnly || event.ctrlKey || event.metaKey || event.detail === 0)) return
         event.stopPropagation()
         dialog.close()
         if (isInternalLink) {
@@ -101,12 +105,23 @@ export function Anchor({
           event.currentTarget.ownerDocument.defaultView?.open(element.href, element.target || '_blank', 'noopener,noreferrer')
         }
       }}
+      onMouseUp={event => {
+        if (readOnly || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey ||
+          !(event.target as HTMLElement).closest?.('.wysimark-link-icon')) return
+        const doc = event.currentTarget.ownerDocument, dom = doc.getSelection()
+        if (!dom || dom.isCollapsed) return
+        const range = ReactEditor.toSlateRange(editor,dom,{exactMatch:false,suppressThrow:true})
+        if (!range || !Range.isBackward(range)) return
+        const focus = pointBeforeLink(editor,ReactEditor.findPath(editor,element))
+        setPointerSelection(editor,{anchor:range.anchor,focus},doc)
+      }}
       {...attributes}
       ref={setAnchorRef}
     >
       {/* Edge allow Chrome to differentiate in/out of the link */}
       <$Edge ref={startEdgeRef} contentEditable={false} />
-      <span>{children}</span>
+      <span className="wysimark-link-icon" contentEditable={false} aria-hidden="true" />
+      <span className="wysimark-link-label">{children}</span>
       {/* Edge allow Chrome to differentiate in/out of the link */}
       <$Edge contentEditable={false} />
     </$Anchor>

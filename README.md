@@ -111,9 +111,18 @@ continues in the background. Click an existing media link or select its full tex
 **Download as attachment and embed** icon on the right of its popover; hover for its description.
 Media detection supports query strings, common CDN suffixes, and media paths inside proxy URLs.
 Drag existing vault media from the file explorer to embed it without copying files,
-or reference them through **Attachment → Vault**. In editing mode, click a link to
-select it, then click again to open it, or Ctrl/Cmd-click to open it directly.
+or reference them through **Attachment → Vault**. In editing mode, click link text
+to place the caret, or click its leading icon to open the information card.
+Ctrl/Cmd-click opens the link directly.
 In reading mode, a single click opens the link.
+All links show the same leading icon, including bare URLs and internal links.
+Icon-only citations use two-step Backspace selection/deletion; visible link text
+supports ordinary character editing.
+Selecting only link text, even the entire label, keeps the icon out of the
+selection so typing replaces the label while retaining its target. Click the
+icon or drag across it to select and cut the complete link.
+Enter spaces as the display text to show only the link icon. Spaces collapse
+to one stored blank label without taking visible text width, including after reopening.
 
 Try the [block structure example](examples/block-structure.md) and
 [table and formatting example](examples/tables-and-formatting.md).

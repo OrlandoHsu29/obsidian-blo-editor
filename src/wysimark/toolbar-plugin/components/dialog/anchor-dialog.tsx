@@ -5,6 +5,7 @@ import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { attachmentPreviewUrl } from '../../../../attachment-preview'
 import { fetchLinkTitle } from '../../../../remote-link-title'
+import { normalizeLinkLabel } from '../../../convert/link-label'
 import { isWikiEmbedUrl, normalizeWikiLinkInput, wikiLinkDisplayText, wikiLinkHref, wikiEmbedUrl, wikiEmbedSpecFromUrl, wikiLinkTarget } from '../../../convert/obsidian-links'
 import { CloseMask } from '../../../shared-overlays/components/CloseMask'
 import { useAnchoredPanelPosition } from '../../../use-reposition/hooks/use-block-toolbar-position'
@@ -78,7 +79,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
     setError('')
     let href = source === 'vault' ? target.trim() : url.trim()
     let preview: string | undefined
-    let label = text.trim()
+    let label = attachment ? text.trim() : normalizeLinkLabel(text)
     try {
       if (attachment && source !== 'vault') {
         setSaving(true)
@@ -164,7 +165,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
             </label>
           </> : <>
             <label className="wysimark-reference-field">
-              <span>{ui('显示文字（可选）')}</span>
+              <span>{ui('显示文字（可选）')}<small className="wysimark-link-label-hint">{ui(source === 'url' && autoTitle ? '留空使用链接地址或自动标题' : '留空使用链接地址')}</small></span>
               <input type="text" value={text} onChange={event => setText(event.target.value)} />
             </label>
             <label className="wysimark-reference-field">

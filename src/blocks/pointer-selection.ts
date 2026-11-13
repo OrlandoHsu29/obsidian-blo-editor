@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react'
-import { Editor, Point, Transforms } from 'slate'
+import { Editor, Point, Range, Transforms } from 'slate'
 import { ReactEditor } from 'slate-react'
 
 type Session = { cleanup?: () => void; suppressClickUntil: number }
@@ -19,6 +19,14 @@ export function consumePointerSelectionClick(editor: Editor): boolean {
   if (!session || Date.now() > session.suppressClickUntil) return false
   session.suppressClickUntil = 0
   return true
+}
+
+/** Keep the browser and Slate pointed at the same real document range. */
+export function setPointerSelection(editor: Editor, range: Range, doc: Document) {
+  Transforms.select(editor, range)
+  const [a, offset] = ReactEditor.toDOMPoint(editor, range.anchor)
+  const [f, end] = ReactEditor.toDOMPoint(editor, range.focus)
+  doc.getSelection()?.setBaseAndExtent(a, offset, f, end)
 }
 
 /** Preserve the real Slate anchor when a boundary click replaces native mousedown. */
@@ -62,10 +70,7 @@ export function startPointerSelection(editor: Editor, point: Point,
     moved = true
     event.preventDefault()
     const range = { anchor: anchor.current, focus }
-    Transforms.select(editor, range)
-    const [a, offset] = ReactEditor.toDOMPoint(editor, range.anchor)
-    const [f, end] = ReactEditor.toDOMPoint(editor, range.focus)
-    doc.getSelection()?.setBaseAndExtent(a, offset, f, end)
+    setPointerSelection(editor, range, doc)
   }
   session.cleanup = cleanup
   doc.addEventListener('mousemove', move, true)

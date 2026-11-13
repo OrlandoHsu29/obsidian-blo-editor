@@ -52,7 +52,9 @@ function parseObsidianLinks(value: string, marks: MarkProps): Segment[] {
       })
     }
 
-    const rawSpec = unescapeMarkdown(restoreEscapedWikiLinks(match[2])).trim()
+    const raw = unescapeMarkdown(restoreEscapedWikiLinks(match[2]))
+    const parts = splitWikiSpec(raw)
+    const rawSpec = parts.display === ' ' ? `${parts.target}| ` : raw.trim()
     if (match[1]) {
       const dimensions = splitWikiSpec(rawSpec).display?.match(/^(\d+)(?:x(\d+))?$/)
       segments.push({

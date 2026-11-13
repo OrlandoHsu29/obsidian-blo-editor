@@ -8,9 +8,6 @@ export const $Anchor = styled("a")`
   &:hover {
     color: var(--link-hover-color, blue);
   }
-  &.--internal-link {
-    cursor: pointer;
-  }
   /**
    * When the cursor is in the anchor and not outside the anchor, we style the
    * anchor with a very light shade. This is enough to subtly intuit to the user
@@ -19,10 +16,6 @@ export const $Anchor = styled("a")`
    */
   border-radius: 0.125em;
   transition: background-color 250ms;
-  &.--selected {
-    background: var(--blue-50);
-    caret-color: transparent;
-  }
 `
 /**
  * This edge piece that are at the edge of the inside of the anchor are visibly

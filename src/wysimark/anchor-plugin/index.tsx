@@ -1,4 +1,4 @@
-import { Descendant } from "slate"
+import { Descendant, Range, Transforms } from "slate"
 
 import { createPlugin, curryOne } from "../sink"
 
@@ -7,7 +7,7 @@ import { onPaste } from "./editable/on-paste"
 import { createAnchorMethods } from "./methods"
 import { normalizeNode } from "./normalize-node"
 import { Anchor } from "./render-element/anchor"
-import { handleLinkKey } from "./link-keyboard"
+import { completeLinkSelection, handleLinkKey } from "./link-keyboard"
 
 type AnchorMethods = ReturnType<typeof createAnchorMethods>
 
@@ -36,6 +36,12 @@ export const AnchorPlugin = createPlugin<AnchorPluginCustomTypes>(
     return createPolicy({
       name: "anchor",
       editor: {
+        deleteFragment: () => {
+          if (editor.wysimark.readOnly) return false
+          const range = completeLinkSelection(editor)
+          if (range && !Range.equals(range,editor.selection!)) Transforms.select(editor,range)
+          return false
+        },
         isInline(element) {
           if (element.type === "anchor") return true
         },

@@ -196,6 +196,8 @@ export const uiMessages = {
   "搜索笔记库文件，或输入路径": { zh: "搜索笔记库文件，或输入路径", en: "Search vault files or enter a path" },
   "笔记库内的文件直接引用，不会重复复制。": { zh: "笔记库内的文件直接引用，不会重复复制。", en: "Vault files are referenced directly without making another copy." },
   "显示文字（可选）": { zh: "显示文字（可选）", en: "Display text (optional)" },
+  "留空使用链接地址": { zh: "留空使用链接地址", en: "Leave empty to use the link address" },
+  "留空使用链接地址或自动标题": { zh: "留空使用链接地址或自动标题", en: "Leave empty to use the link address or fetched title" },
   "插入链接时自动获取链接标题": { zh: "插入链接时自动获取链接标题", en: "Fetch page titles when inserting links" },
   "显示链接标题": { zh: "显示链接标题", en: "Show page title" },
   "获取网页标题并作为链接文字": { zh: "获取网页标题并作为链接文字", en: "Use page title as link text" },

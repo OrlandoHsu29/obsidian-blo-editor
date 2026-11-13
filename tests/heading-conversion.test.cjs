@@ -63,10 +63,10 @@ test('cross-block conversion uses one snapshot for every new heading',()=>{
 });
 
 for(const type of ['ordered-list-item','unordered-list-item','task-list-item']){
- test(`converting ${type} follows the heading level rather than the source list`,()=>{
+ test(`converting ${type} preserves ordered owners and applies document defaults to other list types`,()=>{
   const editor=fixture([{type,depth:2,checked:true,children:[{text:'new'}]},heading(1)]);setHeadingListStyle(editor,'number');
   Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
-  const title=titles(editor)[0];assert.equal(title.level,1);assert.deepEqual(title.__headingList,{style:'number',enabled:true});
+  const title=titles(editor)[0];assert.equal(title.level,1);assert.deepEqual(title.__headingList,type==='ordered-list-item'?undefined:{style:'number',enabled:true});
   assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].depth,0);
   assert.deepEqual(headingListState(editor).levels,[1]);
  });
@@ -97,7 +97,7 @@ test('subtitles, heading toggle-off and first headings retain their existing beh
 });
 
 for(const level of [1,2,3,4,5])for(const command of ['paragraph','toggle']){
- test(`numbered H${level} becomes plain body via ${command}, preserving attached content and one undo`,()=>{
+ test(`numbered H${level} becomes numbered body via ${command}, preserving attached content and one undo`,()=>{
   const owner={type:'ordered-list-item',depth:2,blockChildren:true,__numbering:'continue',children:[
    {...heading(level),__headingList:{style:'number',enabled:true}},paragraph('attached body'),
   ]};
@@ -105,22 +105,22 @@ for(const level of [1,2,3,4,5])for(const command of ['paragraph','toggle']){
   Transforms.select(editor,{path:[0,0,0],offset:3});
   const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
   if(command==='paragraph')editor.collapsibleParagraph.convertParagraph();else editor.heading.convertHeading(level,true);
-  assert.equal(editor.children[0].type,'paragraph');assert.equal(editor.children[0].__blockDepth,0);
-  assert.equal(editor.children[0].__headingList,undefined);assert.equal(editor.children[0].level,undefined);
-  assert.equal(Node.string(editor.children[0]),'existing');assert.equal(Node.string(editor.children[1]),'attached body');
-  assert.equal(editor.children[1].__blockDepth,2);assert.equal(Node.string(editor.children[2]),'following');
-  assert.deepEqual(labels(editor),[]);assert.equal(editor.selection.anchor.offset,3);assert.equal(editor.history.undos.length,1);
+  const list=editor.children[0];assert.equal(list.type,'ordered-list-item');assert.equal(list.depth,2);
+  assert.equal(list.children[0].type,'paragraph');assert.equal(list.children[0].__headingList,undefined);assert.equal(list.children[0].level,undefined);
+  assert.equal(Node.string(list.children[0]),'existing');assert.equal(Node.string(list.children[1]),'attached body');
+  assert.deepEqual(list.children[1],owner.children[1]);assert.equal(Node.string(editor.children[1]),'following');
+  assert.deepEqual(labels(editor),['1.']);assert.equal(editor.selection.anchor.offset,3);assert.equal(editor.history.undos.length,1);
   const after=structuredClone(editor.children);editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
   editor.redo();assert.deepEqual(editor.children,after);
-  const reopened=fixture(parse(serialize(after)));assert.equal(reopened.children[0].type,'paragraph');assert.deepEqual(labels(reopened),[]);
+  const reopened=fixture(parse(serialize(after)));assert.equal(reopened.children[0].type,'ordered-list-item');assert.deepEqual(labels(reopened),['1.']);
  });
 }
 
-test('ordinary numbered body converted to the first heading does not donate its list formatting',()=>{
+test('ordinary numbered body keeps its owner and explicit start when converted to the first heading',()=>{
  const editor=fixture([{type:'ordered-list-item',depth:1,start:8,__numbering:'explicit',children:[{text:'body'}]}]);
  Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
- assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].level,1);assert.equal(editor.children[0].__blockDepth,0);
- assert.deepEqual(labels(editor),[]);assert.equal(editor.children[0].__numbering,undefined);
+ assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].children[0].level,1);assert.equal(editor.children[0].depth,0);
+ assert.deepEqual(labels(editor),['8.']);assert.equal(editor.children[0].__numbering,'explicit');assert.equal(editor.children[0].start,8);
 });
 
 test('converting attached body alone does not remove an unselected heading owner',()=>{
@@ -129,10 +129,52 @@ test('converting attached body alone does not remove an unselected heading owner
  assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].children[0].type,'heading');
 });
 
-test('cross-block heading to body conversion clears both list owners without losing siblings',()=>{
+test('cross-block heading to body conversion keeps both list owners and attached siblings',()=>{
  const editor=fixture([1,2].map(level=>({type:'ordered-list-item',depth:0,blockChildren:true,children:[heading(level),paragraph('attached '+level)]})));
  Transforms.select(editor,{anchor:Editor.start(editor,[0,0]),focus:Editor.end(editor,[1,0])});
  const before=structuredClone(editor.children);editor.collapsibleParagraph.convertParagraph();
- assert(editor.children.every(node=>node.type==='paragraph'));assert.deepEqual(editor.children.map(Node.string),['existing','attached 1','existing','attached 2']);
+ assert(editor.children.every(node=>node.type==='ordered-list-item'));assert.deepEqual(editor.children.flatMap(node=>node.children.map(Node.string)),['existing','attached 1','existing','attached 2']);
  assert.equal(editor.history.undos.length,1);editor.undo();assert.deepEqual(editor.children,before);
+});
+
+for(const level of [1,2,3,4,5])for(const style of ['hash','number'])test(`ordered body keeps numbering when switching to H${level} under ${style} document settings`,()=>{
+ const editor=fixture([{type:'ordered-list-item',depth:1,start:4,__numbering:'explicit',__blockId:'keep-id',children:[{text:'body',bold:true}]},heading(1)]);
+ setHeadingListStyle(editor,style);if(style==='number')toggleHeadingListLevel(editor,1);
+ Transforms.select(editor,{path:[0,0],offset:2});const before=structuredClone(editor.children),selection=structuredClone(editor.selection),count=editor.history.undos.length;
+ editor.heading.convertHeading(level,false);const owner=editor.children[0];
+ assert.equal(owner.type,'ordered-list-item');assert.equal(owner.depth,0);assert.equal(owner.start,4);assert.equal(owner.__numbering,'explicit');assert.equal(owner.__blockId,'keep-id');
+ assert.equal(owner.children[0].level,level);assert.equal(Node.leaf(editor,editor.selection.anchor.path).bold,true);assert.equal(editor.selection.anchor.offset,2);
+ const after=structuredClone(editor.children);assert.equal(editor.history.undos.length,count+1);editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);editor.redo();assert.deepEqual(editor.children,after);
+ const reopened=fixture(parse(serialize(after)));assert.equal(reopened.children[0].type,'ordered-list-item');assert.equal(reopened.children[0].__blockId,'keep-id');assert.equal(reopened.children[0].start,4);
+});
+
+test('multiline ordered items keep their owner, rich text and soft breaks through heading and body styles',()=>{
+ const editor=fixture([{type:'ordered-list-item',depth:1,start:7,__numbering:'explicit',children:[{text:'first\nsecond',italic:true}]}]);
+ Transforms.select(editor,{path:[0,0],offset:8});editor.heading.convertHeading(2,false);
+ assert.equal(editor.children.length,1);assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(Node.string(editor.children[0]),'first\nsecond');assert.equal(editor.children[0].depth,0);assert.deepEqual(labels(editor),['7.']);
+ editor.collapsibleParagraph.convertParagraph();assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(Node.string(editor.children[0]),'first\nsecond');assert.equal(Node.leaf(editor,editor.selection.anchor.path).italic,true);
+ assert.equal(editor.selection.anchor.offset,8);assert.deepEqual(labels(editor),['7.']);
+});
+
+test('selecting paragraph on an ordinary ordered body item leaves list properties intact',()=>{
+ const owner={type:'ordered-list-item',depth:2,start:9,__numbering:'explicit',__blockId:'ordered-body',children:[{text:'body'}]};
+ const editor=fixture([owner]);Transforms.select(editor,{path:[0,0],offset:2});editor.collapsibleParagraph.convertParagraph();
+ assert.deepEqual(editor.children,[owner]);assert.equal(editor.selection.anchor.offset,2);
+});
+
+test('legacy alphabetic list subtitles retain their list when switching to a main heading',()=>{
+ const editor=fixture([{type:'ordered-list-item',depth:0,__subtitle:true,__numbering:'restart',children:[{text:'legacy'}]}]);
+ Transforms.select(editor,{path:[0,0],offset:2});editor.heading.convertHeading(2,false);
+ assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].__subtitle,undefined);
+ assert.equal(editor.children[0].children[0].level,2);assert.deepEqual(labels(editor),['1.']);
+});
+
+test('mixed multiline selections keep existing ordered blocks through heading and body conversion',()=>{
+ const editor=fixture([paragraph('plain\ntext'),{type:'ordered-list-item',depth:1,start:6,__numbering:'explicit',__blockId:'mixed-id',children:[{text:'listed\ntext',bold:true}]},paragraph('last')]);
+ Transforms.select(editor,{anchor:Editor.start(editor,[0]),focus:Editor.end(editor,[2])});
+ const before=structuredClone(editor.children);editor.heading.convertHeading(3,false);
+ const numbered=editor.children.find(node=>node.__blockId==='mixed-id');assert.equal(numbered.type,'ordered-list-item');assert.equal(numbered.start,6);assert.equal(Node.string(numbered),'listed\ntext');assert.equal(numbered.children[0].level,3);
+ const after=structuredClone(editor.children);assert.equal(editor.history.undos.length,1);editor.undo();assert.deepEqual(editor.children,before);editor.redo();assert.deepEqual(editor.children,after);
+ Transforms.select(editor,Editor.range(editor,[]));editor.collapsibleParagraph.convertParagraph();
+ const body=editor.children.find(node=>node.__blockId==='mixed-id');assert.equal(body.type,'ordered-list-item');assert.equal(body.start,6);assert.equal(Node.string(body),'listed\ntext');assert.equal(body.children[0].type,'paragraph');
 });

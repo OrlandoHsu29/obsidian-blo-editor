@@ -68,7 +68,7 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
             Transforms.unwrapNodes(editor, { at: path })
             return true
           }
-          editor.collapsibleParagraph.convertParagraph()
+          editor.collapsibleParagraph.convertParagraph({ preserveOrderedLists: false })
           return true
         },
       },

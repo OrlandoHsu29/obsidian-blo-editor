@@ -6,7 +6,7 @@ import { curryOne } from "../../sink"
 
 import { HeadingElement } from "../types"
 type RootHeading = HeadingElement & { __blockDepth?: number }
-import { liftHeadingContainer, setHeadingNode, unwrapSelectedHeadingLists } from '../../../blocks/heading-conversion'
+import { liftHeadingContainer, setHeadingNode } from '../../../blocks/heading-conversion'
 import { headingListState, inheritHeadingList } from '../../../blocks/heading-numbering'
 
 function convertHeading(
@@ -21,18 +21,23 @@ function convertHeading(
   withHistoryBatch(editor,()=>{
     const refs=entries.map(([,path])=>Editor.pathRef(editor,path))
     try {
-      if(toggle)unwrapSelectedHeadingLists(editor)
       for(const ref of refs)liftHeadingContainer(editor,ref)
       const current=refs.filter(ref=>ref.current).map(ref=>[Node.get(editor,ref.current!),ref.current!] as const)
       if(current.every(([n])=>Element.isElement(n)&&['heading','paragraph','ordered-list-item','unordered-list-item','task-list-item'].includes(n.type)&&!Node.string(n).includes('\n'))) {
         for(const [node,path] of current.reverse()) {
-          if(Element.isElement(node)&&node.type==='ordered-list-item')rewrapElement<RootHeading>(editor,{type:'heading',level,__blockDepth:0},path)
+          if(Element.isElement(node)&&node.type==='ordered-list-item') {
+            rewrapElement<RootHeading>(editor,{type:'heading',level,__blockDepth:0},path)
+            setHeadingNode(editor,[...path,0],level)
+          }
           else setHeadingNode(editor,path,toggle?undefined:level)
-          if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState)
+          if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState,true)
         }
       } else {
-        editor.convertElement.convertElements<RootHeading>(n=>n.type==='heading'&&n.level===level,{type:'heading',level,__blockDepth:0},allowToggle)
-        if(listState&&editor.selection)inheritHeadingList(editor,editor.selection,listState)
+        editor.convertElement.convertElements<RootHeading>(n=>n.type==='heading'&&n.level===level,{type:'heading',level,__blockDepth:0},allowToggle,{preserveOrderedLists:true})
+        if(editor.selection&&!toggle) {
+          for(const [,path]of Editor.nodes(editor,{match:n=>Element.isElement(n)&&n.type==='heading'}))setHeadingNode(editor,path,level)
+        }
+        if(listState&&editor.selection)inheritHeadingList(editor,editor.selection,listState,true)
       }
     }finally{refs.forEach(ref=>ref.unref())}
   })

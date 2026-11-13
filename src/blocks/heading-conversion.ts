@@ -31,11 +31,17 @@ export function liftHeadingContainer(editor:Editor,ref:PathRef) {
 }
 
 export function setHeadingNode(editor:Editor,path:number[],level:number|undefined) {
- if(level===undefined)path=unwrapHeadingList(editor,path)
  const node=Node.get(editor,path)
  if(!Element.isElement(node))return
  const depth=level===undefined?blockDepth(node):0
  Transforms.setNodes(editor,{type:level===undefined?'paragraph':'heading',...(level===undefined?{}:{level:level as 1|2|3|4|5|6}),__subtitle:undefined,...(node.__blockDepth!==undefined||depth>0?{__blockDepth:depth}:{})},{at:path})
  if(level===undefined)Transforms.unsetNodes(editor,['level','__headingList'],{at:path})
  Transforms.unsetNodes(editor,['depth','checked','start','__firstAtDepth','__numbering'],{at:path})
+ if(level!==undefined) {
+  const owner=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'})
+  if(owner) {
+   Transforms.setNodes(editor,{depth:0,__blockDepth:0},{at:owner[1]})
+   Transforms.unsetNodes(editor,'__subtitle',{at:owner[1]})
+  }
+ }
 }

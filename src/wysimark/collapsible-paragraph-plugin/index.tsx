@@ -9,12 +9,11 @@ import {
 
 import { normalizeNode } from "./normalize-node"
 import { Paragraph } from "./render-element/paragraph"
-import { unwrapSelectedHeadingLists } from '../../blocks/heading-conversion'
 import { withHistoryBatch } from '../utils/with-history-batch'
 
 export type CollapsibleParagraphEditor = {
   collapsibleParagraph: {
-    convertParagraph: () => void
+    convertParagraph: (options?: { preserveOrderedLists?: boolean }) => void
   }
 }
 
@@ -58,10 +57,9 @@ export const CollapsibleParagraphPlugin =
 
     editor.convertElement.addConvertElementType("paragraph")
     editor.collapsibleParagraph = {
-      convertParagraph: () => {
+      convertParagraph: (options = {}) => {
         if(editor.wysimark.readOnly||!editor.selection)return
         withHistoryBatch(editor,()=>{
-          unwrapSelectedHeadingLists(editor)
           Transforms.unsetNodes(editor,'__subtitle',{match:n=>Element.isElement(n)&&!!n.__subtitle})
           editor.marksPlugin?.removeMarks()
           if (editor.codeBlock?.convertCodeBlockToParagraph()) return
@@ -70,7 +68,8 @@ export const CollapsibleParagraphPlugin =
             {
               type: "paragraph",
             },
-            false
+            false,
+            { preserveOrderedLists: options.preserveOrderedLists ?? true }
           )
         })
       },

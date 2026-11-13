@@ -112,7 +112,7 @@
     content: none;
 }
 .wysimark-editor :is(h1,h2,h3,h4)[data-heading-list-enabled="false"]::before { content:none; }
-.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"]) > button.wysimark-list-number > .wysimark-list-number-label { color:var(--text-accent); }
+.wysimark-editor li:is([data-list-heading-level="1"],[data-list-heading-level="2"],[data-list-heading-level="3"],[data-list-heading-level="4"],[data-list-heading-level="5"]) > button.wysimark-list-number > .wysimark-list-number-label { color:var(--text-accent); }
 
 /* Use the same controls and focus treatment as Obsidian's settings and menus. */
 .wysimark-overlay { --blo-popup-font-size:calc(var(--font-ui-small) + 1px); font-family:var(--font-interface); font-size:var(--font-ui-medium); color:var(--text-normal); }

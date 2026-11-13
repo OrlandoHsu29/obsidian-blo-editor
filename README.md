@@ -53,6 +53,8 @@ Alongside Obsidian's native Markdown editor, Blo offers:
 tables, and code children. Drop guides show indentation levels; Tab / Shift+Tab
 adjust indentation. At the start of indented body text, Backspace removes one level
 of indentation before deleting or merging. Repeating the active paragraph-style shortcut restores body text.
+Ordered lists retain their numbering when switching between body, heading and subtitle styles,
+including when toggling the active heading style off. Use the ordered-list control to remove numbering.
 Fold ordered/unordered list children with the arrow beside the block handle; folding
 persists with the note. Body list hierarchy guides can be toggled in settings; heading lists have no guides.
 Body ordered-list shortcuts recognize `1.` through `99.`. Ordered, unordered and task

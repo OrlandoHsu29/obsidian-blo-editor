@@ -76,7 +76,8 @@ function restoreSelectionInElement(
 export type CurriedConvertElements = <T extends Element = Element>(
   matchForToggle: (element: Element) => boolean,
   targetElement: TargetElement<T>,
-  allowToggle: boolean
+  allowToggle: boolean,
+  options?: { preserveOrderedLists?: boolean }
 ) => void
 
 /**
@@ -277,7 +278,8 @@ export function convertElements<T extends Element = Element>(
   editor: Editor,
   matchForToggle: (element: Element) => boolean,
   targetElement: TargetElement<T>,
-  allowToggle: boolean
+  allowToggle: boolean,
+  options: { preserveOrderedLists?: boolean } = {}
 ): boolean {
   const { selection } = editor
   if (!selection) return false
@@ -322,7 +324,9 @@ export function convertElements<T extends Element = Element>(
   Editor.withoutNormalizing(editor, () => {
     for (let i = entries.length - 1; i >= 0; i--) {
       const [element, path] = entries[i]
-      if (elementContainsNewlines(element)) {
+      const ordered = options.preserveOrderedLists && (element.type === 'ordered-list-item' ||
+        Editor.above(editor, { at: path, match: n => Element.isElement(n) && n.type === 'ordered-list-item' }))
+      if (elementContainsNewlines(element) && !ordered) {
         const splitPath = splitElementAtSelectedLines(
           editor,
           element,
@@ -371,6 +375,7 @@ export function convertElements<T extends Element = Element>(
      */
     Editor.withoutNormalizing(editor, () => {
       for (const entry of updatedEntries) {
+        if (options.preserveOrderedLists && entry[0].type === 'ordered-list-item') continue
         rewrapElement(editor, { type: "paragraph" }, entry[1])
       }
     })
@@ -381,6 +386,8 @@ export function convertElements<T extends Element = Element>(
      */
     Editor.withoutNormalizing(editor, () => {
       for (const entry of updatedEntries) {
+        if (options.preserveOrderedLists && entry[0].type === 'ordered-list-item' &&
+          typeof targetElement !== 'function' && targetElement.type === 'paragraph') continue
         rewrapElement(editor, targetElement, entry[1])
       }
     })

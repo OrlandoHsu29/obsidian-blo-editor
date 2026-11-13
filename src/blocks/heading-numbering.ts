@@ -57,9 +57,10 @@ export function setHeadingListStyle(editor: Editor, style: HeadingListStyle): vo
 }
 
 /** Use the state from before conversion, before a new heading affects level totals. */
-export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListState):void {
+export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListState,preserveOrderedLists=false):void {
   const entries=[...Editor.nodes(editor,{at,match:isNumberedHeading})]
   for(const [heading,path] of entries.reverse()) {
+    if(preserveOrderedLists&&Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'}))continue
     if(!state.count){unwrapHeadingList(editor,path);continue}
     if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,path,{
       style:state.style,enabled:state.levels.includes(heading.level as HeadingListLevel),

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.33 — 2026-11-13
+
+### 中文
+
+- 有序列表在正文、标题和子标题之间切换时保留编号；子标题序号使用统一的紫色。
+- 链接文字支持直接定位光标和编辑。选满文字后输入会保留链接地址；点击图标或拖选经过图标才能选中整条链接，剪切不再残留图标。
+- 所有链接统一显示图标；仅图标的空白链接可编辑，并保留第一次退格选中、第二次删除的行为。多个空格统一保存为一个空白标签。
+- 链接弹窗增加靠右的浅灰提示，显示文字留空时使用链接地址；开启自动标题时优先获取网页标题。
+- 新增默认开启的「Alt+A 分级选择」：先选当前块及子块，已完整选中时再按选中全文。可在设置中即时关闭。
+- 保留此前列表、任务框和引用的视觉位置，缩窄左侧遮挡区域，让拖动与折叠按钮完整显示；主窗口与 Glimmer Memo 保持正文位置及右边距不变。
+
+### English
+
+- Preserve ordered-list numbering when switching body, heading and subtitle styles; use the same accent color for subtitle numbers.
+- Edit link text directly with a visible caret. Replacing the entire label preserves its destination; click or drag across the icon to select and cut the complete link without leaving an orphan icon.
+- Show a consistent icon on all links. Editable icon-only blank links retain two-step Backspace selection/deletion, and whitespace-only labels persist as one blank label.
+- Add right-aligned display-text hints to link dialogs. Empty labels use the link address, or a fetched page title when automatic titles are enabled.
+- Add **Progressive selection with Alt+A**, enabled by default: select the current block and its children, then select the document on the next press. Disable it immediately in settings.
+- Preserve the established visual alignment of lists, task boxes and quotes. Expose clipped left-side drag/fold controls without moving note content or its right edge in the main editor and Glimmer Memo.
+
+Validation: type checking, 442 automated tests and production packaging passed. Live Obsidian checks covered block/document selection, the setting toggle, link-label replacement, full-link cutting, hint alignment and main/memo control visibility.
+
+Installation: extract `blo-editor-0.1.33.zip` into the vault's `.obsidian/plugins/`, preserving an existing `data.json`. Requires desktop Obsidian 1.8.7 or later.
+
 ## 0.1.32 — 2026-11-13
 
 ### 中文

@@ -5,7 +5,7 @@
 .wysimark-find-slot { position:sticky; top:calc(var(--wysimark-toolbar-height,0px) + 22px); z-index:30; height:0; flex:0 0 0; overflow:visible; }
 .wysimark-reading .wysimark-find-slot { top:8px; }
 .wysimark-find-panel { --blo-popup-font-size:calc(var(--font-ui-small) + 1px); position:absolute; right:12px; top:0; width:min(460px,calc(100% - 24px)); margin:0; padding:8px; border:1px solid var(--background-modifier-border); border-radius:10px; box-shadow:var(--shadow-s); background:var(--background-secondary); color:var(--text-normal); font:var(--blo-popup-font-size) var(--font-interface); transform:scale(var(--blo-popup-scale,1)); transform-origin:top right; }
-.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 var(--blo-document-gutter); }
+.wysimark-document-title { width:100%; max-width:none; box-sizing:border-box; margin:24px 0 20px; padding:0 var(--blo-document-gutter) 0 calc(var(--blo-document-gutter) + var(--blo-left-edge-clearance)); }
 .wysimark-accessible-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .wysimark-container .wysimark-document-title input { display:block; width:100%; height:auto; min-height:1.4em; padding:0; margin:0; text-align:left; font-family:var(--font-text); font-size:36px; font-weight:700; line-height:1.35; letter-spacing:normal; color:var(--text-normal); background:transparent; border:0; border-radius:0; box-shadow:none; }
 .wysimark-container .wysimark-document-title input:focus { outline:none; box-shadow:none; }
@@ -67,14 +67,16 @@
 .wysimark-container button.wysimark-list-number { display:inline-block; vertical-align:baseline; width:max-content; min-width:0; height:auto; min-height:0; margin:0 8px 0 0; padding:0 3px; font:inherit; line-height:inherit; text-align:center; white-space:nowrap; border:0; box-shadow:none; border-radius:4px; background:transparent; color:var(--text-muted); cursor:pointer; }
 .wysimark-container button.wysimark-list-number:hover:not(:disabled) { background:var(--background-modifier-hover); color:var(--text-normal); box-shadow:inset 0 0 0 1px var(--background-modifier-border); }
 .wysimark-container button.wysimark-list-number:disabled { opacity:1; cursor:default; }
-/* A shared two-digit rail keeps both list kinds aligned in the current font. */
+/* One marker rail aligns numbers, bullets and task boxes with the same text start. */
+.wysimark-editor { --blo-list-marker-offset:-.33em; }
 .wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] { display:inline-grid; grid-template-areas:"marker"; box-sizing:border-box; width:max-content; min-width:1.65em; height:1.65em; padding:0 1px; margin-left:0; margin-right:4px; font-variant-numeric:tabular-nums; }
 .wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker]::before { content:"99."; grid-area:marker; visibility:hidden; }
 .wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] > :is(.wysimark-list-number-label,svg) { grid-area:marker; justify-self:center; align-self:center; }
 .wysimark-block > li > div.--list-item-icon[data-list-marker] { anchor-name:var(--blo-block-anchor); }
+.wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] { translate:var(--blo-list-marker-offset,-.33em) 0; }
 .wysimark-block[data-block-type="unordered-list-item"] > li > [data-list-marker] > svg { transform:translateX(-2px); }
 .wysimark-list-guides { position:absolute; position-anchor:var(--blo-block-anchor); left:calc(anchor(center) - var(--blo-guide-depth) * 2em + var(--blo-guide-level) * 2em - 2px); width:1px; top:calc(0px - var(--blo-guide-gap)); bottom:0; background:var(--background-modifier-border); pointer-events:none; user-select:none; }
-.wysimark-block:not(:is([data-block-type="ordered-list-item"],[data-block-type="unordered-list-item"],[data-block-type="task-list-item"])) > .wysimark-list-guides { position-anchor:initial; left:calc((var(--blo-guide-level) - var(--blo-guide-depth)) * 2em + .825em - 2px); }
+.wysimark-block:not(:is([data-block-type="ordered-list-item"],[data-block-type="unordered-list-item"],[data-block-type="task-list-item"])) > .wysimark-list-guides { position-anchor:initial; left:calc((var(--blo-guide-level) - var(--blo-guide-depth)) * 2em + .825em - 2px + var(--blo-list-marker-offset,-.33em)); }
 .theme-dark .wysimark-list-guides { background:color-mix(in srgb,var(--background-modifier-border) 88%,var(--text-muted)); }
 .wysimark-container.blo-hide-list-guides .wysimark-list-guides { display:none; }
 .wysimark-container button.wysimark-list-number { position:static; flex:0 0 auto; align-self:baseline; transform:none; font-size:var(--wysimark-list-number-size,1em); line-height:var(--wysimark-list-number-line,1.65); font-weight:var(--wysimark-list-number-weight,inherit); }
@@ -341,6 +343,7 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    margin-left: calc(-1 * var(--blo-left-edge-clearance));
 }
 
 /* Editor container */
@@ -351,10 +354,11 @@
 }
 
 /* Editor styling */
-.wysimark-container { --blo-document-gutter: 48px; }
+.wysimark-container { --blo-document-gutter: 48px; --blo-left-edge-clearance:8px; }
 .wysimark-editor {
     min-height: 100%;
     padding: 1.25em var(--blo-document-gutter) 3em;
+    padding-left:calc(var(--blo-document-gutter) + var(--blo-left-edge-clearance));
     --wysimark-block-spacing: var(--p-spacing, 1rem);
     font-family: var(--font-text);
     font-size: var(--font-text-size);
@@ -379,7 +383,7 @@
 /* Chunks may nest after paste/delete. Vertical padding with negative margins
    lets a later chunk intercept clicks on the preceding line. Keep only the
    horizontal gutter needed by block handles and list markers. */
-.ks-editor-chunk-leaf { margin: 0 calc(-1 * var(--blo-document-gutter)); padding:0 var(--blo-document-gutter); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
+.ks-editor-chunk-leaf { margin: 0 calc(-1 * var(--blo-document-gutter)) 0 calc(-1 * (var(--blo-document-gutter) + var(--blo-left-edge-clearance))); padding:0 var(--blo-document-gutter) 0 calc(var(--blo-document-gutter) + var(--blo-left-edge-clearance)); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
 /* Media can be much taller than a text chunk. Keep its real layout across
    viewport edges instead of restoring it from a shared intrinsic estimate. */
 .ks-editor-chunk-leaf:has([data-blo-drawing],[data-blo-image],table) { content-visibility:visible; contain:layout style paint; contain-intrinsic-block-size:none; }
@@ -543,7 +547,7 @@
     padding-left: 1em;
     color: var(--text-muted);
 }
-.wysimark-editor blockquote:not([data-callout]) { margin-left: 8px; padding-left: calc(1em - 4px); }
+.wysimark-editor blockquote:not([data-callout]) { margin-left: 2px; padding-left: calc(1em - 4px); }
 
 /* Lists */
 .wysimark-editor ul,

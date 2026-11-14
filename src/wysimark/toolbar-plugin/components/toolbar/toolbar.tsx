@@ -27,17 +27,23 @@ export function Toolbar() {
   useEffect(()=>{
     const doc=toolbar.current?.ownerDocument
     if(!doc)return
+    const openTool=(title:string)=>{
+      if(editor.wysimark.readOnly)return
+      const button=Array.from(toolbar.current?.querySelectorAll<HTMLElement>('[data-toolbar-title]')??[]).find(button=>button.dataset.toolbarTitle===title)
+      button?.click()
+    }
+    const openLink=()=>openTool(t('insertLink'))
+    editor.wysimark.openToolbarTool=openTool
+    editor.wysimark.openLink=openLink
     const openReference=(event:KeyboardEvent)=>{
-      if(event.key.toLowerCase()!=='k'||!(event.ctrlKey||event.metaKey)||event.shiftKey||event.altKey||event.isComposing||editor.wysimark.readOnly)return
+      if(editor.wysimark.handleCommandHotkey||event.key.toLowerCase()!=='k'||!(event.ctrlKey||event.metaKey)||event.shiftKey||event.altKey||event.isComposing||editor.wysimark.readOnly)return
       let editable:HTMLElement
       try{editable=ReactEditor.toDOMNode(editor,editor)}catch{return}
       if(!editable.contains(event.target as Node))return
-      const button=Array.from(toolbar.current?.querySelectorAll<HTMLElement>('[data-toolbar-title]')??[]).find(button=>button.dataset.toolbarTitle===t('insertLink'))
-      if(!button)return
-      event.preventDefault();event.stopPropagation();button.click()
+      event.preventDefault();event.stopPropagation();openLink()
     }
     doc.addEventListener('keydown',openReference,true)
-    return()=>doc.removeEventListener('keydown',openReference,true)
+    return()=>{doc.removeEventListener('keydown',openReference,true);if(editor.wysimark.openLink===openLink)delete editor.wysimark.openLink;if(editor.wysimark.openToolbarTool===openTool)delete editor.wysimark.openToolbarTool}
   },[editor])
   const integrations=editor.wysimark.integrationPreferences
   const integrationState=useSyncExternalStore(integrations?.subscribe ?? subscribeDefaultIntegrations, integrations?.getSnapshot ?? getDefaultIntegrations)

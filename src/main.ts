@@ -5,6 +5,7 @@ import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
 import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Notice, setTooltip } from 'obsidian';
 import { DEFAULT_SETTINGS, BloSettingsTab } from './settings';
+import { installEditorHotkeys } from './editor-hotkeys';
 import type { EditorSettings } from './settings';
 import { BloView, VIEW_TYPE_BLO } from "./BloView";
 import type { Editor } from 'slate';
@@ -40,6 +41,7 @@ export default class BloEditorPlugin extends Plugin {
   private memoSetup: MemoPanelSetupModal | null = null;
   private memoWindows = new Map<Document, MutationObserver>();
   settings: EditorSettings = { ...DEFAULT_SETTINGS };
+  editorHotkeys?: ReturnType<typeof installEditorHotkeys>;
   private aiSkillWrite: Promise<void> | null = null;
   ensureAiSkill(): Promise<void> {
     if (!this.aiSkillWrite) this.aiSkillWrite = writeAiSkill(this.app, this.manifest).finally(() => { this.aiSkillWrite = null; });
@@ -217,7 +219,7 @@ export default class BloEditorPlugin extends Plugin {
       const file = leaf.view.currentFile; await leaf.view.saveFile(); this.nativeLeaves.add(leaf);
       await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
     }});
-    this.addCommand({ id: 'toggle-reading', name: ui("切换富文本编辑与阅读"), callback: async () => {
+    this.addCommand({ id: 'toggle-reading', name: ui("切换富文本编辑与阅读"), hotkeys: [{modifiers:['Mod','Alt'],key:'p'}], callback: async () => {
       const leaf = this.app.workspace.activeLeaf;
       if (!leaf) return;
       if (leaf.view instanceof BloView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
@@ -230,6 +232,8 @@ export default class BloEditorPlugin extends Plugin {
       }
       await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
     }});
+
+    this.editorHotkeys = installEditorHotkeys(this, () => this.app.workspace.getActiveViewOfType(BloView)?.editor ?? undefined);
 
     // Listen for active file changes
     this.registerEvent(

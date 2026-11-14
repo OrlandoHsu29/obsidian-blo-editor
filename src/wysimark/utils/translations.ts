@@ -129,8 +129,13 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
-  "Alt+A 分级选择": { zh: "Alt+A 分级选择", en: "Progressive selection with Alt+A" },
-  "首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。": { zh: "首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。", en: "Press Alt+A to select the current block and its children; press again with the whole block selected to select the document. Changes apply immediately." },
+  '高亮': { zh: '高亮', en: 'Highlight' },
+  '保存笔记': { zh: '保存笔记', en: 'Save note' },
+  '编辑器快捷键': { zh: '编辑器快捷键', en: 'Editor hotkeys' },
+  '配置快捷键': { zh: '配置快捷键', en: 'Configure hotkeys' },
+  '在 Obsidian 快捷键设置中搜索 Blo Editor，可单独修改本编辑器的格式、列表、缩进等快捷键；与原生编辑器命令分开，修改后立即生效。': { zh: '在 Obsidian 快捷键设置中搜索 Blo Editor，可单独修改本编辑器的格式、列表、缩进等快捷键；与原生编辑器命令分开，修改后立即生效。', en: 'Search for Blo Editor in Obsidian hotkey settings to customize formatting, lists and indentation separately from native editor commands. Changes apply immediately.' },
+  "Ctrl/Cmd+A 分级选择": { zh: "Ctrl/Cmd+A 分级选择", en: "Progressive selection with Ctrl/Cmd+A" },
+  "首次按 Ctrl/Cmd+A 仅选当前块内容，保留块样式；再按选中全文。关闭后直接选中全文，修改后立即生效。": { zh: "首次按 Ctrl/Cmd+A 仅选当前块内容，保留块样式；再按选中全文。关闭后直接选中全文，修改后立即生效。", en: "Press Ctrl/Cmd+A to select only the current block's contents, retaining its style; press again to select the entire document. When off, select the document immediately. Changes apply immediately." },
   '复制块链接': { zh: '复制块链接', en: 'Copy block link' },
   '块链接已复制': { zh: '块链接已复制', en: 'Block link copied' },
   '无法复制块链接，请重试': { zh: '无法复制块链接，请重试', en: 'Could not copy the block link. Please try again.' },

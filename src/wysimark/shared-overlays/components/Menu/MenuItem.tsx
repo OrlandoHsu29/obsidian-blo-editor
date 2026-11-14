@@ -39,7 +39,7 @@ export function MenuItem({
         </div>
         <div className="--title">{item.title}</div>
         <div className="--hotkey">
-          {item.hotkey ? formatHotkey(item.hotkey) : undefined}
+          {editor.wysimark.getHotkeyLabel ? editor.wysimark.getHotkeyLabel(item.title, item.hotkey ? formatHotkey(item.hotkey) : undefined) : item.hotkey ? formatHotkey(item.hotkey) : undefined}
         </div>
       </$MenuItem>
     </>

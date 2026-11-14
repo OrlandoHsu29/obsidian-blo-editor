@@ -112,11 +112,20 @@ export class BloSettingsTab extends PluginSettingTab {
         await plugin.saveData(plugin.settings)
       }))
     new Setting(editorGroup)
-      .setName(ui('Alt+A 分级选择'))
-      .setDesc(ui('首次按 Alt+A 选中当前块（含子块）；当前块已完整选中时，再按选中全文。修改后立即生效。'))
+      .setName(ui('Ctrl/Cmd+A 分级选择'))
+      .setDesc(ui('首次按 Ctrl/Cmd+A 仅选当前块内容，保留块样式；再按选中全文。关闭后直接选中全文，修改后立即生效。'))
       .addToggle(toggle => toggle.setValue(plugin.settings.blockSelectShortcut).onChange(async value => {
         plugin.settings.blockSelectShortcut = value
         await plugin.saveData(plugin.settings)
+      }))
+    new Setting(editorGroup)
+      .setName(ui('编辑器快捷键'))
+      .setDesc(ui('在 Obsidian 快捷键设置中搜索 Blo Editor，可单独修改本编辑器的格式、列表、缩进等快捷键；与原生编辑器命令分开，修改后立即生效。'))
+      .addButton(button => button.setButtonText(ui('配置快捷键')).onClick(() => {
+        const setting = (this.app as any).setting
+        setting.open()
+        setting.openTabById('hotkeys')
+        setting.activeTab?.setQuery('Blo Editor')
       }))
     for (const [feature, key, name, description] of [
       ['imageViewer', 'enableImageViewer', '启用图片查看器', '依赖 Image Toolkit；已启用时自动开启，未安装时会自动安装并启用。支持图片放大查看，已适配工具栏图标与主题样式。'],

@@ -35,7 +35,7 @@ export function ToolbarButton({
   const ref = useRef<HTMLDivElement>(null)
   const tooltip = tooltipLabel({
     title: item.title,
-    hotkey: () => (item.hotkey ? formatHotkey(item.hotkey) : undefined),
+    hotkey: () => staticEditor.wysimark.getHotkeyLabel ? staticEditor.wysimark.getHotkeyLabel(item.title, item.hotkey ? formatHotkey(item.hotkey) : undefined) : item.hotkey ? formatHotkey(item.hotkey) : undefined,
   })
   const menuLayer = useLayer(inOverflow ? 'toolbar-submenu' : 'menu')
   const openedComponent = useRef<FunctionComponent<Record<string, never>> | null>(null)

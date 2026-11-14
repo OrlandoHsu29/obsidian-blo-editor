@@ -517,6 +517,8 @@ export class BloView extends FileView {
     };
     editor.wysimark.openSearch = replace => this.showSearch(replace);
     editor.wysimark.getBlockSelectShortcut = () => this.plugin.settings.blockSelectShortcut;
+    editor.wysimark.handleCommandHotkey = event => this.plugin.editorHotkeys?.handle(editor, event) ?? false;
+    editor.wysimark.getHotkeyLabel = (title, fallback) => this.plugin.editorHotkeys?.label(title, fallback);
     editor.wysimark.toggleReading = () => this.toggleReading();
     editor.wysimark.openTextColor = () => (this.plugin as any).openTextColor(editor);
     editor.wysimark.insertDrawing = async () => {
@@ -552,7 +554,7 @@ export class BloView extends FileView {
     super(leaf);
     this.allowNoFile = true;
     this.plugin = plugin;
-    this.modeAction = this.addAction('book-open', ui("切换到阅读模式（Ctrl+Alt+P）"), () => { void this.toggleReading(); });
+    this.modeAction = this.addAction('book-open', ui('切换富文本编辑与阅读'), () => { void this.toggleReading(); });
     this.addAction('refresh-cw', ui("从文件重新载入"), () => { void this.reloadFromDisk().catch(error => this.reportSyncError(error)); });
     const exportAction = this.addAction('file-output', ui('导出笔记'), () => {
       if (this.currentFile && this.editor) new NoteExportModal(this).open();
@@ -560,13 +562,9 @@ export class BloView extends FileView {
     this.modeAction.after(exportAction);
     this.scope = new Scope(this.app.scope);
     this.scope.register(null, null, (event) => {
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && ['f','h'].includes(event.key.toLowerCase())) {
-        event.preventDefault(); this.showSearch(event.key.toLowerCase() === 'h'); return false;
-      }
       const target = event.target as HTMLElement | null;
       if (!this.editor || !target?.closest?.('[data-slate-editor="true"]') ||
         !this.reactContainer?.contains(target)) return;
-      if (this.readOnly && !((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'p')) return;
       if (handleScopedHotkey(this.editor, event)) return false;
     });
   }
@@ -756,7 +754,8 @@ export class BloView extends FileView {
     this.findBar?.refresh();
     this.contentEl.toggleClass('wysimark-reading', this.readOnly);
     setIcon(this.modeAction, this.readOnly ? 'pencil' : 'book-open');
-    this.modeAction.setAttribute('aria-label', this.readOnly ? ui("返回富文本编辑（Ctrl+Alt+P）") : ui("切换到阅读模式（Ctrl+Alt+P）"));
+    const modeTitle = ui('切换富文本编辑与阅读'), hotkey = this.plugin.editorHotkeys?.label(modeTitle);
+    this.modeAction.setAttribute('aria-label', hotkey ? `${modeTitle} (${hotkey})` : modeTitle);
   }
   async toggleReading() {
     await this.saveFile();

@@ -25,6 +25,10 @@ export type WysimarkEditor = {
     documentTitle?: ReactNode
     openSearch?: (replace?: boolean) => void
     getBlockSelectShortcut?: () => boolean
+    handleCommandHotkey?: (event: KeyboardEvent) => boolean
+    getHotkeyLabel?: (title: string, fallback?: string) => string | undefined
+    openLink?: () => void
+    openToolbarTool?: (title: string) => void
     normalizeInternalLink?: (value: string) => { target: string; display?: string }
     resolveInternalMedia?: (target: string) => string | undefined
     getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined

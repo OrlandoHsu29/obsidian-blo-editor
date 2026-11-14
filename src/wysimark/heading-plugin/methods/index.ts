@@ -30,14 +30,20 @@ function convertHeading(
             setHeadingNode(editor,[...path,0],level)
           }
           else setHeadingNode(editor,path,toggle?undefined:level)
-          if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState,true)
+          if(listState&&!(Element.isElement(node)&&node.type==='heading'&&node.level===level))inheritHeadingList(editor,path,listState,!(Element.isElement(node)&&node.type==='heading'))
         }
       } else {
-        editor.convertElement.convertElements<RootHeading>(n=>n.type==='heading'&&n.level===level,{type:'heading',level,__blockDepth:0},allowToggle,{preserveOrderedLists:true})
-        if(editor.selection&&!toggle) {
-          for(const [,path]of Editor.nodes(editor,{match:n=>Element.isElement(n)&&n.type==='heading'}))setHeadingNode(editor,path,level)
-        }
-        if(listState&&editor.selection)inheritHeadingList(editor,editor.selection,listState,true)
+        const headingRanges=current.filter(([node])=>Element.isElement(node)&&node.type==='heading').map(([,path])=>Editor.rangeRef(editor,Editor.range(editor,path)))
+        try {
+          editor.convertElement.convertElements<RootHeading>(n=>n.type==='heading'&&n.level===level,{type:'heading',level,__blockDepth:0},allowToggle,{preserveOrderedLists:true})
+          if(editor.selection&&!toggle) {
+            for(const [,path]of Editor.nodes(editor,{match:n=>Element.isElement(n)&&n.type==='heading'}))setHeadingNode(editor,path,level)
+          }
+          if(listState&&editor.selection) {
+            for(const range of headingRanges)if(range.current)inheritHeadingList(editor,range.current,listState,false)
+            inheritHeadingList(editor,editor.selection,listState,true)
+          }
+        }finally{headingRanges.forEach(range=>range.unref())}
       }
     }finally{refs.forEach(ref=>ref.unref())}
   })

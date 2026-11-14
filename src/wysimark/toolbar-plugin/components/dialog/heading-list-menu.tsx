@@ -12,7 +12,7 @@ export function HeadingListMenu({ dest, close }: { dest: HTMLElement; close: () 
   const editor = useSlate(), ref = useRef<HTMLDivElement>(null)
   const state = headingListState(editor)
   const style = useAnchoredPanelPosition(dest, ref, { close })
-  const disabled = editor.wysimark.readOnly || state.count === 0
+  const disabled = editor.wysimark.readOnly
   useEffect(() => {
     const doc = dest.ownerDocument
     const onKey = (event: KeyboardEvent) => {

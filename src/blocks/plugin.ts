@@ -11,12 +11,17 @@ import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
 import { exitEmptyQuote } from './subtitle'
 import { relocateFoldedSelection, revealFoldedSelection } from './folding'
 import { uniquePastedBlockIds, validBlockId } from './block-reference'
+import { headingDefaults } from './heading-defaults'
+import type { HeadingDefaults } from './heading-defaults'
 type Types={Name:'block-structure';Editor:{}}
 export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  const {insertFragment,insertText}=editor
  const {apply}=editor
+ let pendingDefaults:HeadingDefaults|undefined
  editor.apply=operation=>{
   const restoring=HistoryEditor.isHistoryEditor(editor)&&HistoryEditor.isSaving(editor)===false
+  const rootChange=!restoring&&['insert_node','remove_node','move_node','merge_node','split_node'].includes(operation.type)&&'path' in operation&&operation.path.length===1
+  const defaults=rootChange?headingDefaults(editor.children[0])??pendingDefaults:undefined
   if(!restoring&&operation.type==='split_node'&&operation.path.length===1&&'__blockId' in operation.properties&&validBlockId(operation.properties.__blockId)) {
    clearBlockSelection(editor)
    const node=Node.get(editor,operation.path)
@@ -40,6 +45,13 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   if(operation.type!=='set_selection'||!editor.selection||!operation.newProperties||
     !Range.equals(editor.selection,{...editor.selection,...operation.newProperties}))clearBlockSelection(editor)
   apply(operation)
+  if(rootChange&&defaults) {
+   const first=editor.children[0]
+   if(Element.isElement(first)) {
+    pendingDefaults=undefined
+    if(headingDefaults(first)!==defaults)Transforms.setNodes(editor,{__headingDefaults:defaults},{at:[0]})
+   }else pendingDefaults=defaults
+  }
   if(operation.type==='set_selection'&&restoring)relocateFoldedSelection(editor)
   if(operation.type==='set_node'&&'__collapsed' in operation.newProperties&&operation.newProperties.__collapsed===true)relocateFoldedSelection(editor)
  }

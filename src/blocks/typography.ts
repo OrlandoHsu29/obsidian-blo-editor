@@ -47,6 +47,7 @@ export function cleanPastedFragment(fragment:Descendant[]):Descendant[] {
       if(style)clone.inlineStyle=style;else delete clone.inlineStyle
       return clone
     }
-    return {...node,children:cleanPastedFragment(node.children)} as Descendant
+    const {__headingDefaults:_defaults,...content}=node
+    return {...content,children:cleanPastedFragment(node.children)} as Descendant
   })
 }

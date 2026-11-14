@@ -66,7 +66,8 @@ type CustomElement = PluginTypes["Element"] & {
   __collapsed?: true
   __subtitle?: true
   /** Heading prefix choice and whether it is applied; persisted in block metadata. */
-  __headingList?: { style: 'hash' | 'number'; enabled: boolean }
+  __headingList?: { style: 'hash' | 'number'; enabled: boolean; levels?: (1 | 2 | 3 | 4)[] }
+  __headingDefaults?: import('../../blocks/heading-defaults').HeadingDefaults
   __numbering?: 'continue' | 'restart' | 'explicit'
   __literalOrderedText?: string
   __markdownLeadingNewlines?: number

@@ -13,6 +13,8 @@ loaded._compile(buildSync({stdin:{contents:`
  export {headingListState,setHeadingListStyle,toggleHeadingListLevel} from './src/blocks/heading-numbering';
  export {resolveOrderedNumbers} from './src/blocks/model';
  export {parse,serialize} from './src/wysimark/convert';
+ export {BlockStructurePlugin} from './src/blocks/plugin';
+ export {cleanPastedFragment} from './src/blocks/typography';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'heading-conversion.cjs');
 const {createHeadingMethods,ConvertElementPlugin,CollapsibleParagraphPlugin,headingListState,setHeadingListStyle,toggleHeadingListLevel,resolveOrderedNumbers,parse,serialize}=loaded.exports;
 const heading=level=>({type:'heading',level,children:[{text:'existing'}]});
@@ -35,7 +37,7 @@ for(const level of [1,2,3,4])for(const style of ['number','hash'])for(const enab
   editor.heading.convertHeading(level,true);
   assert.deepEqual(titles(editor)[0].__headingList,{style,enabled});
   assert.deepEqual(editor.children[1],before[1]);
-  assert.deepEqual(headingListState(editor).levels,enabled?[level]:[]);
+  assert.deepEqual(headingListState(editor).levels,enabled?[1,2,3,4]:[1,2,3,4].filter(value=>value!==level));
   assert.equal(headingListState(editor).style,style);
   assert.equal(editor.selection.anchor.offset,2);assert.equal(Node.leaf(editor,editor.selection.anchor.path).bold,true);
   assert.equal(editor.history.undos.length,undos+1);
@@ -43,23 +45,23 @@ for(const level of [1,2,3,4])for(const style of ['number','hash'])for(const enab
   editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
   editor.redo();assert.deepEqual(editor.children,after);
   const reopened=fixture(parse(serialize(editor.children)));
-  assert.deepEqual(headingListState(reopened).levels,enabled?[level]:[]);assert.equal(headingListState(reopened).style,style);
+  assert.deepEqual(headingListState(reopened).levels,enabled?[1,2,3,4]:[1,2,3,4].filter(value=>value!==level));assert.equal(headingListState(reopened).style,style);
   if(style==='number'&&enabled)assert.deepEqual(labels(reopened),['1.','2.']);
  });
 }
 
-test('a new level stays disabled in numeric mode instead of introducing a hash prefix',()=>{
+test('an absent level defaults to enabled in numeric mode too',()=>{
  const editor=fixture([paragraph('new'),heading(1)]);setHeadingListStyle(editor,'number');
  Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(2,false);
- assert.deepEqual(titles(editor)[0].__headingList,{style:'number',enabled:false});
- assert.deepEqual(headingListState(editor).levels,[1]);assert.equal(headingListState(editor).style,'number');
+ assert.deepEqual(titles(editor)[0].__headingList,{style:'number',enabled:true});
+ assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);assert.equal(headingListState(editor).style,'number');
 });
 
 test('cross-block conversion uses one snapshot for every new heading',()=>{
  const editor=fixture([paragraph('first'),paragraph('second'),heading(1)]);setHeadingListStyle(editor,'number');
  Transforms.select(editor,{anchor:Editor.start(editor,[0]),focus:Editor.end(editor,[1])});
  editor.heading.convertHeading(1,false);
- assert.deepEqual(labels(editor),['1.','2.','3.']);assert.deepEqual(headingListState(editor).levels,[1]);
+ assert.deepEqual(labels(editor),['1.','2.','3.']);assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);
 });
 
 for(const type of ['ordered-list-item','unordered-list-item','task-list-item']){
@@ -68,7 +70,7 @@ for(const type of ['ordered-list-item','unordered-list-item','task-list-item']){
   Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
   const title=titles(editor)[0];assert.equal(title.level,1);assert.deepEqual(title.__headingList,type==='ordered-list-item'?undefined:{style:'number',enabled:true});
   assert.equal(editor.children[0].type,'ordered-list-item');assert.equal(editor.children[0].depth,0);
-  assert.deepEqual(headingListState(editor).levels,[1]);
+  assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);
  });
 }
 
@@ -76,13 +78,13 @@ test('multiline conversion also inherits the selected numeric heading level',()=
  const editor=fixture([paragraph('first\nsecond'),heading(1)]);setHeadingListStyle(editor,'number');
  Transforms.select(editor,Editor.range(editor,[0]));editor.heading.convertHeading(1,false);
  assert(titles(editor).every(n=>n.__headingList?.style==='number'&&n.__headingList.enabled));
- assert.deepEqual(headingListState(editor).levels,[1]);
+ assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);
 });
 
 test('changing heading levels adopts the target level while reapplying the same level preserves local formatting',()=>{
  const editor=fixture([heading(2),heading(1)]);setHeadingListStyle(editor,'number');toggleHeadingListLevel(editor,2);
  Transforms.select(editor,Editor.start(editor,[0]));editor.heading.convertHeading(1,false);
- assert.deepEqual(labels(editor),['1.','2.']);assert.deepEqual(headingListState(editor).levels,[1]);
+ assert.deepEqual(labels(editor),['1.','2.']);assert.deepEqual(headingListState(editor).levels,[1,3,4]);
  toggleHeadingListLevel(editor,1);
  editor.heading.convertHeading(1,false);assert.equal(titles(editor)[0].__headingList.enabled,false);
 });
@@ -177,4 +179,41 @@ test('mixed multiline selections keep existing ordered blocks through heading an
  const after=structuredClone(editor.children);assert.equal(editor.history.undos.length,1);editor.undo();assert.deepEqual(editor.children,before);editor.redo();assert.deepEqual(editor.children,after);
  Transforms.select(editor,Editor.range(editor,[]));editor.collapsibleParagraph.convertParagraph();
  const body=editor.children.find(node=>node.__blockId==='mixed-id');assert.equal(body.type,'ordered-list-item');assert.equal(body.start,6);assert.equal(Node.string(body),'listed\ntext');assert.equal(body.children[0].type,'paragraph');
+});
+for(const style of ['hash','number'])for(const from of [1,2,3,4])for(const to of [1,2,3,4].filter(level=>level!==from))test(`H${from} to previously absent H${to} preserves default ${style} prefixes`,()=>{
+ const editor=fixture([heading(from)]);setHeadingListStyle(editor,style);assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);
+ Transforms.select(editor,Editor.start(editor,[0]));const before=structuredClone(editor.children),undos=editor.history.undos.length;editor.heading.convertHeading(to,false);
+ assert.equal(titles(editor)[0].level,to);assert.notEqual(titles(editor)[0].__headingList?.enabled,false);assert.equal(labels(editor).length,style==='number'?1:0);assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);assert.equal(editor.history.undos.length,undos+1);
+ const after=structuredClone(editor.children);editor.undo();assert.deepEqual(editor.children,before);editor.redo();assert.deepEqual(editor.children,after);assert.deepEqual(headingListState(fixture(parse(serialize(after)))).levels,[1,2,3,4]);
+});
+for(const style of ['hash','number'])test(`an unchecked absent H3 stays disabled across conversion, save and return under ${style}`,()=>{
+ const editor=fixture([heading(1)]);setHeadingListStyle(editor,style);toggleHeadingListLevel(editor,3);assert.deepEqual(headingListState(editor).levels,[1,2,4]);
+ const reopened=fixture(parse(serialize(editor.children)));assert.deepEqual(headingListState(reopened).levels,[1,2,4]);Transforms.select(reopened,Editor.start(reopened,[0]));reopened.heading.convertHeading(3,false);
+ assert.equal(titles(reopened)[0].__headingList.enabled,false);assert.equal(reopened.children[0].type,'heading');assert.deepEqual(labels(reopened),[]);
+ reopened.heading.convertHeading(2,false);assert.equal(titles(reopened)[0].__headingList.enabled,true);assert.deepEqual(headingListState(reopened).levels,[1,2,4]);
+ assert.deepEqual(headingListState(fixture(parse(serialize(reopened.children)))).levels,[1,2,4]);
+});
+test('heading to body removes a hash prefix and body to heading follows the target default',()=>{
+ const editor=fixture([heading(1),heading(3,{})]);Transforms.select(editor,Editor.start(editor,[0]));editor.collapsibleParagraph.convertParagraph();assert.equal(editor.children[0].type,'paragraph');assert.equal(editor.children[0].__headingList,undefined);editor.heading.convertHeading(2,false);assert.equal(titles(editor)[0].__headingList.enabled,true);assert.equal(titles(editor)[0].__headingList.style,'hash');
+});
+test('a multiline numbered heading honors a disabled target and preserves its block ID',()=>{
+ const editor=fixture([{type:'ordered-list-item',blockChildren:true,depth:0,__blockId:'title-id',children:[{...heading(1),children:[{text:'first\nsecond',bold:true}]}]}]);toggleHeadingListLevel(editor,3);Transforms.select(editor,Editor.start(editor,[0,0]));editor.heading.convertHeading(3,false);
+ assert.equal(labels(editor).length,0);assert.equal(editor.children[0].__blockId,'title-id');assert(titles(editor).every(node=>node.level===3&&node.__headingList.enabled===false));assert.equal(Node.string(editor),'first\nsecond');
+});
+for(const style of ['hash','number'])for(const level of [1,2,3,4])for(const enabled of [true,false])test(`empty-note preset for ${style} H${level}, ${enabled?'enabled':'disabled'}, applies to its first heading after reopening`,()=>{
+ const editor=fixture([{type:'paragraph',children:[{text:''}]}]);assert.deepEqual(headingListState(editor).levels,[1,2,3,4]);assert.equal(headingListState(editor).style,'hash');setHeadingListStyle(editor,style);if(!enabled)toggleHeadingListLevel(editor,level);
+ assert.equal(headingListState(editor).count,0);assert.equal(headingListState(editor).levels.includes(level),enabled);
+ const reopened=fixture(parse(serialize(editor.children)));assert.equal(headingListState(reopened).style,style);assert.equal(headingListState(reopened).levels.includes(level),enabled);
+ Transforms.select(reopened,Editor.start(reopened,[]));reopened.heading.convertHeading(level,false);const title=titles(reopened)[0];assert.ok(title,JSON.stringify({children:reopened.children,selection:reopened.selection,types:reopened.convertElement.convertElementTypes}));assert.equal(title.level,level);assert.equal(title.__headingList?.enabled!==false,enabled);assert.equal(labels(reopened).length,style==='number'&&enabled?1:0);
+});
+test('all four absent levels can be disabled, saved, and individually enabled in advance',()=>{
+ const editor=fixture([{type:'paragraph',children:[{text:''}]}]);for(const level of [1,2,3,4])toggleHeadingListLevel(editor,level);assert.deepEqual(headingListState(editor).levels,[]);setHeadingListStyle(editor,'number');
+ const reopened=fixture(parse(serialize(editor.children)));assert.deepEqual(headingListState(reopened).levels,[]);assert.equal(headingListState(reopened).style,'number');toggleHeadingListLevel(reopened,4);assert.deepEqual(headingListState(reopened).levels,[4]);Transforms.select(reopened,Editor.start(reopened,[]));reopened.heading.convertHeading(4,false);assert.deepEqual(labels(reopened),['1.']);
+});
+test('removing the first body block preserves document heading presets with one undo',()=>{
+ const editor=fixture([paragraph('first'),paragraph('second')]);loaded.exports.BlockStructurePlugin.fn(editor);setHeadingListStyle(editor,'number');toggleHeadingListLevel(editor,3);editor.history.undos=[];editor.operations=[];const before=structuredClone(editor.children);
+ Transforms.removeNodes(editor,{at:[0]});assert.equal(headingListState(editor).style,'number');assert.deepEqual(headingListState(editor).levels,[1,2,4]);assert.equal(editor.history.undos.length,1);editor.undo();assert.deepEqual(editor.children,before);editor.redo();assert.deepEqual(headingListState(editor).levels,[1,2,4]);
+});
+test('pasting content does not import another note\'s document-wide heading presets',()=>{
+ const source=fixture([paragraph('source')]);setHeadingListStyle(source,'number');toggleHeadingListLevel(source,3);const fragment=loaded.exports.cleanPastedFragment(source.children);assert.equal(fragment[0].__headingDefaults,undefined);assert.deepEqual(headingListState(fixture(fragment)).levels,[1,2,3,4]);
 });

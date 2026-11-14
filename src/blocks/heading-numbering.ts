@@ -1,36 +1,42 @@
 import { Editor, Element, Node, Range, Transforms } from 'slate'
 import type { Location, Path } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { blockDepth, canIndentBlock, rootCache } from './model'
+import { rootCache } from './model'
 import { selectionHasMainHeading } from './heading-policy'
 import { setListBlock } from './list-container'
 import { unwrapHeadingList } from './heading-conversion'
+import { headingDefaults } from './heading-defaults'
+import type { HeadingDefaults } from './heading-defaults'
 
 const isNumberedHeading = (node: Node) => Element.isElement(node) && node.type === 'heading' && node.level >= 1 && node.level <= 4 && !node.__subtitle
 export type HeadingListStyle = 'hash' | 'number'
 export type HeadingListLevel = 1 | 2 | 3 | 4
-type HeadingListState = { count: number; style: HeadingListStyle; levels: readonly HeadingListLevel[]; uniform: boolean }
+const defaultLevels: readonly HeadingListLevel[] = [1, 2, 3, 4]
+type HeadingListState = { count: number; style: HeadingListStyle; levels: readonly HeadingListLevel[]; uniform: boolean; defaults?: HeadingDefaults }
 const listStates = new WeakMap<ReturnType<typeof rootCache>['headings'], HeadingListState>()
 
 export function toggleHeadingListLevel(editor: Editor, level: HeadingListLevel): void {
+  if (editor.wysimark.readOnly) return
   const { style, levels } = headingListState(editor)
   const enabled = !levels.includes(level)
+  const nextLevels = defaultLevels.filter(value => value === level ? enabled : levels.includes(value))
   changeHeadings(editor, heading => heading.type === 'heading' && heading.level === level
-    ? { style, enabled }
-    : undefined)
+    ? { style, enabled } : undefined, { style, levels: nextLevels })
 }
 
 export function headingListState(editor: Editor): HeadingListState {
   const headings = rootCache(editor).headings
+  const defaults = headingDefaults(editor.children[0])
   let state = listStates.get(headings)
-  if (!state) {
-    let count = 0, numbered = false, savedStyle: HeadingListStyle | undefined
+  if (!state || state.defaults !== defaults) {
+    let count = 0, numbered = false, savedStyle: HeadingListStyle | undefined, savedLevels: readonly HeadingListLevel[] | undefined
     const counts = new Map<HeadingListLevel,{total:number;hash:number;number:number}>()
     for (const heading of headings) {
       const node = heading.node
       if (!isNumberedHeading(node) || node.type !== 'heading') continue
       count++
       savedStyle ??= node.__headingList?.style
+      savedLevels ??= node.__headingList?.levels
       numbered ||= heading.numberLabel !== undefined
       const level = node.level as HeadingListLevel
       const current = counts.get(level) ?? {total:0,hash:0,number:0}
@@ -39,8 +45,12 @@ export function headingListState(editor: Editor): HeadingListState {
       else if(node.__headingList?.enabled !== false)current.hash++
       counts.set(level,current)
     }
-    const style = savedStyle ?? (numbered ? 'number' : 'hash')
-    state = { count, style, levels: [...counts].filter(([,n])=>n[style]===n.total).map(([level])=>level).sort(),
+    const style = defaults?.style ?? savedStyle ?? (numbered ? 'number' : 'hash')
+    state = { count, style, defaults, levels: defaultLevels.filter(level => {
+      if (defaults) return defaults.levels.includes(level)
+      const current = counts.get(level)
+      return current ? current[style] === current.total : (savedLevels ?? defaultLevels).includes(level)
+    }),
       uniform: [...counts.values()].every(n=>n[style==='number'?'hash':'number']===0) }
     listStates.set(headings, state)
   }
@@ -53,17 +63,22 @@ export function setHeadingListStyle(editor: Editor, style: HeadingListStyle): vo
   changeHeadings(editor, heading => {
     const enabled = heading.__headingList?.enabled !== false
     return { style, enabled }
-  })
+  }, { style, levels: [...state.levels] })
 }
 
 /** Use the state from before conversion, before a new heading affects level totals. */
 export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListState,preserveOrderedLists=false):void {
+  // Consolidate inferred/legacy choices into the same document preset used by
+  // the menu, rather than repeating level snapshots on every new heading.
+  if(!state.defaults&&state.count)saveDefaults(editor,{style:state.style,levels:[...state.levels]})
   const entries=[...Editor.nodes(editor,{at,match:isNumberedHeading})]
   for(const [heading,path] of entries.reverse()) {
-    if(preserveOrderedLists&&Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'}))continue
-    if(!state.count){unwrapHeadingList(editor,path);continue}
+    const enabled=Element.isElement(heading)&&heading.type==='heading'&&state.levels.includes(heading.level as HeadingListLevel)
+    const owner=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'})
+    if(owner&&(preserveOrderedLists||state.style==='number'&&enabled))continue
+    if(!state.count&&!state.defaults){unwrapHeadingList(editor,path);continue}
     if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,path,{
-      style:state.style,enabled:state.levels.includes(heading.level as HeadingListLevel),
+      style:state.style,enabled,
     })
   }
 }
@@ -124,10 +139,17 @@ export function deleteHeadingListPrefix(editor:Editor):boolean {
   return true
 }
 
-function changeHeadings(editor: Editor, change: (heading: Element) => NonNullable<Element['__headingList']> | undefined): void {
+function saveDefaults(editor: Editor, defaults: HeadingDefaults) {
+  const current=headingDefaults(editor.children[0])
+  if(current?.style===defaults.style&&current.levels.length===defaults.levels.length&&current.levels.every((level,index)=>level===defaults.levels[index]))return
+  if (Element.isElement(editor.children[0])) Transforms.setNodes(editor, { __headingDefaults: defaults }, { at: [0] })
+}
+
+function changeHeadings(editor: Editor, change: (heading: Element) => NonNullable<Element['__headingList']> | undefined, defaults?: HeadingDefaults): void {
   if (editor.wysimark.readOnly) return
   const entries = [...Editor.nodes(editor, { at: [], match: isNumberedHeading })]
   withHistoryBatch(editor, () => {
+    if (defaults) saveDefaults(editor, defaults)
     // Work backwards so wrapping/unwrapping cannot invalidate subsequent paths.
     for (const [heading, path] of entries.reverse()) {
       if (!Element.isElement(heading)) continue
@@ -153,12 +175,5 @@ function setHeadingList(editor:Editor,path:Path,settings:NonNullable<Element['__
         type:'ordered-list-item',blockChildren:true,depth:0,__numbering:'continue',children:[],
       },{at:path})
     }
-  } else if(owner) {
-    owner.children.forEach((child,index)=>{
-      if(Element.isElement(child)&&canIndentBlock(child)&&blockDepth(child)<blockDepth(owner)) {
-        Transforms.setNodes(editor,{__blockDepth:blockDepth(owner)},{at:[...parentPath,index]})
-      }
-    })
-    Transforms.unwrapNodes(editor,{at:parentPath})
-  }
+  } else if(owner) unwrapHeadingList(editor,path)
 }

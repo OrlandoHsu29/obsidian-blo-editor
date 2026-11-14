@@ -58,11 +58,11 @@ test('reselecting the current style performs no operations and creates no undo e
 test('a style choice does not re-enable levels that were switched off',()=>{
  const editor=fixture([heading(1),heading(2)]);
  toggleHeadingListLevel(editor,1);toggleHeadingListLevel(editor,2);
- setHeadingListStyle(editor,'number');assert.deepEqual(headingListLevels(editor),[]);assert.deepEqual(labels(editor),[]);
+ setHeadingListStyle(editor,'number');assert.deepEqual(headingListLevels(editor),[3,4]);assert.deepEqual(labels(editor),[]);
  const reopened=fixture(parse(serialize(editor.children)));
- assert.equal(headingListState(reopened).style,'number');assert.deepEqual(headingListLevels(reopened),[]);
- setHeadingListStyle(reopened,'hash');assert.deepEqual(headingListLevels(reopened),[]);
- toggleHeadingListLevel(reopened,2);assert.deepEqual(headingListLevels(reopened),[2]);
+ assert.equal(headingListState(reopened).style,'number');assert.deepEqual(headingListLevels(reopened),[3,4]);
+ setHeadingListStyle(reopened,'hash');assert.deepEqual(headingListLevels(reopened),[3,4]);
+ toggleHeadingListLevel(reopened,2);assert.deepEqual(headingListLevels(reopened),[2,3,4]);
 });
 
 test('selection and body edits reuse the same heading state cache',()=>{
@@ -77,7 +77,7 @@ test('invalid metadata is ignored and old slider metadata retains its per-headin
   const nodes=parse(source(saved));assert.equal(nodes[0].__headingList,undefined);assert.equal(Node.string(nodes[0]),'Alpha');
  }
  const editor=fixture(parse(source({path:[],style:'number',enabled:false,maxLevel:2})));
- assert.equal(headingListState(editor).style,'number');assert.deepEqual(headingListLevels(editor),[]);
+ assert.equal(headingListState(editor).style,'number');assert.deepEqual(headingListLevels(editor),[2,3,4]);
  assert.deepEqual(editor.children[0].__headingList,{style:'number',enabled:false});
 });
 
@@ -90,7 +90,8 @@ for(const style of ['hash','number']) {
     const before=structuredClone(editor.children);
     toggleHeadingListLevel(editor,2);
     assert.deepEqual(headingListLevels(editor),[1,3,4]);
-    assert.deepEqual(editor.children[0],before[0]);assert.deepEqual(editor.children[2],before[2]);assert.deepEqual(editor.children[3],before[3]);
+    const content=node=>JSON.parse(JSON.stringify(node,(key,value)=>['__headingList','__headingDefaults'].includes(key)?undefined:value));
+    for(const index of [0,2,3])assert.deepEqual(content(editor.children[index]),content(before[index]));
     assert.deepEqual(editor.children[4],subtitle);assert.deepEqual(editor.children[5],body);
     if(style==='number')assert.deepEqual(labels(editor),['1.','1.','1.1','a.','8.']);
     const disabled=structuredClone(editor.children);

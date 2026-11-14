@@ -6,7 +6,7 @@ import { HistoryEditor } from 'slate-history'
 import type { Descendant } from 'slate'
 import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
-import { boundaryBlockIndex, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary } from './boundary'
+import { boundaryBlockIndex, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary, outdentEmptyParagraph } from './boundary'
 import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
 import { exitEmptyQuote } from './subtitle'
 import { relocateFoldedSelection, revealFoldedSelection } from './folding'
@@ -67,7 +67,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  return {
  name:'block-structure',editor:{
   normalizeNode:entry=>normalizeHeadingIndent(editor,entry)||normalizeStructuredBoundary(editor,entry)||normalizeOrderedText(editor,entry),
-  insertBreak:()=>insertBreakAtBoundary(editor)||exitEmptyQuote(editor),
+  insertBreak:()=>insertBreakAtBoundary(editor)||outdentEmptyParagraph(editor)||exitEmptyQuote(editor),
   deleteBackward:()=>deleteAtBlockBoundary(editor),
   deleteForward:()=>deleteWholeBlockSelection(editor),
   deleteFragment:()=>deleteWholeBlockSelection(editor),

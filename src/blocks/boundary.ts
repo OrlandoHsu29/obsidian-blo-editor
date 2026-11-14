@@ -1,6 +1,6 @@
 import { Editor, Element, Node, NodeEntry, Range, Transforms } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { blockDepth, isEditorSpacer } from './model'
+import { blockDepth, changeBlockIndent, isEditorSpacer } from './model'
 import { isStructuredBlock } from './structured-block'
 
 export { isStructuredBlock } from './structured-block'
@@ -47,6 +47,14 @@ export function selectStructuredBoundary(editor: Editor, index: number): boolean
     editor.marks = null
   })
   return true
+}
+
+/** Empty indented prose leaves one level instead of creating another empty row. */
+export function outdentEmptyParagraph(editor: Editor): boolean {
+  if (editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection)) return false
+  const index = editor.selection.anchor.path[0], node = editor.children[index]
+  return Element.isElement(node) && node.type === 'paragraph' && Editor.isEmpty(editor, node) &&
+    changeBlockIndent(editor, index, -1)
 }
 
 export function insertBreakAtBoundary(editor: Editor): boolean {

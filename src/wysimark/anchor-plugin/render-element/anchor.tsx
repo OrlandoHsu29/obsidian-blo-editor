@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react"
-import { Editor, Element, Path, Range } from "slate"
-import { ReactEditor, useReadOnly, useSelected, useSlateSelector, useSlateStatic } from "slate-react"
+import { useReadOnly, useSelected, useSlateStatic } from "slate-react"
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -9,18 +8,10 @@ import { useLayer } from "../../use-layer"
 import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
 import { AnchorDialog } from "./AnchorDialog"
-import { isIconOnlyLink, isLinkFullySelected, isLinkIconSelected, selectedLink } from '../link-keyboard'
+import { isIconOnlyLink } from '../link-keyboard'
 import { consumePointerSelectionClick } from '../../../blocks/pointer-selection'
 import { useSelectionBackground } from './use-selection-background'
-function isPreciseLinkSelection(editor: Editor): boolean {
-  const selection = editor.selection
-  if (!selection) return false
-  if (Range.isCollapsed(selection)) return true
-  if (selectedLink(editor)) return true
-  const cell = Editor.above(editor, { at: selection.anchor,
-    match: node => Element.isElement(node) && node.type === 'table-cell' })?.[1]
-  return !!cell && Path.isAncestor(cell, selection.focus.path) && Range.equals(selection, Editor.range(editor, cell))
-}
+import { useLinkSelection } from './use-link-selection'
 
 export function Anchor({
   element,
@@ -35,17 +26,9 @@ export function Anchor({
   }, [attributes.ref])
   const selected = useSelected()
   const editor = useSlateStatic()
-  const preciseSelection = useSlateSelector(isPreciseLinkSelection)
-  const expandedSelection = useSlateSelector(editor => !!editor.selection && Range.isExpanded(editor.selection))
-  const fullSelection = useSlateSelector(useCallback(editor => {
-    try { return isLinkFullySelected(editor, ReactEditor.findPath(editor, element)) }
-    catch { return false }
-  }, [element]))
-  const iconSelection = useSlateSelector(useCallback(editor => {
-    try { return isLinkIconSelected(editor, ReactEditor.findPath(editor, element)) }
-    catch { return false }
-  }, [element]))
-  const selectionBackground = useSelectionBackground(element, fullSelection)
+  const selection = useLinkSelection(element)
+  const { precise: preciseSelection, expanded: expandedSelection, full: fullSelection, icon: iconSelection } = selection
+  const selectionBackground = useSelectionBackground(element, selection)
   const dialog = useLayer("dialog")
   const dialogRef = useRef(dialog)
   const ownedDialog = useRef<React.FunctionComponent<Record<string, never>> | null>(null)

@@ -15,17 +15,21 @@ function outsideLink(editor: Editor, path: Path, before: boolean): Point {
 
 export const pointBeforeLink = (editor: Editor, path: Path) => outsideLink(editor, path, true)
 
-/** The icon lies before the label, independently of how much text is selected. */
-export function isLinkIconSelected(editor: Editor, path: Path, range = editor.selection): boolean {
-  if (!range || Range.isCollapsed(range)) return false
-  const [start, end] = Range.edges(range)
-  return Point.compare(start, outsideLink(editor, path, true)) <= 0 && Point.compare(end, Editor.start(editor, path)) >= 0
+export type LinkSelection = { full: boolean; icon: boolean; text: Range | null; start: Point | null }
+export const noLinkSelection: LinkSelection = { full: false, icon: false, text: null, start: null }
+
+/** Share one node range and leading-boundary lookup across all link presentation. */
+export function linkSelection(editor: Editor, path: Path, range = editor.selection): LinkSelection {
+  if (!range || Range.isCollapsed(range) || !Range.includes(range, path)) return noLinkSelection
+  const bounds = Editor.range(editor, path), [start, end] = Range.edges(range)
+  const icon = Point.compare(start, outsideLink(editor, path, true)) <= 0 && Point.compare(end, bounds.anchor) >= 0
+  const text = Range.intersection(range, bounds)
+  return { icon, full: icon && Point.compare(end, bounds.focus) >= 0,
+    text: text && Range.isExpanded(text) ? text : null, start: bounds.anchor }
 }
 
 export function isLinkFullySelected(editor: Editor, path: Path, range = editor.selection): boolean {
-  if (!range || Range.isCollapsed(range)) return false
-  const [start, end] = Range.edges(range)
-  return Point.compare(start, outsideLink(editor, path, true)) <= 0 && Point.compare(end, Editor.end(editor, path)) >= 0
+  return linkSelection(editor, path, range).full
 }
 
 /** Only a range that actually includes the icon may remove the link node. */

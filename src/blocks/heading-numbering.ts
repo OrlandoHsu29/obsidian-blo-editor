@@ -105,7 +105,8 @@ export function convertSelectedHeadingList(editor:Editor,style:HeadingListStyle,
   if(!editor.selection||editor.wysimark.readOnly)return false
   const selected=new Set([...Editor.nodes(editor,{match:isNumberedHeading})].map(([node])=>node))
   if(!selected.size)return false
-  if(headingListControlDisabled(editor,style))return true
+  // The selection already contains a main heading; don't traverse it again.
+  if(headingListState(editor).style!==style)return true
   const type=style==='number'?'ordered-list-item':'unordered-list-item'
   const entries=[...Editor.nodes(editor,{mode:'highest',match:n=>Element.isElement(n)&&(isNumberedHeading(n)||
     ('blockChildren' in n&&n.blockChildren&&n.type.endsWith('list-item'))||editor.convertElement.isConvertibleElement(n))})]

@@ -1,8 +1,8 @@
-import { CSSProperties, useCallback, useLayoutEffect, useState } from 'react'
+import { CSSProperties, useLayoutEffect, useState } from 'react'
 import { Editor, Range, Text } from 'slate'
-import { ReactEditor, useSlateSelector, useSlateStatic } from 'slate-react'
+import { ReactEditor, useSlateStatic } from 'slate-react'
 import { AnchorElement } from '..'
-
+import type { LinkSelection } from '../link-keyboard'
 
 /** Measure only link text leaves; whole-wrapper rects would count nested marks twice. */
 export function textRangeWidth(editor: Editor, range: Range): number {
@@ -17,23 +17,16 @@ export function textRangeWidth(editor: Editor, range: Range): number {
 }
 
 /** Paint on the existing inline box, whose height matches the full link background. */
-export function useSelectionBackground(element: AnchorElement, full: boolean): CSSProperties | undefined {
+export function useSelectionBackground(element: AnchorElement, selection: LinkSelection): CSSProperties | undefined {
   const editor = useSlateStatic()
-  const range = useSlateSelector(useCallback(editor => {
-    if (!editor.selection || Range.isCollapsed(editor.selection)) return null
-    try {
-      const range = Range.intersection(editor.selection, Editor.range(editor, ReactEditor.findPath(editor, element)))
-      return range && Range.isExpanded(range) ? range : null
-    } catch { return null }
-  }, [element]), (a, b) => a === b || !!a && !!b && Range.equals(a, b))
+  const { text: range, start, full } = selection
   const [style, setStyle] = useState<CSSProperties>()
   useLayoutEffect(() => {
-    if (!range || full) { setStyle(undefined); return }
-    const start = Editor.start(editor, ReactEditor.findPath(editor, element))
+    if (!range || !start || full) { setStyle(undefined); return }
     const left = textRangeWidth(editor, { anchor: start, focus: Range.start(range) })
     const right = left + textRangeWidth(editor, range)
     const backgroundImage = `linear-gradient(to right, transparent ${left}px, var(--text-selection) ${left}px, var(--text-selection) ${right}px, transparent ${right}px)`
-    setStyle({ backgroundImage })
-  }, [editor, element, range, full])
+    setStyle(previous => previous?.backgroundImage === backgroundImage ? previous : { backgroundImage })
+  }, [editor, element, range, start, full])
   return style
 }

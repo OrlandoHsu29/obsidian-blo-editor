@@ -6,7 +6,7 @@ const {createEditor,Editor,Node,Range,Transforms}=require('slate');
 const {withHistory}=require('slate-history');
 const loaded=new Module('link-cut.cjs');loaded.require=id=>id==='obsidian'?{getLanguage:()=> 'en',Platform:{isMacOS:false}}:require(id);
 loaded._compile(buildSync({stdin:{contents:`import {createWithSink} from './src/wysimark/sink/editor';import {AnchorPlugin} from './src/wysimark/anchor-plugin';import {TablePlugin} from './src/wysimark/table-plugin';export const withLinks=createWithSink([AnchorPlugin.fn,TablePlugin.fn]);export * from './src/wysimark/anchor-plugin/link-keyboard';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'link-cut.cjs');
-const {withLinks,selectLink,isLinkFullySelected,isLinkIconSelected}=loaded.exports;
+const {withLinks,selectLink,isLinkFullySelected,linkSelection}=loaded.exports;
 const pointerLoaded=new Module('link-pointer.cjs');pointerLoaded.require=loaded.require;
 pointerLoaded._compile(buildSync({entryPoints:['src/wysimark/anchor-plugin/pointer-selection.ts'],bundle:true,platform:'node',format:'cjs',external:['slate','slate-react'],write:false}).outputFiles[0].text,'link-pointer.cjs');
 const {linkIconSelectionRange}=pointerLoaded.exports;
@@ -19,13 +19,13 @@ for(const backward of [false,true])for(const offset of [0,1,3,5])test(`icon sele
  const editor=fixture([paragraph([{text:'before '},link(),{text:' after'}])]);
  const anchor=Editor.end(editor,[0,0]),focus={path:[0,1,0],offset};
  Transforms.select(editor,backward?{anchor:focus,focus:anchor}:{anchor,focus});
- assert.equal(isLinkIconSelected(editor,[0,1]),true);
+ assert.equal(linkSelection(editor,[0,1]).icon,true);
  assert.equal(isLinkFullySelected(editor,[0,1]),offset===5);
 });
 test('label-only and preceding text selections do not include the icon',()=>{
  const editor=fixture([paragraph([{text:'before '},link(),{text:' after'}])]);
  for(const range of [Editor.range(editor,[0,1]),Editor.range(editor,[0,0]),{anchor:Editor.start(editor,[0,1]),focus:{path:[0,1,0],offset:1}}]){
-  Transforms.select(editor,range);assert.equal(isLinkIconSelected(editor,[0,1]),false);
+  Transforms.select(editor,range);assert.equal(linkSelection(editor,[0,1]).icon,false);
  }
 });
 

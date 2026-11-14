@@ -124,7 +124,7 @@ test('Mermaid source switching keeps the clicked block stationary until keyboard
  assert.equal(scrollCalls,0,'switching the clicked diagram must not reveal/center the code start');
  editable.props.scrollSelectionIntoView(editor,{startContainer:outside,endContainer:outside});
  assert.equal(scrollCalls,1,'unrelated selections must still scroll normally');
- editable.props.onKeyDownCapture();
+ editable.props.onKeyDownCapture({key:'ArrowRight',nativeEvent:{keyCode:39}});
  editable.props.scrollSelectionIntoView(editor,{startContainer:caret,endContainer:caret});
  assert.equal(scrollCalls,2,'typing/navigation restores normal caret scrolling');
 });

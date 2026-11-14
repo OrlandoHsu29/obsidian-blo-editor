@@ -14,6 +14,8 @@ import { MarkdownChangeTracker } from "./markdown-change-tracker"
 import type { GetVaultFilePathsHandler, GetVaultImagePathsHandler } from "./types"
 import { SlashPopover } from '../../SlashPopover'
 import { trackLinkIconSelection } from '../anchor-plugin/pointer-selection'
+import { prepareLinkEndInput } from '../anchor-plugin/link-input'
+import { renderLinkInputText } from '../anchor-plugin/render-element/link-input-text'
 
 export type { Element, Text } from "./plugins"
 
@@ -239,11 +241,18 @@ export function Editable({
             target?.closest('[data-wysimark-mermaid-scroller]')?.closest<HTMLElement>('[data-wysimark-code-block]')
           pointerTargetRef.current = anchor && event.currentTarget.contains(anchor) ? anchor : null
         }}
-        onKeyDownCapture={clearPointerTarget}
+        onKeyDownCapture={event => {
+          clearPointerTarget()
+          if (!event.ctrlKey && !event.metaKey && !event.altKey &&
+            (event.key.length === 1 || event.nativeEvent.keyCode === 229)) {
+            prepareLinkEndInput(editor, event.currentTarget.ownerDocument)
+          }
+        }}
         onBeforeInputCapture={clearPointerTarget}
         onCompositionStartCapture={clearPointerTarget}
         readOnly={readOnly}
         renderLeaf={renderLeaf}
+        renderText={renderLinkInputText}
         onBlur={onBlur}
         placeholder={placeholder}
         className={className}

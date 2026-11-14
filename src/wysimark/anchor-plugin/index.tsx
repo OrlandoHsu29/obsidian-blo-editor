@@ -8,6 +8,7 @@ import { createAnchorMethods } from "./methods"
 import { normalizeNode } from "./normalize-node"
 import { Anchor } from "./render-element/anchor"
 import { completeLinkSelection, handleLinkKey } from "./link-keyboard"
+import { exitLinkEnd, withLinkEndInput } from './link-input'
 
 type AnchorMethods = ReturnType<typeof createAnchorMethods>
 
@@ -33,9 +34,11 @@ export type AnchorPluginCustomTypes = {
 export const AnchorPlugin = createPlugin<AnchorPluginCustomTypes>(
   (editor, _options, { createPolicy }) => {
     editor.anchor = createAnchorMethods(editor)
+    withLinkEndInput(editor)
     return createPolicy({
       name: "anchor",
       editor: {
+        insertText: () => { exitLinkEnd(editor); return false },
         deleteFragment: () => {
           if (editor.wysimark.readOnly) return false
           const range = completeLinkSelection(editor)

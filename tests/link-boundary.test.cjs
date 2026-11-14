@@ -34,6 +34,7 @@ test('icon selection does not survive an unrelated cursor movement',()=>{
 
 test('backspace and arrows at visible link text use normal Slate character editing',()=>{
  const editor=fixture([{text:''},link('Link'),{text:''}]);
+ Transforms.select(editor,Editor.end(editor,[0,1]));
  assert.equal(handleLinkKey(editor,'ArrowLeft'),false);backspace(editor);
  assert.equal(Node.string(editor),'Lin');assert.equal(anchors(editor).length,1);assert.equal(anchors(editor)[0][0].href,'https://example.test');
  Transforms.select(editor,Editor.end(editor,[0,1]));assert.equal(handleLinkKey(editor,'Backspace'),false);editor.deleteBackward('character');assert.equal(Node.string(editor),'Li');

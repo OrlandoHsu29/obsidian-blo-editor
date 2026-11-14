@@ -169,6 +169,7 @@ export function SinkEditable(originalProps: EditableProps): React.ReactElement {
       originalProps.decorate,
       originalProps.renderElement,
       originalProps.renderLeaf,
+      originalProps.renderText,
       originalProps.renderPlaceholder,
       originalProps.onKeyDown,
       originalProps.onKeyUp,

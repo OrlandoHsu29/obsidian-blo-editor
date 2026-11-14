@@ -113,7 +113,6 @@ export function Anchor({
       <$Edge ref={startEdgeRef} contentEditable={false} />
       <span className="wysimark-link-icon" contentEditable={false} aria-hidden="true" />
       <span className="wysimark-link-label" style={selectionBackground}>{children}</span>
-      <$Edge contentEditable={false} />
     </$Anchor>
   )
 }

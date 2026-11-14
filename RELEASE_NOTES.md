@@ -1,33 +1,27 @@
-# Blo Editor 0.1.28
+# Blo Editor 0.1.36
 
 ## 中文
 
-- 新增 H1～H4 标题列表，支持无序（井号）和有序（数字）两种方式，可分别启用各标题级别。同一篇笔记保持一种标题列表方式，工具栏和快捷键遵守当前选择。
-- 完善标题编号：未编号的中间标题会阻断上级编号继承；子标题保持独立编号。Backspace 可直接清除标题列表样式。
-- 统一 Markdown、富文本和 PDF 导出：不导出装饰井号，保留实际数字编号及正文列表结构。
-- 修复段落合并时空列表标记丢失的问题；调整任务列表命名、工具栏顺序、列表对齐与引用线位置。
-- 块按钮提示延迟显示在下方，复用工具栏的统一提示逻辑。
-- 复用编辑事务及指针拖动逻辑，清理未使用代码，改善图片缩放和弹窗拖动的撤销与资源释放。
-- 切换行内图片与单独一行时保留当前尺寸，不再自动套用缩小预设；未记录尺寸的图片也可正常切换。
-- 标题有序列表编号使用完全不透明的主题强调色。
-- 修复引用开头按 Backspace 时跨块合并、引用外壳残留及连续按键可能删除上一行末尾字符的问题；首次取消一层引用，保留链接、文字和撤销记录。
-- 重新截取 README 的深浅色总览、表格选区、窄窗口表格、工具栏溢出和导出选项，展示当前界面样式。
-- 子标题有序列表使用小写字母 a、b、c…，超过 z 后接 aa、ab…；使用独立子标题图标，段落菜单位置保留在标题 4 后。导出保留字母前缀，Markdown 使用加粗正文呈现子标题。
+- 工具栏段落菜单的快捷键保持单行显示，修复挤压换行，并调浅提示文字颜色。
+- 标题列表级别按钮根据实际标题状态更新；取消某个标题的列表样式后，对应级别不再错误地保持选中。
+- 清除格式支持将标题、列表、引用和代码块还原为正文，同时清除行内样式。光标未选中文字时作用于当前块，保留文字、链接、媒体、表格结构及撤销记录。
+- 链接图标与说明文字支持一致的双向拖选；固定拖选起点，避免经过图标后选区被浏览器重置，防止拖选意外复制链接。
+- 统一链接图标、部分文字和完整链接的选中底色高度，保留只编辑说明文字时的链接目标。
+- 链接末尾统一输入普通文字，沿用所在块的段落样式；修复中文组合输入中断、重复残留及 Backspace 误删链接说明文字的问题。
+- 合并链接的重复选区订阅和范围计算，共享公共判断缓存；标题存在性检查找到首个匹配即停止，减少长笔记选区变化时的开销。
+- 简化链接输入边界的渲染标识，减少长段落输入时的临时字符串分配。
 
-验证：类型检查、105 项自动化测试及生产打包通过；已验证 Obsidian 内的标题列表、快捷键、撤销、保存与导出交互，并用临时笔记验证引用取消、链接合并、子标题字母编号及 Markdown 保存重开。
+验证：类型检查、685 项自动化测试及生产打包通过。已在 Obsidian 的临时笔记中验证中文组合输入、取消输入、逐字删除，以及包含 1,000 个链接的长笔记拖选、全文选中和页面 DOM／文档模型一致性。
 
 ## English
 
-- Added heading lists for H1–H4 with unordered hash prefixes or ordered numeric prefixes and independent heading-level controls. Toolbar actions and shortcuts follow the selected document-wide mode.
-- Improved numbering across unnumbered intermediate headings, kept subtitle numbering independent, and made Backspace remove heading list formatting directly.
-- Unified Markdown, rich-text and PDF exports: omit decorative hashes while preserving actual numbering and body lists.
-- Fixed empty list markers disappearing when merging paragraphs; refined task-list labels, toolbar order, list alignment and quote borders.
-- Delayed block-handle tooltips below their controls and reused the shared toolbar tooltip behavior.
-- Shared editor transactions and pointer-drag handling, removed unused code, and improved resize/drag undo and cleanup.
-- Preserve current image dimensions when switching between inline and block layouts, including images without recorded dimensions.
-- Render ordered heading numbers with the fully opaque theme accent color.
-- Fix Backspace at the start of a quote merging across blocks, leaving an empty quote, or deleting the previous line's last character on repeated presses. The first press now removes one quote level while preserving links, text and undo history.
-- Refresh the README screenshots for light/dark previews, table selection, narrow tables, toolbar overflow and export options using the current interface.
-- Use lowercase a, b, c… numbering for subtitles, continuing with aa, ab… after z. Add a dedicated subtitle icon while keeping its paragraph-menu position after Heading 4. Exports retain the letter prefixes; Markdown renders subtitles as bold paragraphs.
+- Keep paragraph-menu shortcuts on one line, fix cramped wrapping, and soften their text color.
+- Reflect actual heading list formatting in level controls instead of leaving a level selected after an individual heading is disabled.
+- Clear both block and inline formatting, converting headings, lists, quotes and code blocks to body text. With a caret-only selection, clear the current block while preserving content, links, media, table structure and undo history.
+- Stabilize bidirectional link selection, preserve the original drag anchor across the icon, and prevent selection gestures from duplicating links through native drag and drop.
+- Match the selection background height of link icons, partial labels and complete links while preserving link targets when editing label text alone.
+- Type plain text at link ends using the surrounding block style. Fix interrupted Chinese IME composition, duplicate native text residue, and Backspace deleting part of the link label.
+- Consolidate link selection subscriptions and range calculations, share common selection checks, and short-circuit heading existence queries in long notes.
+- Replace text-sized rendering keys at link input boundaries to reduce temporary string allocation during typing.
 
-Validation: type checking, 105 automated tests and production packaging passed. Heading lists, shortcuts, undo, persistence and exports were verified in Obsidian, with temporary-note checks for quote removal, link merging, subtitle letters and saved/reopened Markdown.
+Validation: type checking, 685 automated tests and production packaging passed. Temporary Obsidian notes covered IME updates and commits, composition cancellation, character deletion, and a 1,000-link document with forward dragging, whole-document selection and DOM/model consistency checks.

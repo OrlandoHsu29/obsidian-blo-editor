@@ -1,5 +1,5 @@
 import { App, Component, MarkdownRenderer, Notice, TFile, setIcon } from 'obsidian'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { getDefaultIntegrations, subscribeDefaultIntegrations } from './integration-preferences'
 import { Editor, Element, Node, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
@@ -14,6 +14,7 @@ import { openEmbeddedDrawing } from './drawing-navigation'
 import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DrawingReference, trackDrawingReference } from './drawing-save-as'
 import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
 import { useLayer } from './wysimark/use-layer'
+import { observeDrawingResize } from './drawing-resize'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
 type DrawingPlugin = {
@@ -108,10 +109,15 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
   const preferences = editor.wysimark.integrationPreferences
   const enabled = useSyncExternalStore(preferences?.subscribe ?? subscribeDefaultIntegrations, preferences?.getSnapshot ?? getDefaultIntegrations).drawings
   const ref = useRef<HTMLDivElement>(null)
+  const frame = useRef<HTMLDivElement>(null)
   const [revision, setRevision] = useState(0), [failed, setFailed] = useState(false)
   const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null)
   const [size, setSize] = useState<ImageSize | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const previewReady = !!naturalSize
+  useLayoutEffect(() => {
+    if (previewReady && frame.current) return observeDrawingResize(frame.current, isDragging)
+  }, [previewReady, isDragging])
   useEffect(() => {
     setSize(element.width && element.height ? { width: element.width, height: element.height } : null)
   }, [element.width, element.height])
@@ -159,7 +165,7 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
     const reference = trackDrawingReference(app, sourcePath, editor, element)
     void openDrawing(app, file, { sourcePath, editor, reference }).catch(() => new Notice(ui('无法打开画板'))).finally(() => reference?.path.unref())
   }
-  return <div className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
+  return <div ref={frame} className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
     style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
     {enabled && <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}

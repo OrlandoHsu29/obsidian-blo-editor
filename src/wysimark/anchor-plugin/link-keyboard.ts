@@ -15,11 +15,17 @@ function outsideLink(editor: Editor, path: Path, before: boolean): Point {
 
 export const pointBeforeLink = (editor: Editor, path: Path) => outsideLink(editor, path, true)
 
+/** The icon lies before the label, independently of how much text is selected. */
+export function isLinkIconSelected(editor: Editor, path: Path, range = editor.selection): boolean {
+  if (!range || Range.isCollapsed(range)) return false
+  const [start, end] = Range.edges(range)
+  return Point.compare(start, outsideLink(editor, path, true)) <= 0 && Point.compare(end, Editor.start(editor, path)) >= 0
+}
+
 export function isLinkFullySelected(editor: Editor, path: Path, range = editor.selection): boolean {
   if (!range || Range.isCollapsed(range)) return false
   const [start, end] = Range.edges(range)
-  // The leading icon belongs to the node boundary, not its first character.
-  return Point.compare(start, outsideLink(editor,path,true)) <= 0 && Point.compare(end, Editor.end(editor,path)) >= 0
+  return Point.compare(start, outsideLink(editor, path, true)) <= 0 && Point.compare(end, Editor.end(editor, path)) >= 0
 }
 
 /** Only a range that actually includes the icon may remove the link node. */

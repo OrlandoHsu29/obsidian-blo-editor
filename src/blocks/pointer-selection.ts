@@ -48,6 +48,7 @@ export function startPointerSelection(editor: Editor, point: Point,
     anchor.unref()
     doc.removeEventListener('mousemove', move, true)
     doc.removeEventListener('mouseup', up, true)
+    doc.removeEventListener('dragstart', preventDrag, true)
     win.removeEventListener('blur', cleanup)
     doc.documentElement.classList.remove('blo-selecting-from-boundary')
     session.cleanup = undefined
@@ -57,6 +58,10 @@ export function startPointerSelection(editor: Editor, point: Point,
     // otherwise collapse the selection that was just extended.
     if (moved) session.suppressClickUntil = Date.now() + 500
     cleanup()
+  }
+  const preventDrag = (event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
   }
   const move = (event: globalThis.MouseEvent) => {
     if (!(event.buttons & 1) || !anchor.current) { cleanup(); return }
@@ -75,6 +80,7 @@ export function startPointerSelection(editor: Editor, point: Point,
   session.cleanup = cleanup
   doc.addEventListener('mousemove', move, true)
   doc.addEventListener('mouseup', up, true)
+  doc.addEventListener('dragstart', preventDrag, true)
   win.addEventListener('blur', cleanup)
   return cleanup
 }

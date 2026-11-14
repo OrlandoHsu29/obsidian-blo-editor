@@ -5,6 +5,7 @@ const Module=require('node:module');
 const {createEditor,Editor,Transforms}=require('slate');
 const loaded=new Module('link-pointer.cjs');
 const reactEditor={
+ focus(){},toDOMNode:(e,node)=>node===e?e.host:e.link,
  toSlatePoint:(_e,[node])=>node.point,
  toSlateRange:(_e,selection)=>selection.range,
  toSlateNode:e=>e.children[0].children[1],findPath:()=>[0,1],
@@ -12,7 +13,7 @@ const reactEditor={
 };
 loaded.require=id=>id==='slate-react'?{ReactEditor:reactEditor}:require(id);
 loaded._compile(buildSync({entryPoints:['src/wysimark/anchor-plugin/pointer-selection.ts'],bundle:true,platform:'node',format:'cjs',external:['slate','slate-react'],write:false}).outputFiles[0].text,'link-pointer.cjs');
-const {trackLinkIconSelection}=loaded.exports;
+const {trackLinkIconSelection,linkIconHit}=loaded.exports;
 function fixture(){
  const e=createEditor();e.wysimark={readOnly:false};e.isInline=n=>n.type==='anchor';e.children=[{type:'paragraph',children:[{text:'body'},{type:'anchor',href:'https://example.test',children:[{text:'Title'}]},{text:'after'}]}];
  const anchor={path:[0,1,0],offset:5},focus={path:[0,1,0],offset:0};Transforms.select(e,{anchor,focus});
@@ -21,12 +22,43 @@ function fixture(){
  const win={getComputedStyle:()=>({fontSize:'20px',lineHeight:'33px'}),addEventListener:(t,f)=>listen('win:',t,f),removeEventListener:t=>remove('win:',t),requestAnimationFrame:fn=>{frames.set(++next,fn);return next},cancelAnimationFrame:id=>frames.delete(id)};
  const selection={anchorNode:{point:anchor},anchorOffset:5,range:{anchor,focus},setBaseAndExtent(a,_a,f,_f){writes++;this.anchorNode=a;this.focusNode=f;this.range={anchor:a.point,focus:f.point}}};
  const link={getClientRects:()=>[{left:6,right:100,top:8,bottom:32,height:24}],querySelector:selector=>selector==='.wysimark-link-icon'?{getBoundingClientRect:()=>({left:10,right:30,width:20,height:20,top:10,bottom:30})}:{getClientRects:()=>[{left:36,right:100}]}};
- let hit=true,previousLine;
- const doc={defaultView:win,addEventListener:(t,f,c)=>listen('doc:',t,f,c),removeEventListener:t=>remove('doc:',t),getSelection:()=>selection,elementFromPoint:()=>({closest:()=>hit?link:null}),caretRangeFromPoint:()=>previousLine?{getBoundingClientRect:()=>previousLine}:null,createRange:()=>({setStart(){},collapse(){},getBoundingClientRect:()=>({left:4,top:10,bottom:30,height:20})})};
+ let hit=true,previousLine,nativePoint,caretOffset=4;
+ const doc={defaultView:win,addEventListener:(t,f,c)=>listen('doc:',t,f,c),removeEventListener:t=>remove('doc:',t),getSelection:()=>selection,elementFromPoint:()=>({closest:()=>hit?link:null}),caretRangeFromPoint:()=>previousLine||nativePoint?{startContainer:{point:nativePoint},startOffset:nativePoint?.offset,getBoundingClientRect:()=>previousLine}:null,createRange:()=>({setStart(_node,offset){caretOffset=offset},collapse(){},getBoundingClientRect:()=>({left:4-(e.children[0].children[0].text.length-caretOffset)*6,top:10,bottom:30,height:20})})};
+ link.ownerDocument=doc;
+ doc.documentElement={classList:{remove(){}}};
  const host={ownerDocument:doc,contains:()=>true};
- const event={currentTarget:host,button:0,detail:1,clientX:80,clientY:20};
- return {e,event,selection,listeners,frames,missIcon(){hit=false},pointToPreviousLine(){previousLine={top:-22,bottom:0,height:22}},pointToNextLine(){previousLine={top:40,bottom:62,height:22}},get writes(){return writes},dispatch(type,extra={}){listeners.get('doc:'+type)?.fn({buttons:1,clientX:20,clientY:20,...extra})},blur(){listeners.get('win:blur')?.fn()},paint(){for(const [id,fn]of frames){frames.delete(id);fn()}}};
+ e.host=host;
+ e.link=link;
+ const event={currentTarget:host,button:0,detail:1,clientX:80,clientY:20,preventDefault(){this.prevented=true},stopPropagation(){this.stopped=true}};
+ return {e,event,link,selection,listeners,frames,missIcon(){hit=false},setNativeCaret(point){nativePoint=point},pointToPreviousLine(){previousLine={top:-22,bottom:0,height:22}},pointToNextLine(){previousLine={top:40,bottom:62,height:22}},get writes(){return writes},dispatch(type,extra={}){listeners.get('doc:'+type)?.fn({buttons:1,clientX:20,clientY:20,...extra})},blur(){listeners.get('win:blur')?.fn()},paint(){for(const [id,fn]of frames){frames.delete(id);fn()}}};
 }
+
+for(const spaces of [' ','   ','\u00a0'])test(`a press in preceding whitespace ${JSON.stringify(spaces)} resolves the icon without hitting the anchor DOM`,()=>{
+ const f=fixture();f.e.children[0].children[0].text='body'+spaces;
+ f.missIcon();f.setNativeCaret({path:[0,0],offset:4});
+ f.event.clientX=4-spaces.length*6;f.event.clientY=20;
+ const before=structuredClone(f.e.children),cleanup=trackLinkIconSelection(f.e,f.event);
+ assert(f.event.prevented&&f.event.stopped);
+ assert.deepEqual(f.e.selection.anchor,{path:[0,0],offset:4+spaces.length});
+ assert.deepEqual(f.e.children,before);cleanup();assert.equal(f.listeners.size,0);
+});
+test('the leading gap includes fractional-pixel rounding without absorbing preceding text',()=>{
+ const f=fixture();assert.ok(linkIconHit(f.e,f.link,3.5,20));assert.equal(linkIconHit(f.e,f.link,2,20),undefined);
+});
+
+for(const [x,y] of [[5,20],[20,20],[32,20],[35,20],[32,-4],[32,44]])test(`starting at ${x},${y} uses the expanded icon geometry`,()=>{
+ const f=fixture();assert.equal(linkIconHit(f.e,f.link,x,y).overLabel,false);
+ f.event.clientX=x;f.event.clientY=y;
+ const cleanup=trackLinkIconSelection(f.e,f.event);
+ assert(f.event.prevented&&f.event.stopped);
+ assert.deepEqual(f.e.selection,{anchor:{path:[0,0],offset:4},focus:{path:[0,2],offset:0}});
+ assert(f.listeners.has('doc:dragstart'));cleanup();assert.equal(f.listeners.size,0);assert.equal(Editor.pointRefs(f.e).size,0);
+});
+test('actual label text and adjacent rows are excluded from the expanded start region',()=>{
+ const f=fixture();assert.equal(linkIconHit(f.e,f.link,37,20).overLabel,true);
+ assert.equal(linkIconHit(f.e,f.link,20,-8),undefined);assert.equal(linkIconHit(f.e,f.link,20,46),undefined);
+ f.pointToPreviousLine();assert.equal(linkIconHit(f.e,f.link,20,-2),undefined);
+});
 test('mousemove waits for native selection; selectionchange normalizes before Slate without a feedback loop',()=>{
  const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);
  assert.equal(f.listeners.get('doc:selectionchange').capture,true);
@@ -57,6 +89,25 @@ test('moving back across the right-third threshold deselects the icon while pres
  const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);f.dispatch('mousemove');f.dispatch('selectionchange');
  f.dispatch('mousemove',{clientX:24});f.dispatch('selectionchange');f.paint();assert.deepEqual(f.e.selection.focus,{path:[0,1,0],offset:0});
  f.dispatch('mousemove',{clientX:23});f.dispatch('selectionchange');f.paint();assert.deepEqual(f.e.selection.focus,{path:[0,0],offset:4});cleanup();
+});
+
+test('forward dragging retains the leading anchor when Chromium restarts selection inside the label',()=>{
+ const f=fixture(),origin={path:[0,0],offset:4};
+ f.selection.anchorNode={point:origin};f.selection.anchorOffset=4;
+ const cleanup=trackLinkIconSelection(f.e,f.event);
+ f.dispatch('mousemove',{clientX:24});f.dispatch('selectionchange');
+ assert.deepEqual(f.e.selection,{anchor:origin,focus:{path:[0,1,0],offset:0}});
+ for(const offset of [1,2,3,5]){
+  const range={anchor:{path:[0,1,0],offset:0},focus:{path:[0,1,0],offset}};
+  f.selection.range=range;Transforms.select(f.e,range);
+  f.dispatch('mousemove',{clientX:50+offset});f.dispatch('selectionchange');f.paint();
+  assert.deepEqual(f.e.selection,{anchor:origin,focus:range.focus});
+  const writes=f.writes;f.dispatch('selectionchange');assert.equal(f.writes,writes,'stable ranges must not oscillate');
+ }
+ f.missIcon();const range={anchor:{path:[0,1,0],offset:0},focus:{path:[0,2],offset:2}};
+ f.selection.range=range;Transforms.select(f.e,range);f.dispatch('mousemove',{clientX:130});f.dispatch('selectionchange');
+ assert.deepEqual(f.e.selection,{anchor:origin,focus:range.focus});
+ f.dispatch('mouseup',{clientX:130});assert.deepEqual(f.e.selection.anchor,origin);cleanup();
 });
 test('the upper line leading retains icon selection even outside the painted glyph and hit target',()=>{
  const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);f.dispatch('mousemove');f.dispatch('selectionchange');f.missIcon();

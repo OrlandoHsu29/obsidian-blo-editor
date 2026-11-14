@@ -10,10 +10,12 @@ import { serializeNonCodeText } from "./serialize-non-code-text"
 import { cleanInlineStyle } from '../../../../../blocks/typography'
 import { serializeMath } from "../../../../math-plugin/serialize"
 import { serializeLine } from '../serialize-line'
+import { serializeCodeFrame } from './serialize-code-frame'
 
 export function serializeSegment(
   segment: Segment,
-  options?: EscapeTextOptions
+  options?: EscapeTextOptions,
+  preserveCodeBoundary = false
 ): string {
   if (SlateText.isText(segment)) {
     if (segment.inlineStyle) {
@@ -36,7 +38,11 @@ export function serializeSegment(
   }
   switch (segment.type) {
     case 'inline-code':
-      return segment.children.some(text => text.text) ? serializeLine(segment.children.map(text => ({ ...text, code: true })), [], [], options) : ''
+      if (!segment.children.some(text => text.text)) return ''
+      if (preserveCodeBoundary || segment.children.length > 1) {
+        return serializeCodeFrame(segment)
+      }
+      return serializeLine(segment.children.map(text => ({ ...text, code: true })), [], [], options)
     case "math-inline":
       return serializeMath(segment.latex, false, options?.inTable)
     case "anchor": {

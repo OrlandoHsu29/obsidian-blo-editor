@@ -1,4 +1,5 @@
 import type { PhrasingContent } from "mdast"
+import { Text as SlateText } from 'slate'
 
 import { MarkProps, Segment, Text } from "../../types"
 import { assertUnreachable } from "../../utils"
@@ -198,9 +199,22 @@ export function parsePhrasingContents(
   const segments: Segment[] = []
   context ??= { pairedTags: findPairedInlineTags(phrasingContents), tagDepths: {}, styleStack: [] }
   const { pairedTags, tagDepths, styleStack } = context
+  const codeStarts: number[] = []
   phrasingContents.forEach(phrasingContent => {
     const tag = pairedTags.has(phrasingContent) ? parseInlineTag(phrasingContent) : null
     if (tag) {
+      // Paired HTML code tags preserve one editable frame across mark changes,
+      // and keep separately authored adjacent frames distinct.
+      if (tag.name === 'code') {
+        if (!tag.closing) codeStarts.push(segments.length)
+        else {
+          const start = codeStarts.pop()
+          const children = start === undefined ? [] : segments.slice(start)
+          if (children.length && children.every(SlateText.isText)) {
+            segments.splice(start!, children.length, { type: 'inline-code', children: children.map(({ code: _code, ...text }) => text) })
+          }
+        }
+      }
       if (tag.name === 'span' || tag.name === 'font' || tag.name === 'mark' && (tag.style || styleStack.at(-1)?.name === 'mark')) {
         if (tag.closing) styleStack.pop(); else styleStack.push({ name: tag.name, style: tag.style || '' })
         if (tag.name !== 'mark') return

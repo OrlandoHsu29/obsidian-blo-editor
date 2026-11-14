@@ -12,6 +12,13 @@ import {
   isPlainSpace,
 } from "./utils"
 
+function hasAdjacentCode(segments: Segment[], index: number, direction: -1 | 1): boolean {
+  let neighbor = index + direction
+  while (SlateText.isText(segments[neighbor]) && (segments[neighbor] as SlateText).text === '') neighbor += direction
+  const next = segments[neighbor]
+  return !!next && !SlateText.isText(next) && next.type === 'inline-code'
+}
+
 /** Delimiter runs beside punctuation/word characters may not parse as marks. */
 function htmlBoundaryMarks(segments: Segment[]): Set<MarkKey> {
   const result = new Set<MarkKey>()
@@ -166,7 +173,8 @@ export function serializeLine(
     /**
      * Then we add the Text or the Anchor for the segment
      */
-    substrings.push(serializeSegment(segment, resolvedOptions))
+    substrings.push(serializeSegment(segment, resolvedOptions,
+      !SlateText.isText(segment) && segment.type === 'inline-code' && (hasAdjacentCode(segments, i, -1) || hasAdjacentCode(segments, i, 1))))
 
     /**
      * Now we are searching for the next segment which we want to grab the marks

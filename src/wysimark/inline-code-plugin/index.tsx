@@ -12,6 +12,30 @@ export * from "./types"
 
 const isCode = (node: unknown): node is InlineCodeElement => Element.isElement(node) && node.type === 'inline-code'
 
+/** Join only code whose text participates in this formatting operation. */
+function mergeSelectedCode(editor: Editor) {
+  if (!editor.selection || Range.isCollapsed(editor.selection)) return
+  const refs = [...Editor.nodes<InlineCodeElement>(editor, { match: isCode })].filter(([, path]) => {
+    const range = Range.intersection(editor.selection!, Editor.range(editor, path))
+    return range && Range.isExpanded(range)
+  }).map(([, path]) => Editor.pathRef(editor, path))
+  try {
+    Editor.withoutNormalizing(editor, () => {
+      for (let i = refs.length - 1; i > 0; i--) {
+        const left = refs[i - 1].current, right = refs[i].current
+        if (!left || !right || !Path.equals(Path.parent(left), Path.parent(right))) continue
+        const gap = right[right.length - 1] - left[left.length - 1]
+        if (gap === 2) {
+          const boundary = Node.get(editor, Path.next(left))
+          if (!Text.isText(boundary) || boundary.text !== '') continue
+          Transforms.removeNodes(editor, { at: Path.next(left) })
+        } else if (gap !== 1) continue
+        Transforms.mergeNodes(editor, { at: refs[i].current! })
+      }
+    })
+  } finally { refs.forEach(ref => ref.unref()) }
+}
+
 export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor => {
   const entry = () => editor.selection ? Editor.above<InlineCodeElement>(editor, { match: isCode }) : undefined
   const cancelEmpty = () => {
@@ -38,22 +62,42 @@ export const InlineCodePlugin = createPlugin<InlineCodePluginCustomTypes>(editor
   editor.inlineCode = {
     toggleInlineCode: () => {
       if (editor.wysimark.readOnly || !editor.selection || Editor.above(editor, { match: n => Element.isElement(n) && n.type === 'code-block' })) return
-      HistoryEditor.withNewBatch(editor, () => Editor.withoutNormalizing(editor, () => {
-        if (Range.isCollapsed(editor.selection!)) {
-          const code = entry()
-          if (code) { Transforms.unwrapNodes(editor, { at: code[1] }); return }
-          materializeTextBoundary(editor)
-          const { code: _code, ...marks } = Editor.marks(editor) ?? {}
-          Transforms.insertNodes(editor, { type: 'inline-code', children: [{ ...marks, text: '' }] }, { select: true })
-          return
-        }
-        const leaves = [...Editor.nodes<Text>(editor, { match: Text.isText })].filter(([text]) => text.text.length > 0)
-        if (!leaves.length) return
-        const allCode = leaves.every(([, at]) => Editor.above(editor, { at, match: isCode }))
-        if (allCode) Transforms.unwrapNodes(editor, { match: isCode, split: true })
-        else Transforms.setNodes(editor, { code: true }, { match: Text.isText, split: true })
-        editor.marks = null
-      }))
+      let addingCode = false
+      HistoryEditor.withNewBatch(editor, () => {
+        Editor.withoutNormalizing(editor, () => {
+          if (Range.isCollapsed(editor.selection!)) {
+            const code = entry()
+            if (code) { Transforms.unwrapNodes(editor, { at: code[1] }); return }
+            materializeTextBoundary(editor)
+            const { code: _code, ...marks } = Editor.marks(editor) ?? {}
+            Transforms.insertNodes(editor, { type: 'inline-code', children: [{ ...marks, text: '' }] }, { select: true })
+            return
+          }
+          // An outside drag may touch adjacent prose at a zero-length endpoint.
+          // Only selected characters determine the toggle and receive code marks.
+          const leaves = [...Editor.nodes<Text>(editor, { match: Text.isText })].flatMap(([node, path]) => {
+            const range = Range.intersection(editor.selection!, Editor.range(editor, path))
+            if (!range || Range.isCollapsed(range)) return []
+            const [start, end] = Range.edges(range)
+            return [{ path, range, text: node.text.slice(start.offset, end.offset) }]
+          })
+          if (!leaves.length) return
+          const at = { anchor: Range.start(leaves[0].range), focus: Range.end(leaves[leaves.length - 1].range) }
+          // Boundary whitespace follows the text's style instead of changing the
+          // toggle direction. A whitespace-only selection still toggles normally.
+          const content = leaves.filter(({ text }) => text.trim().length > 0)
+          const allCode = (content.length ? content : leaves).every(({ path }) => Editor.above(editor, { at: path, match: isCode }))
+          if (allCode) Transforms.unwrapNodes(editor, { at, match: isCode, split: true })
+          else {
+            addingCode = true
+            Transforms.setNodes(editor, { code: true }, { at, match: Text.isText, split: true })
+          }
+          editor.marks = null
+        })
+        // Code marks have now normalized into inline nodes. Keep this merge in
+        // the same undo batch, without touching unselected neighboring code.
+        if (addingCode) mergeSelectedCode(editor)
+      })
     },
   }
   const hotkeys = createHotkeyHandler({ 'mod+j': () => editor.inlineCode.toggleInlineCode() })

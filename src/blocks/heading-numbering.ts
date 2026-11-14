@@ -47,9 +47,8 @@ export function headingListState(editor: Editor): HeadingListState {
     }
     const style = defaults?.style ?? savedStyle ?? (numbered ? 'number' : 'hash')
     state = { count, style, defaults, levels: defaultLevels.filter(level => {
-      if (defaults) return defaults.levels.includes(level)
       const current = counts.get(level)
-      return current ? current[style] === current.total : (savedLevels ?? defaultLevels).includes(level)
+      return current ? current[style] === current.total : (defaults?.levels ?? savedLevels ?? defaultLevels).includes(level)
     }),
       uniform: [...counts.values()].every(n=>n[style==='number'?'hash':'number']===0) }
     listStates.set(headings, state)

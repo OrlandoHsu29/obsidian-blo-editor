@@ -7,7 +7,7 @@ const {withHistory} = require('slate-history');
 const loaded = new Module('heading-numbering.cjs');
 loaded.require = id => id === 'obsidian' ? {getLanguage: () => 'en'} : require(id);
 loaded._compile(buildSync({stdin:{contents:"export * from './src/blocks/heading-numbering'; export {resolveOrderedNumbers} from './src/blocks/model'; export {parse,serialize} from './src/wysimark/convert'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text, 'heading-numbering.cjs');
-const {resolveOrderedNumbers, headingListState, toggleHeadingListLevel, setHeadingListStyle, parse, serialize} = loaded.exports;
+const {resolveOrderedNumbers, headingListState, toggleHeadingListLevel, setHeadingListStyle, convertSelectedHeadingList, deleteHeadingListPrefix, parse, serialize} = loaded.exports;
 const heading = (level, extra={}) => ({type:'heading',level,children:[{text:`Title ${level}`,bold:true}],...extra});
 const paragraph = text => ({type:'paragraph',children:[{text}]});
 const numbered = (level, extra={}) => ({type:'ordered-list-item',blockChildren:true,depth:0,children:[heading(level)],...extra});
@@ -69,6 +69,29 @@ test('selection and body edits reuse the same heading state cache',()=>{
  const editor=fixture([heading(1),heading(2),paragraph('body')]),first=headingListState(editor);
  Transforms.select(editor,Editor.start(editor,[2]));assert.equal(headingListState(editor),first);
  editor.insertText('more ');assert.equal(headingListState(editor),first);
+});
+
+for(const style of ['hash','number'])test(`a locally disabled H2 unchecks its level despite enabled document presets (${style})`,()=>{
+ const editor=fixture([heading(1,{__headingDefaults:{style:'hash',levels:[1,2,3,4]}}),heading(2),heading(2),heading(3)]);
+ setHeadingListStyle(editor,style);assert.deepEqual(headingListLevels(editor),[1,2,3,4]);
+ Transforms.select(editor,Editor.start(editor,[1]));const before=structuredClone(editor.children);
+ assert.equal(convertSelectedHeadingList(editor,style,true),true);
+ assert.deepEqual(headingListLevels(editor),[1,3,4]);assert(headingListState(editor).defaults.levels.includes(2));
+ const remaining=editor.children[2].type==='heading'?editor.children[2]:editor.children[2].children[0];assert.notEqual(remaining.__headingList?.enabled,false);
+ const disabled=structuredClone(editor.children);editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(headingListLevels(editor),[1,2,3,4]);editor.redo();assert.deepEqual(editor.children,disabled);assert.deepEqual(headingListLevels(editor),[1,3,4]);
+ const reopened=fixture(parse(serialize(editor.children)));assert.deepEqual(headingListLevels(reopened),[1,3,4]);
+ Transforms.select(editor,Editor.start(editor,[1]));convertSelectedHeadingList(editor,style,true);assert.deepEqual(headingListLevels(editor),[1,2,3,4]);
+});
+
+test('Backspace prefix removal updates only the corresponding heading level state',()=>{
+ const editor=fixture([heading(1,{__headingDefaults:{style:'hash',levels:[1,2,3,4]}}),heading(2),heading(2)]);
+ Transforms.select(editor,Editor.start(editor,[1]));assert.equal(deleteHeadingListPrefix(editor),true);assert.deepEqual(headingListLevels(editor),[1,3,4]);
+});
+
+test('absent levels still use saved presets rather than existing headings of other levels',()=>{
+ const editor=fixture([heading(1,{__headingDefaults:{style:'hash',levels:[1,3,4]}}),heading(3)]);
+ assert.deepEqual(headingListLevels(editor),[1,3,4]);toggleHeadingListLevel(editor,2);assert.deepEqual(headingListLevels(editor),[1,2,3,4]);
+ assert.equal(editor.children.filter(n=>n.type==='heading'&&n.level===2).length,0);
 });
 
 test('invalid metadata is ignored and old slider metadata retains its per-heading enabled state',()=>{

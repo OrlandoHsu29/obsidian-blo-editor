@@ -60,7 +60,7 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
           if (!listItem) return false
           const [element, path] = listItem
           const depth=list.getListDepth()
-          if (depth > 0) {
+          if (depth > 0 && !Editor.isEmpty(editor, element)) {
             setListDepth(editor,path,depth-1)
             return true
           }

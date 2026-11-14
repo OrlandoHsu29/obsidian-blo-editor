@@ -188,16 +188,17 @@ export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
   return indentBlockGroups(editor,[index],delta)
 }
 /** Remove the same subtree that the block handle selects, as one undo step. */
-export function deleteBlockGroup(editor: Editor, index: number): boolean {
+export function deleteBlockGroup(editor: Editor, index: number, selectedEnd?: number): boolean {
   if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
   const removed=editor.children[index]
-  const end=groupEnd(editor.children,index)
+  const end=selectedEnd??groupEnd(editor.children,index)
+  const wholeDocument=selectedEnd!==undefined&&index===0&&end===editor.children.length
   batch(editor,()=>{
     for(let i=end-1;i>=index;i--)Transforms.removeNodes(editor,{at:[i]})
     // Restore a durable input row at the removed block, instead of accepting
     // Slate's fallback caret inside the preceding heading/table/code block.
     if(isStructuredBlock(removed)) {
-      Transforms.insertNodes(editor,{type:'paragraph',__blockDepth:blockDepth(removed),children:[{text:''}]},{at:[index]})
+      Transforms.insertNodes(editor,{type:'paragraph',__blockDepth:wholeDocument?0:blockDepth(removed),children:[{text:''}]},{at:[index]})
       Transforms.select(editor,Editor.start(editor,[index]))
       editor.marks=null
       return

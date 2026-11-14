@@ -11,7 +11,9 @@ loaded._compile(buildSync({stdin:{contents:`
  import {ConvertElementPlugin} from './src/wysimark/convert-element-plugin';
  import {ListPlugin} from './src/wysimark/list-plugin';
  import {HeadingPlugin} from './src/wysimark/heading-plugin';
- export const withLists=createWithSink([ConvertElementPlugin.fn,HeadingPlugin.fn,ListPlugin.fn]);
+ import {NormalizeAfterDeletePlugin} from './src/wysimark/normalize-after-delete-plugin';
+ import {CollapsibleParagraphPlugin} from './src/wysimark/collapsible-paragraph-plugin';
+ export const withLists=createWithSink([ConvertElementPlugin.fn,HeadingPlugin.fn,NormalizeAfterDeletePlugin.fn,CollapsibleParagraphPlugin.fn,ListPlugin.fn]);
  export {normalizeOrderedText,resolveOrderedNumbers,rootCache,blockDepth} from './src/blocks/model';
  export {parse,serialize} from './src/wysimark/convert';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'body-list-policy.cjs');
@@ -70,11 +72,12 @@ for(const type of ['unordered-list-item','ordered-list-item','task-list-item'])f
  const before=structuredClone(editor.children);
  assert.equal(rootCache(editor).listGuides.get(editor.children[1]),1);
  if(action==='deleteBackward')editor.deleteBackward('character');else editor.insertBreak();
- assert.equal(editor.children[1].depth,0);assert.equal(blockDepth(editor.children[1]),0);
- assert.equal(rootCache(editor).listGuides.get(editor.children[1]),undefined);
- assert.equal(blockDepth(parse(serialize(editor.children))[1]),0);
+ const depth=action==='deleteBackward'?1:0,guide=depth?1:undefined;
+ assert.equal(editor.children[1].type,action==='deleteBackward'?'paragraph':type);assert.equal(blockDepth(editor.children[1]),depth);
+ assert.equal(rootCache(editor).listGuides.get(editor.children[1]),guide);
+ assert.equal(blockDepth(parse(serialize(editor.children))[1]),depth);
  editor.undo();assert.deepEqual(editor.children,before);assert.equal(rootCache(editor).listGuides.get(editor.children[1]),1);
- editor.redo();assert.equal(blockDepth(editor.children[1]),0);assert.equal(rootCache(editor).listGuides.get(editor.children[1]),undefined);
+ editor.redo();assert.equal(blockDepth(editor.children[1]),depth);assert.equal(rootCache(editor).listGuides.get(editor.children[1]),guide);
 });
 
 test('successive empty Enter presses remove one shared indentation level at a time',()=>{

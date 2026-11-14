@@ -67,7 +67,6 @@ for(const parentType of ['unordered-list-item','ordered-list-item'])for(const bl
  const list=(text,at,extra={})=>({type:parentType,depth:at,__blockDepth:at,children:[{text}],...extra});
  const e=fixture([list('Parent',depth,{__collapsed:true}),list('Child',depth+1,{__collapsed:true}),list('Grandchild',depth+2),list('',depth,{type:blankType,...(blankType==='task-list-item'?{checked:true}:{})}),paragraph('Next')],withFoldedLists);
  Editor.normalize(e,{force:true});Transforms.select(e,Editor.start(e,[3]));const parents=structuredClone(e.children.slice(0,3));
- if(depth>0){e.deleteBackward('character');assert.equal(e.children[3].type,blankType);assert.equal(blockDepth(e.children[3]),0);assert.equal(e.selection.focus.path[0],3)}
  e.deleteBackward('character');assert.equal(e.children.length,5);assert.equal(e.children[3].type,'paragraph');assert.equal(Node.string(e.children[3]),'');assert.deepEqual(e.selection.anchor,Editor.start(e,[3]));assert.deepEqual(e.children.slice(0,3),parents);
  e.deleteBackward('character');assert.equal(e.children.length,4);assert.deepEqual(e.selection.anchor,Editor.end(e,[0]));assert.deepEqual(e.children.slice(0,3),parents);
  e.undo();assert.equal(e.children[3].type,'paragraph');assert.equal(e.selection.focus.path[0],3);e.undo();assert.equal(e.children[3].type,blankType);assert.deepEqual(e.children.slice(0,3),parents);

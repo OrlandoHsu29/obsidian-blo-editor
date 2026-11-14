@@ -1,5 +1,5 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
-import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, rootCache } from './model'
+import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
@@ -8,7 +8,9 @@ import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
 import { isEditableStructure } from './structured-block'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
-const staged=new WeakMap<Editor,{index:number;range:Range}>()
+type BlockSelection={index:number;range:Range;end?:number}
+const staged=new WeakMap<Editor,BlockSelection>()
+const contentSelections=new WeakMap<Editor,Range>()
 const selectingBlock=new WeakSet<Editor>()
 /** Whole-block ranges include folded descendants without entering their text. */
 export function isBlockSelectionRange(editor:Editor,range:Range):boolean {
@@ -20,11 +22,11 @@ export function subscribeBlockSelection(editor:Editor,listener:()=>void) {
  let set=listeners.get(editor);if(!set){set=new Set();listeners.set(editor,set)}
  set.add(listener);return ()=>{set!.delete(listener)}
 }
-function setBlockSelection(editor:Editor,value:{index:number;range:Range}|undefined) {
+function setBlockSelection(editor:Editor,value:BlockSelection|undefined) {
  if(value)staged.set(editor,value);else staged.delete(editor)
  listeners.get(editor)?.forEach(listener=>listener())
 }
-export function clearBlockSelection(editor:Editor){if(staged.has(editor))setBlockSelection(editor,undefined)}
+export function clearBlockSelection(editor:Editor){contentSelections.delete(editor);if(staged.has(editor))setBlockSelection(editor,undefined)}
 export function isWholeBlockSelected(editor:Editor,index:number):boolean {
  const pending=staged.get(editor)
  return !!pending&&!!editor.selection&&Range.equals(editor.selection,pending.range)&&
@@ -34,20 +36,24 @@ export function isWholeBlockSelected(editor:Editor,index:number):boolean {
 export function indentBlockSelection(editor:Editor,delta:1|-1):boolean {
  const pending=staged.get(editor),index=pending&&isWholeBlockSelected(editor,pending.index)?pending.index:undefined
  const handled=indentSelectedBlocks(editor,delta)
- if(handled&&index!==undefined)selectBlockContents(editor,index)
+ if(handled&&index!==undefined) {
+  if(pending?.end!==undefined)selectStructuralRange(editor,0,Editor.range(editor,[]),editor.children.length)
+  else selectBlockContents(editor,index)
+ }
  return handled
 }
 export function deleteWholeBlockSelection(editor:Editor):boolean {
  const pending=staged.get(editor)
  if(editor.wysimark.readOnly||!editor.selection)return false
- let index=pending&&isWholeBlockSelected(editor,pending.index)?pending.index:undefined
+ const selected=pending&&isWholeBlockSelected(editor,pending.index)?pending:undefined
+ let index=selected?.index
  if(index===undefined&&Range.isCollapsed(editor.selection)) {
   const entry=Editor.above(editor,{match:n=>isStructuredBlock(n)&&editor.isVoid(n)})
   if(entry?.[1].length===1)index=entry[1][0]
  }
  if(index===undefined)return false
  clearBlockSelection(editor)
- return deleteBlockGroup(editor,index)
+ return deleteBlockGroup(editor,index,selected?.end)
 }
 export function deleteAtBlockBoundary(editor:Editor):boolean {
  if(deleteWholeBlockSelection(editor))return true
@@ -71,6 +77,7 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
   }
   // At the text start, outdent the subtree before Backspace can merge it.
   if(Element.isElement(node)&&!isEditorSpacer(node)&&!isStructuredBlock(node)&&
+   !(isListBlock(node)&&Editor.isEmpty(editor,node))&&
    blockDepth(node)>0&&point.offset===0&&
    (Point.equals(point,Editor.start(editor,[index]))||Editor.before(editor,point,{unit:'character'})?.path[0]!==index))return changeBlockIndent(editor,index,-1)
  }
@@ -91,26 +98,35 @@ function blockSelectionRange(editor:Editor,index:number):Range {
 }
 export function selectBlockContents(editor:Editor,index:number):boolean {
  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
- const range=blockSelectionRange(editor,index)
+ return selectStructuralRange(editor,index,blockSelectionRange(editor,index))
+}
+function selectStructuralRange(editor:Editor,index:number,range:Range,end?:number):boolean {
+ contentSelections.delete(editor)
  selectingBlock.add(editor)
  try{Transforms.select(editor,range)}finally{selectingBlock.delete(editor)}
- setBlockSelection(editor,{index,range})
+ setBlockSelection(editor,{index,range,end})
  return true
 }
-/** Escalate an exact block selection to the document without unfolding children. */
+/** Select text first; reserve structural block selection for handles and media. */
 export function selectBlockOrDocument(editor:Editor):boolean {
  if(editor.wysimark.readOnly||!editor.selection)return false
- const range=editor.selection,index=boundaryBlockIndex(editor)??Range.start(range).path[0]
- if(!editor.children[index]||isEditorSpacer(editor.children[index]))return false
- const block=blockSelectionRange(editor,index)
+ const range=editor.selection,index=boundaryBlockIndex(editor)??Range.start(range).path[0],node=editor.children[index]
+ if(!Element.isElement(node)||isEditorSpacer(node))return false
+ const block=Editor.range(editor,[index])
+ const document=Editor.range(editor,[])
  const [start,end]=Range.edges(range)
- const whole=isWholeBlockSelected(editor,index)||!Range.isCollapsed(range)&&
-  Point.equals(start,block.anchor)&&Point.equals(end,block.focus)
- if(!whole&&!(Point.equals(start,Editor.start(editor,[]))&&Point.equals(end,Editor.end(editor,[]))&&!Range.isCollapsed(range)))return selectBlockContents(editor,index)
- clearBlockSelection(editor)
- selectingBlock.add(editor)
- try{Transforms.select(editor,Editor.range(editor,[]))}finally{selectingBlock.delete(editor)}
- return true
+ const remembered=contentSelections.get(editor)
+ const covers=(target:Range)=>Point.equals(start,Range.start(target))&&Point.equals(end,Range.end(target))
+ const complete=isWholeBlockSelected(editor,index)||!!remembered&&Range.equals(remembered,range)||
+  Range.isExpanded(range)&&(covers(block)||covers(document))
+ if(!complete) {
+  if(editor.isVoid(node))return selectBlockContents(editor,index)
+  clearBlockSelection(editor)
+  Transforms.select(editor,block)
+  contentSelections.set(editor,block)
+  return true
+ }
+ return selectStructuralRange(editor,0,document,editor.children.length)
 }
 function enterStructure(editor:Editor,index:number,backwards:boolean):void {
  const point=backwards?Editor.end(editor,[index]):Editor.start(editor,[index])
@@ -139,7 +155,7 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
   return true
  }
  const pending=staged.get(editor)
- if(pending&&Range.equals(editor.selection,pending.range)&&structured(editor.children[pending.index])) {
+ if(pending&&pending.end===undefined&&Range.equals(editor.selection,pending.range)&&structured(editor.children[pending.index])) {
   if(isEditableStructure(editor.children[pending.index])) {
    const index=pending.index
    clearBlockSelection(editor)

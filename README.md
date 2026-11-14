@@ -66,6 +66,7 @@ Tab, menus and dragging cannot indent them, but dragging can reorder them. Conti
 heading and parent-block boundaries; intervening text and code do not restart
 same-level numbering. Restart manually when needed; body lists keep ordinary `1.` markers.
 Heading numbers also appear in the native outline.
+The heading-list menu defaults to hash prefixes with H1–H4 all enabled, even in an empty note. Configure absent levels in advance; the note saves these presets and applies them to new headings. Switching heading levels follows the target level's preset, removing the prefix when that level is disabled.
 
 **Table editing by cells, rows, or columns.** Select a rectangle or use row/column
 handles and adjust alignment and headers from the floating toolbar. Click to select
@@ -194,8 +195,9 @@ Leave **Editing scope** empty to include new notes created anywhere in the vault
 Common shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Alt+C text
 color, Ctrl+F find, Ctrl+H replace, and Ctrl+Alt+P reading/editing mode.
 
-Alt+A selects the current block and its children; press again with the whole block selected to select the document. Turn off **Progressive selection with Alt+A** in the plugin settings to disable it immediately.
-Commands and custom bindings are available in Obsidian's hotkey settings.
+Ctrl/Cmd+A first selects only the current block's contents. Backspace clears the text while keeping list markers, heading formatting and code-block frames; another Backspace removes an empty list's marker. Press Ctrl/Cmd+A again to select the entire document, including block structures. Turn off **Progressive selection with Ctrl/Cmd+A** in the plugin settings to select the document immediately. Block handles continue to select whole blocks and their children.
+While editing a formula, Ctrl/Cmd+A stays inside its source input on every press.
+Search **Blo Editor** in **Settings → Hotkeys** to customize formatting, headings, lists, quotes, indentation and links separately from native editor commands. Rebinding or removing shortcuts takes effect immediately. **Configure hotkeys** in the plugin settings opens this filtered list. **Blo Editor: Strikethrough** defaults to Ctrl/Cmd+Shift+X.
 
 ## Write Blo notes with AI
 

@@ -10,6 +10,7 @@ export const $Menu = styled($Panel)`
   font-size: calc(var(--blo-popup-font-size, var(--font-ui-small)) / .875);
   padding: 6px;
   transition: none;
+  width: max-content;
   min-width: 12em;
   max-height: min(420px, calc(100vh - 32px));
   overflow-y: auto;
@@ -58,15 +59,19 @@ export const $MenuItem = styled("div")`
   }
   .--title {
     flex: 1 1 auto;
+    min-width: 0;
     font-size: 0.875em;
     color: var(--text-normal);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .--hotkey {
-    flex: 0 0;
+    flex: 0 0 auto;
     font-size: 0.75em;
     padding-left: 1.5em;
-    color: var(--text-muted);
+    color: color-mix(in srgb, var(--text-muted) 80%, var(--text-faint));
+    white-space: nowrap;
   }
   background: var(--background-secondary);
   cursor: pointer;

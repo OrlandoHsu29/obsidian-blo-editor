@@ -69,7 +69,7 @@
 .wysimark-container button.wysimark-list-number:disabled { opacity:1; cursor:default; }
 /* One marker rail aligns numbers, bullets and task boxes with the same text start. */
 .wysimark-editor { --blo-list-marker-offset:-.33em; }
-.wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] { display:inline-grid; grid-template-areas:"marker"; box-sizing:border-box; width:max-content; min-width:1.65em; height:1.65em; padding:0 1px; margin-left:0; margin-right:4px; font-variant-numeric:tabular-nums; }
+.wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] { display:inline-grid; grid-template-areas:"marker"; box-sizing:border-box; width:max-content; min-width:1.65em; height:1.65em; padding:0 1px; margin-left:0; margin-right:0; font-variant-numeric:tabular-nums; }
 .wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker]::before { content:"99."; grid-area:marker; visibility:hidden; }
 .wysimark-container :is(button.wysimark-list-number,div.--list-item-icon)[data-list-marker] > :is(.wysimark-list-number-label,svg) { grid-area:marker; justify-self:center; align-self:center; }
 .wysimark-block > li > div.--list-item-icon[data-list-marker] { anchor-name:var(--blo-block-anchor); }

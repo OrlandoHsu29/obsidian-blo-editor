@@ -9,8 +9,7 @@ import { useLayer } from "../../use-layer"
 import { AnchorElement } from "../index"
 import { $Anchor, $Edge } from "../styles"
 import { AnchorDialog } from "./AnchorDialog"
-import { isIconOnlyLink, isLinkFullySelected, pointBeforeLink, selectLink, selectedLink } from '../link-keyboard'
-import { setPointerSelection } from '../../../blocks/pointer-selection'
+import { isIconOnlyLink, isLinkFullySelected, selectLink, selectedLink } from '../link-keyboard'
 
 function isPreciseLinkSelection(editor: Editor): boolean {
   const selection = editor.selection
@@ -104,16 +103,6 @@ export function Anchor({
         } else if (!/^\s*(?:javascript|data|vbscript):/i.test(element.href)) {
           event.currentTarget.ownerDocument.defaultView?.open(element.href, element.target || '_blank', 'noopener,noreferrer')
         }
-      }}
-      onMouseUp={event => {
-        if (readOnly || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey ||
-          !(event.target as HTMLElement).closest?.('.wysimark-link-icon')) return
-        const doc = event.currentTarget.ownerDocument, dom = doc.getSelection()
-        if (!dom || dom.isCollapsed) return
-        const range = ReactEditor.toSlateRange(editor,dom,{exactMatch:false,suppressThrow:true})
-        if (!range || !Range.isBackward(range)) return
-        const focus = pointBeforeLink(editor,ReactEditor.findPath(editor,element))
-        setPointerSelection(editor,{anchor:range.anchor,focus},doc)
       }}
       {...attributes}
       ref={setAnchorRef}

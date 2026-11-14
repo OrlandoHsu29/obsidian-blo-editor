@@ -13,6 +13,7 @@ import { useEditor } from "./useEditor"
 import { MarkdownChangeTracker } from "./markdown-change-tracker"
 import type { GetVaultFilePathsHandler, GetVaultImagePathsHandler } from "./types"
 import { SlashPopover } from '../../SlashPopover'
+import { trackLinkIconSelection } from '../anchor-plugin/pointer-selection'
 
 export type { Element, Text } from "./plugins"
 
@@ -60,6 +61,8 @@ export function Editable({
 }: EditableProps) {
   const changeTrackerRef = useRef<MarkdownChangeTracker | undefined>(undefined)
   const pointerTargetRef = useRef<HTMLElement | null>(null)
+  const linkDragRef = useRef<(() => void) | undefined>(undefined)
+  useEffect(() => () => linkDragRef.current?.(), [editor])
   const clearPointerTarget = useCallback(() => { pointerTargetRef.current = null }, [])
   const scrollSelectionIntoView = useCallback((editor: Editor, range: globalThis.Range) => {
     // A mouse click already identifies visible content, including image voids
@@ -229,6 +232,8 @@ export function Editable({
       <SinkEditable
         scrollSelectionIntoView={scrollSelectionIntoView}
         onMouseDownCapture={event => {
+          linkDragRef.current?.()
+          linkDragRef.current = trackLinkIconSelection(editor, event)
           const target = isDomElement(event.target) ? event.target : null
           const anchor = target?.closest<HTMLElement>('td') ?? target?.closest<HTMLElement>('[data-slate-void="true"]') ??
             target?.closest('[data-wysimark-mermaid-scroller]')?.closest<HTMLElement>('[data-wysimark-code-block]')

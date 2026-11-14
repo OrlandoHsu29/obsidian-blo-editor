@@ -7,6 +7,9 @@ const {withHistory}=require('slate-history');
 const loaded=new Module('link-cut.cjs');loaded.require=id=>id==='obsidian'?{getLanguage:()=> 'en',Platform:{isMacOS:false}}:require(id);
 loaded._compile(buildSync({stdin:{contents:`import {createWithSink} from './src/wysimark/sink/editor';import {AnchorPlugin} from './src/wysimark/anchor-plugin';import {TablePlugin} from './src/wysimark/table-plugin';export const withLinks=createWithSink([AnchorPlugin.fn,TablePlugin.fn]);export * from './src/wysimark/anchor-plugin/link-keyboard';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'link-cut.cjs');
 const {withLinks,selectLink,isLinkFullySelected}=loaded.exports;
+const pointerLoaded=new Module('link-pointer.cjs');pointerLoaded.require=loaded.require;
+pointerLoaded._compile(buildSync({entryPoints:['src/wysimark/anchor-plugin/pointer-selection.ts'],bundle:true,platform:'node',format:'cjs',external:['slate','slate-react'],write:false}).outputFiles[0].text,'link-pointer.cjs');
+const {linkIconSelectionRange}=pointerLoaded.exports;
 const link=(text='Title',href='https://example.test')=>({type:'anchor',href,title:'Keep title',children:[{text,bold:true}]});
 const paragraph=children=>({type:'paragraph',children});
 const entries=editor=>[...Editor.nodes(editor,{at:[],match:n=>n.type==='anchor'})];
@@ -54,4 +57,26 @@ test('cutting a complete link inside a table keeps its cell, row and neighboring
  const table={type:'table',columns:[{align:'left'},{align:'left'}],children:[{type:'table-row',children:[cell([{text:'before'},link(),{text:'after'}]),cell([{text:'neighbor'}])]}]};
  const editor=fixture([table]);const [,path]=entries(editor)[0];selectLink(editor,path);editor.deleteFragment();
  assert.equal(entries(editor).length,0);assert.equal(editor.children[0].type,'table');assert.equal(editor.children[0].children[0].children.length,2);assert.equal(Node.string(editor),'beforeafterneighbor');
+});
+
+test('dragging backward across the icon ends exactly after preceding body text',()=>{
+ const editor=fixture([paragraph([{text:'before'},link(),{text:'after'}])]);
+ const range=linkIconSelectionRange(editor,[0,1],Editor.end(editor,[0,1]));
+ assert.deepEqual(range.focus,{path:[0,0],offset:6});Transforms.select(editor,range);assert.equal(isLinkFullySelected(editor,[0,1]),true);
+ editor.deleteFragment();assert.equal(Node.string(editor),'beforeafter');assert.equal(entries(editor).length,0);
+});
+test('dragging forward onto the icon includes its boundary without selecting the first label character',()=>{
+ const editor=fixture([paragraph([{text:'before'},link(),{text:'after'}])]);
+ const anchor={path:[0,0],offset:6},range=linkIconSelectionRange(editor,[0,1],anchor);
+ assert.deepEqual(range,{anchor,focus:{path:[0,1,0],offset:0}});assert.equal(Editor.string(editor,range),'');
+});
+test('dragging from the first label character onto the icon never consumes preceding body text',()=>{
+ const editor=fixture([paragraph([{text:'before'},link(),{text:'after'}])]);
+ const range=linkIconSelectionRange(editor,[0,1],Editor.start(editor,[0,1]));
+ assert.deepEqual(range.focus,{path:[0,0],offset:6});assert.equal(Editor.string(editor,range),'');
+});
+test('a standalone link uses the empty leading text boundary without requiring another character',()=>{
+ const editor=fixture([paragraph([{text:''},link(),{text:''}])]);
+ const range=linkIconSelectionRange(editor,[0,1],Editor.end(editor,[0,1]));assert.deepEqual(range.focus,{path:[0,0],offset:0});
+ Transforms.select(editor,range);assert.equal(isLinkFullySelected(editor,[0,1]),true);editor.deleteFragment();assert.equal(entries(editor).length,0);assert.equal(editor.children[0].type,'paragraph');
 });

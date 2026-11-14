@@ -39,7 +39,7 @@ export function editorCommands(): EditorCommand[] {
     { id: 'toggle-reading', name: ui('切换富文本编辑与阅读'), hotkeys: key('p', 'Mod', 'Alt'), readOnly: true },
     { id: 'text-color', name: ui('应用上次字体颜色'), hotkeys: key('c', 'Mod', 'Alt') },
     { id: 'insert-inline-math', name: ui('插入行内公式'), hotkeys: key('m', 'Mod', 'Shift') },
-    { id: 'clear-formatting', name: ui('清除文字样式'), hotkeys: [] },
+    { id: 'clear-formatting', name: ui('清除格式'), hotkeys: [] },
     { id: 'insert-drawing', name: ui('插入画板'), hotkeys: [] },
   ]
 }
@@ -66,7 +66,7 @@ export function installEditorHotkeys(plugin: Plugin, getEditor: () => Editor | u
   // command cannot fall through to an old Slate or Wysimark format shortcut.
   const legacy = [key('j', 'Mod'), ...['0','1','2','3','4','5','7','8','9','k','.',','].map(k => key(k, 'Mod', Platform.isMacOS ? 'Alt' : 'Shift'))].flat()
   const retiredBindings = [...commands.flatMap(c => c.hotkeys), ...legacy]
-  const aliases: Record<string, string> = { [ui('清除格式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color' }
+  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color' }
   return {
     handle(editor: Editor, event: KeyboardEvent): boolean {
       if (event.isComposing) return false

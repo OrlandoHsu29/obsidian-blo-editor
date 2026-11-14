@@ -1,50 +1,38 @@
-import { Editor, Node, Path, Point, Transforms } from "slate"
+import { Editor, Element, Node, Path, Transforms } from "slate"
 
 import { findElementUp } from "../../sink"
 import type { CodeBlockElement } from "../types"
 import { isListItem } from '../../list-plugin'
 import { blockDepth } from '../../../blocks/model'
+import { removeMarks } from '../../marks-plugin/methods/removeMarks'
 
-export function convertCodeBlockToParagraph(editor: Editor): boolean {
-  const entry = findElementUp<CodeBlockElement>(editor, "code-block")
-  if (!entry) return false
+export function convertCodeBlockToParagraph(editor: Editor, at?: Path): boolean {
+  const entry = at ? Editor.node(editor, at) : findElementUp<CodeBlockElement>(editor, "code-block")
+  if (!entry || !Element.isElement(entry[0]) || entry[0].type !== 'code-block') return false
   const [block, path] = entry
-  const lines = block.children.map((line) => Node.string(line))
-  const mapPoint = (point: Point): Point => {
-    if (!Path.isAncestor(path, point.path)) return point
-    const lineIndex = point.path[path.length]
-    const linePath = [...path, lineIndex]
-    const offset = lines.slice(0, lineIndex)
-      .reduce((sum, line) => sum + line.length + 1, 0)
-      + Editor.string(editor, { anchor: Editor.start(editor, linePath), focus: point }).length
-    return { path: [...path, 0], offset }
-  }
-  const selection = editor.selection && {
-    anchor: mapPoint(editor.selection.anchor),
-    focus: mapPoint(editor.selection.focus),
-  }
   Editor.withoutNormalizing(editor, () => {
-    Transforms.removeNodes(editor, { at: path })
-    Transforms.insertNodes(
-      editor,
-      { type: "paragraph", __blockDepth: blockDepth(block), children: [{ text: lines.join("\n") }] },
-      { at: path }
-    )
-    if (selection) Transforms.select(editor, selection)
+    // Merge in place so Slate keeps caret/range references, block identity and
+    // undo/redo positions instead of detaching them during node replacement.
+    for (let i = block.children.length - 1; i > 0; i--) {
+      const line = [...path, i]
+      Transforms.insertText(editor, '\n', { at: Editor.start(editor, line) })
+      Transforms.mergeNodes(editor, { at: line })
+    }
+    Transforms.setNodes(editor, { type: 'paragraph', __blockDepth: blockDepth(block) }, { at: path })
+    Transforms.unsetNodes(editor, 'language', { at: path })
+    Transforms.unwrapNodes(editor, { at: [...path, 0] })
+    removeMarks(editor, { at: path })
+    const paragraph = Node.get(editor, path)
+    if (Element.isElement(paragraph)) for (let i = paragraph.children.length - 1; i > 0; i--) {
+      Transforms.mergeNodes(editor, { at: [...path, i] })
+    }
     const parentPath = Path.parent(path)
     if (parentPath.length) {
       const parent = Node.get(editor, parentPath)
       if (isListItem(parent) && parent.blockChildren && parent.children.length === 1 &&
           'type' in parent.children[0] && parent.children[0].type === 'paragraph') {
-        const child = parent.children[0], active = editor.selection
-        Transforms.removeNodes(editor, { at: parentPath })
-        const { blockChildren: _unused, ...simple } = parent
-        void _unused
-        Transforms.insertNodes(editor, { ...simple, children: child.children }, { at: parentPath })
-        if (active) Transforms.select(editor, {
-          anchor: { path: [...parentPath, ...active.anchor.path.slice(parentPath.length + 1)], offset: active.anchor.offset },
-          focus: { path: [...parentPath, ...active.focus.path.slice(parentPath.length + 1)], offset: active.focus.offset },
-        })
+        Transforms.unwrapNodes(editor, { at: [...parentPath, 0] })
+        Transforms.unsetNodes(editor, 'blockChildren', { at: parentPath })
       }
     }
   })

@@ -138,7 +138,7 @@ export default class BloEditorPlugin extends Plugin {
       if (!checking) new NoteExportModal(view).open();
       return true;
     }});
-    this.addCommand({id:'clear-formatting',name:ui("清除文字样式"),checkCallback:checking=>{
+    this.addCommand({id:'clear-formatting',name:ui("清除格式"),checkCallback:checking=>{
       const view=this.app.workspace.getActiveViewOfType(BloView);if(!view?.editor||view.readOnly)return false;
       if(!checking)clearFormatting(view.editor);return true;
     }});

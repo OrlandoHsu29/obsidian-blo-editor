@@ -5,6 +5,7 @@ import { MathFormula } from "./MathFormula"
 import { editMath } from "./editing"
 import type { MathElement, MathPluginCustomTypes } from "./types"
 import { materializeTextBoundary } from "../../blocks/boundary"
+import { mathSelectionSource } from './selection-source'
 
 const isMath = (node: unknown): node is MathElement => Element.isElement(node) && (node.type === "math-inline" || node.type === "math-block")
 export function canInsertMath(editor: Editor): boolean {
@@ -16,7 +17,7 @@ function insertInline(editor: Editor): boolean {
   if (!canInsertMath(editor)) return false
   const existing = Editor.above<MathElement>(editor, { match: isMath })
   if (existing) { editMath(editor, existing[0]); return true }
-  const latex = Editor.string(editor, editor.selection!)
+  const latex = mathSelectionSource(editor)
   HistoryEditor.withNewBatch(editor, () => Editor.withoutNormalizing(editor, () => {
     materializeTextBoundary(editor)
     Transforms.insertNodes(editor, { type: 'math-inline', latex, children: [{ text: '' }] }, { select: true })

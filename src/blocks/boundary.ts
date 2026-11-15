@@ -5,7 +5,16 @@ import { isStructuredBlock } from './structured-block'
 
 export { isStructuredBlock } from './structured-block'
 
-/** Turn an insertion caret into a durable text row before inserting content. */
+const boundaryInputScroll = new WeakMap<Editor, number>()
+
+/** The first text row needs nearest-edge scrolling rather than Slate's centering. */
+export function takeBoundaryInputScroll(editor: Editor): boolean {
+  const index = boundaryInputScroll.get(editor)
+  boundaryInputScroll.delete(editor)
+  return index !== undefined && editor.selection?.anchor.path[0] === index
+}
+
+/** Turn the right-side insertion caret into a separate durable text row. */
 export function materializeTextBoundary(editor: Editor): boolean {
   if (!editor.selection) return false
   const index = editor.selection.anchor.path[0], node = editor.children[index]
@@ -13,6 +22,8 @@ export function materializeTextBoundary(editor: Editor): boolean {
   Transforms.setNodes(editor, {
     __collapsible: undefined, __blockDepth: blockDepth(editor.children[index - 1] ?? node),
   }, { at: [index] })
+  // Normalization inserts a replacement spacer before this now-durable row.
+  if (isStructuredBlock(editor.children[index - 1])) boundaryInputScroll.set(editor, index + 1)
   return true
 }
 

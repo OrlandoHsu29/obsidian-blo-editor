@@ -4,6 +4,7 @@ import { normalizeSiblings } from "../../sink"
 
 import { ParagraphElement } from ".."
 import { isEditorSpacer } from '../../../blocks/model'
+import { isStructuredBlock } from '../../../blocks/structured-block'
 
 function isParagraph(node: Element): node is ParagraphElement {
   return Element.isElement(node) && node.type === "paragraph"
@@ -27,7 +28,7 @@ export function normalizeSiblingParagraphs(
     }
     // A converted/deleted wall can leave its old insertion paragraph behind.
     // Editable text already provides the caret, so only the spacer is removed.
-    if (Editor.hasInlines(editor, a[0]) && !Editor.isVoid(editor, a[0])) {
+    if (!isStructuredBlock(a[0]) && Editor.hasInlines(editor, a[0]) && !Editor.isVoid(editor, a[0])) {
       Transforms.removeNodes(editor, { at: b[1] })
       return true
     }

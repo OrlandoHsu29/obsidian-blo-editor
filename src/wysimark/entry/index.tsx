@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react"
 import { Descendant, Editor } from "slate"
 import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
 import { isPointerSelecting } from '../../blocks/pointer-selection'
+import { takeBoundaryInputScroll } from '../../blocks/boundary'
 import { tableCellSelection } from '../table-plugin/cell-selection'
 import { isDomElement } from '../../dom-guards'
 
@@ -67,12 +68,16 @@ export function Editable({
   useEffect(() => () => linkDragRef.current?.(), [editor])
   const clearPointerTarget = useCallback(() => { pointerTargetRef.current = null }, [])
   const scrollSelectionIntoView = useCallback((editor: Editor, range: globalThis.Range) => {
+    const boundaryInput = takeBoundaryInputScroll(editor)
     // A mouse click already identifies visible content, including image voids
     // and a Mermaid block switching from its diagram to source code.
     // Keep that target stationary until typing or keyboard navigation takes over.
     const target = pointerTargetRef.current
     if (target?.isConnected && target.contains(range.startContainer) && target.contains(range.endContainer)) return
-    if (!isPointerSelecting(editor) && !tableCellSelection(editor)?.axis) defaultScrollSelectionIntoView(editor, range)
+    if (!isPointerSelecting(editor) && !tableCellSelection(editor)?.axis) {
+      if (boundaryInput) range.startContainer.parentElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      else defaultScrollSelectionIntoView(editor, range)
+    }
   }, [])
 
   /**

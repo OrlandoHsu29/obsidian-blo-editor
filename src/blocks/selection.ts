@@ -164,7 +164,14 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
   }
   if(event.key==='ArrowLeft'||event.key==='ArrowRight') {
    if(event.key==='ArrowRight'){clearBlockSelection(editor);return selectStructuredBoundary(editor,pending.index)}
-   Transforms.select(editor,Editor.end(editor,[pending.index]));clearBlockSelection(editor);return true
+   let previous=pending.index-1
+   while(previous>=0&&isEditorSpacer(editor.children[previous]))previous--
+   if(previous>=0) {
+    clearBlockSelection(editor)
+    if(structured(editor.children[previous]))selectStructuredBoundary(editor,previous)
+    else Transforms.select(editor,Editor.end(editor,[previous]))
+   }
+   return true
   }
   const next=pending.index+(event.key==='ArrowUp'?-1:1)
   if(next>=0&&next<editor.children.length) {

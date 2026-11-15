@@ -388,8 +388,9 @@
    horizontal gutter needed by block handles and list markers. */
 .ks-editor-chunk-leaf { margin: 0 calc(-1 * var(--blo-document-gutter)) 0 calc(-1 * (var(--blo-document-gutter) + var(--blo-left-edge-clearance))); padding:0 var(--blo-document-gutter) 0 calc(var(--blo-document-gutter) + var(--blo-left-edge-clearance)); overflow-clip-margin:32px; content-visibility:auto; contain-intrinsic-block-size:auto 512px; }
 /* Media can be much taller than a text chunk. Keep its real layout across
-   viewport edges instead of restoring it from a shared intrinsic estimate. */
-.ks-editor-chunk-leaf:has([data-blo-drawing],[data-blo-image],table) { content-visibility:visible; contain:layout style paint; contain-intrinsic-block-size:none; }
+   viewport edges instead of restoring it from a shared intrinsic estimate.
+   Boundary-only chunks must also keep their actual zero height on first input. */
+.ks-editor-chunk-leaf:has([data-blo-drawing],[data-blo-image],table,p[data-block-boundary]) { content-visibility:visible; contain:layout style paint; contain-intrinsic-block-size:none; }
 .wysimark-editor :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,table,hr,[data-wysimark-code-block]) { margin-block: 0 !important; }
 .wysimark-editor :is(p,li) { line-height: 1.65 !important; }
 .wysimark-editor :is(p,li,[data-wysimark-block])[data-subtitle="true"] { font-weight:var(--font-bold,700); }
@@ -424,6 +425,10 @@
     height: 1.65em !important;
     min-height: 0;
     line-height: 1.65 !important;
+    /* IME preedit text must stay on the caret line in this 1px-wide slot. */
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
     border: 0;
     border-radius: 0;
     background: none;

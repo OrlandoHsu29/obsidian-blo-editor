@@ -81,9 +81,9 @@ export function ToolbarButton({
        * `menu` automatically. This replicates behavior in menus in windowing
        * systems.
        */
-      if (menuLayer.layer && !inOverflow && !menuToggle) openMenu()
+      if (!isDisabled && menuLayer.layer && !inOverflow && !menuToggle) openMenu()
     },
-    [menuLayer.layer, openMenu, inOverflow, menuToggle]
+    [menuLayer.layer, openMenu, inOverflow, menuToggle, isDisabled]
   )
 
   return (

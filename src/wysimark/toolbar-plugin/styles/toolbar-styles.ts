@@ -90,7 +90,6 @@ export const $ToolbarButton = styled("div")`
   &.--disabled {
     opacity: 0.3;
     cursor: default;
-    pointer-events: none;
   }
   &.--menu-open {
     color: var(--text-normal);

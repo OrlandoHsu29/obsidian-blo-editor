@@ -374,7 +374,8 @@
 
 /* Fixed typography; each root block owns its single preceding gap. */
 .wysimark-editor { --wysimark-block-spacing: 1em; line-height: 1.65 !important; }
-.wysimark-editor, .wysimark-editor * { letter-spacing: normal !important; word-spacing: normal !important; }
+/* MathJax uses negative letter spacing for its breakable operator spaces. */
+.wysimark-editor, .wysimark-editor :not(mjx-container, mjx-container *) { letter-spacing: normal !important; word-spacing: normal !important; }
 /* Native inter-script spacing changes layout only, never stored or copied text. */
 .wysimark-editor { text-autospace:normal; }
 .wysimark-editor :is(pre,code,[data-inline-code],[data-wysimark-code-block],[data-blo-math],[data-blo-drawing]) { text-autospace:no-autospace; }

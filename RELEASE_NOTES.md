@@ -2,6 +2,7 @@
 
 ## 中文
 
+- 修复正文统一字距覆盖 MathJax 运算符间距的问题，恢复公式符号两侧的正常留白。
 - 修复从库外路径打开 README 等含图片笔记时，动态资源地址触发图片反复挂载、正文闪烁和持续重排的问题；相同图片尺寸不再重复更新状态。
 - 正文粘贴到已有样式的标题、列表时保留目标行样式；局部复制标题或列表文字时不携带块样式，保留文字自身的行内格式，完整块复制仍保留块样式。
 - 勾选任务框时退出插件管理的旧表格单元格选中状态，避免重新进入编辑或滚回表格；选中的表格标题行、标题列使用更深底色。
@@ -15,6 +16,7 @@
 
 ## English
 
+- Preserve MathJax's native operator spacing instead of overriding it with body-text letter spacing.
 - Fix repeated image remounts, flashing content and continuous reflow when external file adapters return changing resource URLs. Avoid redundant updates for unchanged natural image dimensions.
 - Preserve an existing heading/list style when pasting body text. Partial copies carry text and inline formatting without heading/list styles; complete block copies retain their structure.
 - Leave the previous plugin-managed table cell selection when toggling a task, preventing accidental cell editing or scrolling back to the table. Distinguish selected header rows and columns with deeper shading.

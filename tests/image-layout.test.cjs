@@ -16,10 +16,9 @@ loaded.require=id=>{
  return require(id);
 };
 loaded._compile(buildSync({stdin:{contents:`
- export {convertToInlineImage} from './src/wysimark/image-plugin/render-element/image-with-controls/image-toolbar/image-type-buttons/convert-to-inline-image';
  export {convertToBlockImage} from './src/wysimark/image-plugin/render-element/image-with-controls/image-toolbar/image-type-buttons/convert-to-block-image';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-react'],write:false}).outputFiles[0].text,'image-layout.cjs');
-const {convertToInlineImage,convertToBlockImage}=loaded.exports;
+const {convertToBlockImage}=loaded.exports;
 
 function fixture(children){
  const editor=withHistory(createEditor());
@@ -38,20 +37,16 @@ for(const [name,dimensions] of Object.entries({
  widthOnly:{width:480},
  dimensionsOnly:{width:720,height:480},
 })){
- test(`layout round trip preserves ${name} dimensions, metadata and undo/redo`,()=>{
-  const editor=fixture([image(dimensions)]);
-  Transforms.select(editor,Editor.start(editor,[0]));
+ test(`legacy inline media converts to a block preserving ${name} dimensions, metadata and undo/redo`,()=>{
+  const photo={...image(dimensions),type:'image-inline'};
+  const editor=fixture([{type:'paragraph',children:[{text:''},photo,{text:''}]}]);
+  Transforms.select(editor,Editor.start(editor,[0,1]));
   const before=structuredClone(editor.children);
-  HistoryEditor.withNewBatch(editor,()=>convertToInlineImage(editor,editor.children[0]));
-  const [inline]=findImage(editor);
-  assert.deepEqual(inline,{...before[0],type:'image-inline'});
-  const inlineDocument=structuredClone(editor.children);
-  editor.undo();assert.deepEqual(editor.children,before);
-  editor.redo();assert.deepEqual(editor.children,inlineDocument);
   HistoryEditor.withNewBatch(editor,()=>convertToBlockImage(editor,findImage(editor)[0]));
-  assert.deepEqual(editor.children,before);
-  editor.undo();assert.deepEqual(editor.children,inlineDocument);
-  editor.redo();assert.deepEqual(editor.children,before);
+  assert.deepEqual(editor.children,[image(dimensions)]);
+  const blockDocument=structuredClone(editor.children);
+  editor.undo();assert.deepEqual(editor.children,before);
+  editor.redo();assert.deepEqual(editor.children,blockDocument);
  });
 }
 

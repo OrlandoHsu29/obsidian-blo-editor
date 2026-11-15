@@ -1,7 +1,7 @@
-import { Editor, Element, Text, Transforms } from "slate"
+import { Editor, Node, Path, Text, Transforms } from "slate"
 import { ReactEditor } from "slate-react"
 
-import { findElementUp } from "../../../../../sink"
+import { blockDepth } from '../../../../../../blocks/model'
 import { ImageInlineElement } from "../../../../types"
 
 export function convertToBlockImage(
@@ -9,8 +9,14 @@ export function convertToBlockImage(
   element: ImageInlineElement
 ) {
   const path = ReactEditor.findPath(editor, element)
+  convertInlineImageAtPath(editor, path)
+}
 
+/** Path-based conversion also works after asynchronous attachment downloads. */
+export function convertInlineImageAtPath(editor: Editor, path: Path) {
   Editor.withoutNormalizing(editor, () => {
+    const parentPath = Path.parent(path), parentElement = Node.parent(editor, path)
+    const depth = blockDepth(parentElement)
     /**
      * Convert the inline image to a block image.
      *
@@ -24,7 +30,7 @@ export function convertToBlockImage(
      */
     Transforms.setNodes(
       editor,
-      { type: "image-block" },
+      { type: "image-block", ...(depth ? { __blockDepth: depth } : {}) },
       { at: path }
     )
     /**
@@ -34,12 +40,6 @@ export function convertToBlockImage(
      * isn't, something isn't working properly because the Slate normalization
      * rules require a block parent to an inline.
      */
-    const parentEntry = findElementUp(
-      editor,
-      (node) => Element.isElement(node) && Editor.isBlock(editor, node) && node.type !== "image-block"
-    )
-    if (!parentEntry) throw new Error("This shouldn't happen")
-    const [parentElement, parentPath] = parentEntry
     const siblings = parentElement.children
     const siblingCount = parentElement.children.length
     const index = path.slice(-1)[0]

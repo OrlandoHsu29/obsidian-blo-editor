@@ -4,6 +4,7 @@ import { HistoryEditor } from 'slate-history'
 import { attachmentPreviewUrl } from './attachment-preview'
 import { wikiEmbedUrl } from './wysimark/convert/obsidian-links'
 import { imageExtensions, mediaExtensions } from './media-extensions'
+import { convertInlineImageAtPath } from './wysimark/image-plugin/render-element/image-with-controls/image-toolbar/image-type-buttons/convert-to-block-image'
 
 const mediaFile = new RegExp(`\\.(?:${imageExtensions}|${mediaExtensions})(?=$|[?!#@:;/"'])`, 'i')
 
@@ -124,6 +125,10 @@ export function createMediaLinkImport(editor: Editor, at: Path, url: string) {
         const apply = () => Editor.withoutNormalizing(editor, () => {
           Transforms.removeNodes(editor, { at })
           Transforms.insertNodes(editor, { type: 'image-inline', url: preview, alt: file.name, children: [{ text: '' }] }, { at })
+          // Table content currently accepts inline children only. In text blocks,
+          // use the existing layout conversion to split before/after the media.
+          const parent = Node.parent(editor, at)
+          if (Element.isElement(parent) && parent.type !== 'table-content') convertInlineImageAtPath(editor, at)
         })
         if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, apply)
         else apply()

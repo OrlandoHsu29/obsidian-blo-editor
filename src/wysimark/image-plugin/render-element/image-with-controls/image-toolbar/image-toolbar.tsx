@@ -19,7 +19,7 @@ import { useBlockToolbarPosition } from '../../../../use-reposition/hooks/use-bl
  * It includes:
  *
  * - A set of image resize presets when clicked resizes the image to the preset
- * - Buttons to toggle between a block image and an inline image
+ * - Convert a legacy inline image to a standalone block
  */
 export function ImageToolbar({
   element,

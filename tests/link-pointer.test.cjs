@@ -33,6 +33,15 @@ function fixture(){
  return {e,event,link,selection,listeners,frames,missIcon(){hit=false},setNativeCaret(point){nativePoint=point},pointToPreviousLine(){previousLine={top:-22,bottom:0,height:22}},pointToNextLine(){previousLine={top:40,bottom:62,height:22}},get writes(){return writes},dispatch(type,extra={}){listeners.get('doc:'+type)?.fn({buttons:1,clientX:20,clientY:20,...extra})},blur(){listeners.get('win:blur')?.fn()},paint(){for(const [id,fn]of frames){frames.delete(id);fn()}}};
 }
 
+test('a gesture already owned by table selection does not start a competing text tracker',()=>{
+ const f=fixture();f.event.defaultPrevented=true;
+ const before=structuredClone(f.e.selection);
+ assert.equal(trackLinkIconSelection(f.e,f.event),undefined);
+ assert.equal(f.listeners.size,0);
+ for(const x of [20,40,80,40]){f.dispatch('mousemove',{clientX:x});f.dispatch('selectionchange');f.paint()}
+ assert.equal(f.writes,0);assert.deepEqual(f.e.selection,before);
+});
+
 for(const spaces of [' ','   ','\u00a0'])test(`a press in preceding whitespace ${JSON.stringify(spaces)} resolves the icon without hitting the anchor DOM`,()=>{
  const f=fixture();f.e.children[0].children[0].text='body'+spaces;
  f.missIcon();f.setNativeCaret({path:[0,0],offset:4});
@@ -146,4 +155,41 @@ test('blur or unmount releases the point reference, listeners and queued frame',
 });
 test('read-only and modified clicks do not install drag handlers',()=>{
  for(const key of ['readOnly','shiftKey','ctrlKey','metaKey','altKey']){const f=fixture();if(key==='readOnly')f.e.wysimark.readOnly=true;else f.event[key]=true;assert.equal(trackLinkIconSelection(f.e,f.event),undefined);assert.equal(f.listeners.size,0)}
+});
+
+test('ordinary text dragging never repairs an anchor before crossing an icon',()=>{
+ const f=fixture();f.missIcon();const cleanup=trackLinkIconSelection(f.e,f.event);
+ const range={anchor:{path:[0,0],offset:1},focus:{path:[0,2],offset:3}};
+ Transforms.select(f.e,range);f.selection.range=range;
+ f.dispatch('mousemove',{clientX:130});f.dispatch('selectionchange');f.paint();
+ assert.equal(f.writes,0);assert.deepEqual(f.e.selection,range);cleanup();
+});
+
+test('a later claimed move cancels queued link corrections and releases references',()=>{
+ const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);
+ f.dispatch('mousemove');assert.equal(f.frames.size,1);
+ f.dispatch('mousemove',{defaultPrevented:true});f.paint();
+ assert.equal(f.writes,0);assert.equal(f.listeners.size,0);assert.equal(Editor.pointRefs(f.e).size,0);cleanup();
+});
+
+test('read-only transitions and detached editors cancel an active tracker',()=>{
+ for(const detached of [false,true]){
+  const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);f.dispatch('mousemove');
+  if(detached)f.e.host.isConnected=false;else f.e.wysimark.readOnly=true;
+  f.dispatch('mousemove');f.paint();assert.equal(f.writes,0);assert.equal(f.listeners.size,0);assert.equal(Editor.pointRefs(f.e).size,0);cleanup();
+ }
+});
+
+test('a queued frame observes read-only changes without waiting for another move',()=>{
+ const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);f.dispatch('mousemove');
+ f.e.wysimark.readOnly=true;f.paint();
+ assert.equal(f.writes,0);assert.equal(f.listeners.size,0);assert.equal(Editor.pointRefs(f.e).size,0);cleanup();
+});
+
+test('synchronous selection notifications do not reenter a correction',()=>{
+ const f=fixture(),cleanup=trackLinkIconSelection(f.e,f.event);
+ const set=f.selection.setBaseAndExtent;
+ f.selection.setBaseAndExtent=function(...args){f.dispatch('selectionchange');set.apply(this,args)};
+ f.dispatch('mousemove');f.dispatch('selectionchange');f.paint();
+ assert.equal(f.writes,1);cleanup();assert.equal(f.listeners.size,0);
 });

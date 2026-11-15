@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 import { Editor, Element as SlateElement, Node, Path, Point, Range, Text } from 'slate'
 import { ReactEditor } from 'slate-react'
-import { setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
+import { isPointerSelecting, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
 import { pointBeforeLink, selectLink } from './link-keyboard'
 
 /** Shared geometry for starting a gesture and extending one across the icon. */
@@ -42,7 +42,9 @@ export function linkIconSelectionRange(editor: Editor, path: number[], anchor: P
 
 /** Correct native dragging only over icons; leave label characters to the browser. */
 export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLElement>): (() => void) | undefined {
-  if (editor.wysimark.readOnly || event.button !== 0 || event.detail > 1 ||
+  // A table or boundary handler may already own this gesture. Starting another
+  // tracker would restore its text anchor over that handler's cell range.
+  if (event.defaultPrevented || isPointerSelecting(editor) || editor.wysimark.readOnly || event.button !== 0 || event.detail > 1 ||
     event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
   const host = event.currentTarget, doc = host.ownerDocument, win = doc.defaultView!
   const x = event.clientX, y = event.clientY
@@ -77,7 +79,10 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   let anchor: ReturnType<typeof Editor.pointRef> | undefined, moved = false, frame = 0
   let pointer: globalThis.MouseEvent | undefined
   let lastLink: HTMLAnchorElement | undefined
+  let active = true, correcting = false
   const cleanup = () => {
+    if (!active) return
+    active = false
     anchor?.unref(); anchor = undefined
     lastLink = undefined; pointer = undefined
     doc.removeEventListener('mousemove', move, true)
@@ -87,7 +92,8 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
     win.removeEventListener('blur', cleanup)
   }
   const correct = (event: globalThis.MouseEvent) => {
-    if (!anchor?.current) return
+    if (!active || correcting || !anchor?.current) return
+    if (isPointerSelecting(editor) || editor.wysimark.readOnly || host.isConnected === false) { cleanup(); return }
     const native = doc.getSelection(), node = native?.focusNode
     const focusElement = node?.nodeType === 1 ? node as Element : node?.parentElement
     const hit = doc.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLAnchorElement>('a[data-link-icon]')
@@ -112,6 +118,9 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
       lastLink = link
       break
     }
+    // Ordinary text dragging belongs to the browser. Anchor repair is needed
+    // only after this gesture has actually crossed a link's non-editable icon.
+    if (!target && !lastLink) return
     current ??= native && ReactEditor.toSlateRange(editor, native, { exactMatch: false, suppressThrow: true })
     // Chromium can restart its native drag anchor at the label's first text
     // point after crossing contentEditable=false. Keep the original anchor
@@ -120,10 +129,13 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
       current ? { anchor: anchor.current, focus: current.focus } : undefined
     if (!range) return
     if (editor.selection && Range.equals(editor.selection, range) && current && Range.equals(current, range)) return
-    setPointerSelection(editor, range, doc)
+    correcting = true
+    try { setPointerSelection(editor, range, doc) } finally { correcting = false }
   }
   const move = (event: globalThis.MouseEvent) => {
-    if (!(event.buttons & 1)) { cleanup(); return }
+    // Another handler can take over after mousedown (e.g. leaving an edited
+    // table cell). Retire pending corrections as soon as it claims the move.
+    if (event.defaultPrevented || isPointerSelecting(editor) || editor.wysimark.readOnly || host.isConnected === false || !(event.buttons & 1)) { cleanup(); return }
     if (!moved && Math.hypot(event.clientX - x, event.clientY - y) < 3) return
     moved = true
     if (!anchor) {

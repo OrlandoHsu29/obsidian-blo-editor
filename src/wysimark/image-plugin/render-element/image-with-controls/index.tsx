@@ -1,5 +1,5 @@
 import { clsx } from "clsx"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useReadOnly, useSelected, useSlateStatic } from "slate-react"
 
 import {
@@ -38,7 +38,10 @@ export function ImageWithControls({
 }) {
   const editor = useSlateStatic()
   const revision = useAttachmentRevision(editor, element.url)
-  const url = editor.wysimark.resolveImageUrl?.(element.url) ?? element.url
+  // Some file adapters add a fresh cache-busting token on every resolution.
+  // A size/selection render must not remount the image and trigger onLoad again.
+  const url = useMemo(() => editor.wysimark.resolveImageUrl?.(element.url) ?? element.url,
+    [editor, element.url, revision])
   const selected = useSelected()
   const readOnly = useReadOnly()
   const [naturalSize, setNaturalSize] = useState<{width: number; height: number} | null>(null)
@@ -102,7 +105,9 @@ export function ImageWithControls({
     <$ImageContainer className={className} data-blo-image>
       <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width ?? element.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
-        if (image.naturalWidth && image.naturalHeight) setNaturalSize({width: image.naturalWidth, height: image.naturalHeight})
+        if (image.naturalWidth && image.naturalHeight) setNaturalSize(current =>
+          current?.width === image.naturalWidth && current.height === image.naturalHeight
+            ? current : {width: image.naturalWidth, height: image.naturalHeight})
       }} />
       {showControls ? (
         <ImageToolbar

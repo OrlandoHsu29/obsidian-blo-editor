@@ -1,5 +1,7 @@
 import { useCallback, useRef } from "react"
 import { useSlateStatic } from "slate-react"
+import { Transforms } from 'slate'
+import { tableCellSelection } from '../../table-plugin/cell-selection'
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -15,6 +17,8 @@ export function TaskListItem({
 }: ConstrainedRenderElementProps<TaskListItemElement>) {
   const editor = useSlateStatic()
   const toggle = useCallback(() => {
+    // Leave plugin-owned cell selection; ordinary text keeps its native caret.
+    if (tableCellSelection(editor)) Transforms.deselect(editor)
     editor.list.toggleTaskListItem({ at: element })
   }, [editor, element])
 
@@ -27,7 +31,8 @@ export function TaskListItem({
   const marginLeft = `${element.depth * 2}em`
   return (
     <$TaskListItem {...attributes} ref={attachList} style={{ marginLeft }} onMouseEnter={align}>
-      <div className="--list-item-icon" data-list-marker contentEditable={false}>
+      <div className="--list-item-icon" data-list-marker contentEditable={false}
+        onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}>
         {element.checked ? (
           <CheckedIcon onClick={toggle} style={{ cursor: "pointer" }} />
         ) : (

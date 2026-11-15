@@ -32,6 +32,17 @@ const values=editor=>target(editor).children.map(row=>row.children.map(Node.stri
 const path=editor=>[editor.children.indexOf(target(editor))];
 const select=(editor,x,y)=>selectTableCell(editor,[...path(editor),y,x]);
 
+test('leaving the table for a task checkbox clears its selection without entering cell editing',()=>{
+ const e=fixture([['Header'],['Cell']]);
+ Transforms.insertNodes(e,{type:'task-list-item',depth:0,checked:false,children:[{text:'Task'}]},{at:[e.children.length]});
+ e.history.undos=[];e.history.redos=[];
+ select(e,0,1);const at=[e.children.length-1];
+ Transforms.deselect(e);
+ Transforms.setNodes(e,{checked:true},{at});
+ assert.equal(e.selection,null);assert.equal(tableCellSelection(e),undefined);assert.equal(Node.get(e,at).checked,true);
+ e.undo();assert.equal(Node.get(e,at).checked,false);
+});
+
 test('a native copied table fills cells from a selected cell without nesting or affecting neighbors',()=>{
  const editor=fixture([['00','01','02'],['10','11','12'],['20','21','22']]);select(editor,1,1);
  const before=structuredClone(editor.children);editor.insertFragment([table([['A','B'],['C','D']])]);

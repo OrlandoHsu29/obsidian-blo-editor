@@ -94,7 +94,7 @@ export function PdfEmbed({ app, file, spec, sourcePath }: { app: App; file: TFil
     })
     return () => { cancelled = true; ownerRef.current = null; owner.unload(); target.empty() }
   }, [app, file, previewSpec, sourcePath])
-  return <div ref={frame} className={`blo-pdf${selected && !readOnly ? ' is-selected' : ''}`} data-blo-pdf data-pdf-zoomed={zoomed || undefined} data-pdf-resizing={loading || isDragging || undefined} contentEditable={false}
+  return <div ref={frame} className={`blo-pdf${selected && !readOnly ? ' is-selected' : ''}`} data-blo-pdf data-pdf-file={file.path} data-pdf-zoomed={zoomed || undefined} data-pdf-resizing={loading || isDragging || undefined} contentEditable={false}
     style={{ width: display.width, aspectRatio: `1 / ${pageRatio}`, paddingTop: heightOffset, boxSizing: 'content-box' }}
     onMouseDownCapture={event => {
       // Keep native controls and scrollbar gestures separate from the note's

@@ -1,4 +1,4 @@
-import { Component, Modal, Notice, Platform, Setting } from 'obsidian';
+import { Component, Modal, Notice, Platform, Setting, TFile, loadPdfJs } from 'obsidian';
 import type { BloView } from './BloView';
 import { ui } from './wysimark/utils/translations';
 
@@ -59,7 +59,7 @@ async function waitForPreviews(source: HTMLElement): Promise<void> {
     const finish = (error?: Error) => { observer.disconnect(); window.clearTimeout(timeout); error ? reject(error) : resolve(); };
     const observer = new MutationObserver(() => { if (ready()) finish(); });
     const timeout = window.setTimeout(() => finish(new Error(ui('预览尚未加载完成，请稍后重试'))), 20000);
-    observer.observe(source, { childList: true, subtree: true });
+    observer.observe(source, { childList: true, subtree: true, attributes: true });
   });
 }
 
@@ -82,14 +82,35 @@ async function dataUrl(src: string): Promise<string> {
 }
 
 /** Snapshot the rendered document; no Slate operations or selection changes. */
-export async function createPdfHtml(view: BloView, options: PdfOptions): Promise<string> {
+export async function createPdfHtml(view: BloView, options: PdfOptions, format: 'pdf' | 'html' = 'pdf'): Promise<string> {
   const source = view.contentEl.querySelector<HTMLElement>('[data-slate-editor="true"]');
   if (!source || !view.currentFile) throw new Error(ui('请先打开一篇笔记'));
   await waitForPreviews(source);
   const doc = source.ownerDocument;
   const clone = source.cloneNode(true) as HTMLElement;
+  // Render PDF covers independently: offscreen native readers may never paint,
+  // and exporting must not scroll the note or disturb their zoom/render queue.
+  for (const frame of Array.from(clone.querySelectorAll<HTMLElement>('[data-blo-pdf]'))) {
+    const file = view.app.vault.getAbstractFileByPath(frame.dataset.pdfFile ?? '');
+    if (!(file instanceof TFile)) throw new Error(ui('预览尚未加载完成，请稍后重试'));
+    const pdfjs = await loadPdfJs();
+    const task = pdfjs.getDocument({ data: new Uint8Array(await view.app.vault.readBinary(file)), isEvalSupported: false });
+    try {
+      const pdf = await task.promise;
+      const number = Math.max(1, Math.min(pdf.numPages, Number(frame.querySelector<HTMLInputElement>('.pdf-toolbar input')?.value) || 1));
+      const page = await pdf.getPage(number), original = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: Math.min(2, 1600 / original.width) });
+      const canvas = doc.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+      const image = doc.createElement('img'); image.src = canvas.toDataURL('image/png');
+      image.alt = `${file.basename} · ${number}/${pdf.numPages}`;
+      image.style.cssText = 'display:block;max-width:100%;width:100%;height:auto';
+      const cover = doc.createElement('div'); cover.style.cssText = `max-width:100%;width:${frame.style.width};break-inside:avoid`;
+      cover.append(image); frame.replaceWith(cover);
+    } finally { await task.destroy(); }
+  }
   // Canvas pixels are not copied by cloneNode (SVG drawings already are).
-  const canvases = Array.from(source.querySelectorAll('canvas'));
+  const canvases = Array.from(source.querySelectorAll('canvas')).filter(canvas => !canvas.closest('[data-blo-pdf]'));
   clone.querySelectorAll('canvas').forEach((canvas, index) => {
     const image = doc.createElement('img');
     image.src = canvases[index].toDataURL('image/png');
@@ -99,7 +120,8 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
     canvas.replaceWith(image);
   });
   // Number markers are interactive buttons in the editor, but are note content.
-  clone.querySelectorAll('button.wysimark-list-number').forEach(button => {
+  const originalMarkers = source.querySelectorAll<HTMLElement>('button.wysimark-list-number');
+  clone.querySelectorAll('button.wysimark-list-number').forEach((button, index) => {
     const heading = button.parentElement?.querySelector(':scope > .wysimark-list-content > :is(h1,h2,h3,h4,h6):first-child');
     if (heading) {
       heading.prepend(doc.createTextNode(button.textContent + ' '));
@@ -108,11 +130,17 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
     }
     const marker = doc.createElement('span');
     marker.className = button.className;
-    marker.style.cssText = (button as HTMLElement).style.cssText;
-    marker.textContent = button.textContent;
+    const computed = doc.defaultView!.getComputedStyle(originalMarkers[index]);
+    for (const property of ['display','box-sizing','width','min-width','height','padding','margin','font','text-align','white-space','color','translate']) {
+      marker.style.setProperty(property, computed.getPropertyValue(property));
+    }
+    marker.append(...Array.from(button.childNodes));
+    if (button.hasAttribute('data-list-marker')) {
+      marker.firstElementChild?.setAttribute('style', 'grid-area:marker;justify-self:center;align-self:center');
+    }
     button.replaceWith(marker);
   });
-  clone.querySelectorAll('button,script,style,iframe,object,embed,[data-wysimark-code-controls],.wysimark-block-handle,.wysimark-list-guides,.blo-table-placeholder,[data-slate-zero-width],[data-block-boundary="true"],.wysimark-overlay').forEach(el => {
+  clone.querySelectorAll('button,script,style,iframe,object,embed,[data-wysimark-code-controls],[data-wysimark-image-resize],.wysimark-block-handle,.wysimark-block-highlight,.blo-table-placeholder,[data-slate-zero-width],[data-block-boundary="true"],.wysimark-overlay').forEach(el => {
     // Excalidraw embeds its handwriting fonts inside the SVG's stylesheet.
     if (el.tagName.toLowerCase() === 'style' && el.closest('svg')) return;
     el.remove();
@@ -156,7 +184,13 @@ export async function createPdfHtml(view: BloView, options: PdfOptions): Promise
   const csp = output.createElement('meta'); csp.httpEquiv = 'Content-Security-Policy';
   csp.content = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:;"; output.head.appendChild(csp);
   const style = output.createElement('style'); style.textContent = await stylesheetText(doc, !!source.querySelector('[data-blo-math]')) + '\n' + PRINT_CSS; output.head.appendChild(style);
-  output.body.className = doc.body.className.replace(/theme-dark/g, 'theme-light'); output.body.classList.add('theme-light','blo-pdf');
+  output.body.className = doc.body.className.replace(/theme-dark/g, 'theme-light'); output.body.classList.add('theme-light','blo-export-document');
+  if (format === 'html') {
+    const screen = output.createElement('style');
+    screen.textContent = 'html body.blo-export-document{max-width:960px!important;margin:32px auto!important;padding:0 24px!important;box-sizing:border-box!important}';
+    output.head.append(screen);
+    const viewport = output.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width,initial-scale=1'; output.head.append(viewport);
+  }
   // Preserve the user's configured font, while selecting the light theme's colors.
   const computed = doc.defaultView!.getComputedStyle(source);
   output.body.style.setProperty('--font-text', computed.fontFamily);

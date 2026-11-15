@@ -13,9 +13,11 @@ import { relocateFoldedSelection, revealFoldedSelection } from './folding'
 import { uniquePastedBlockIds, validBlockId } from './block-reference'
 import { headingDefaults } from './heading-defaults'
 import type { HeadingDefaults } from './heading-defaults'
+import { copiedTextContent, pasteTextContent } from './paste-style'
 type Types={Name:'block-structure';Editor:{}}
 export const BlockStructurePlugin=createPlugin<Types>(editor=>{
- const {insertFragment,insertText}=editor
+ const {insertFragment,insertText,getFragment}=editor
+ editor.getFragment=()=>copiedTextContent(editor,getFragment())
  const {apply}=editor
  let pendingDefaults:HeadingDefaults|undefined
  editor.apply=operation=>{
@@ -60,7 +62,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   Editor.withoutNormalizing(editor,()=>{materializeTextBoundary(editor);insertText(text)})
  }
  editor.insertFragment=(fragment,options)=>{
-  const insert=()=>insertFragment(uniquePastedBlockIds(editor,cleanPastedFragment(fragment as Descendant[])),options)
+  const insert=()=>insertFragment(pasteTextContent(editor,uniquePastedBlockIds(editor,cleanPastedFragment(fragment as Descendant[]))),options)
   if(!fragment.length||boundaryBlockIndex(editor)===undefined)return insert()
   Editor.withoutNormalizing(editor,()=>{materializeTextBoundary(editor);insert()})
  }

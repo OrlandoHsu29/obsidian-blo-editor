@@ -32,6 +32,10 @@ for (const file of ['SKILL.md', 'references/format.md', 'references/drawings.md'
   await copyFile(resolve(root, 'skills/blo-editor-notes', file), target)
 }
 await mkdir(resolve(destination, 'assets'), { recursive: true })
+await mkdir(resolve(destination, 'examples'), { recursive: true })
+for (const file of ['feature-tour.md', 'feature-tour.excalidraw.md', 'feature-tour.pdf']) {
+  await copyFile(resolve(root, 'examples', file), resolve(destination, 'examples', file))
+}
 for (const asset of await readdir(resolve(root, 'assets'), { withFileTypes: true })) {
   if (asset.isFile() && /\.(png|jpe?g|gif|webp|svg)$/i.test(asset.name)) {
     await copyFile(resolve(root, 'assets', asset.name), resolve(destination, 'assets', asset.name))

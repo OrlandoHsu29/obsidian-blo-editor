@@ -22,6 +22,7 @@ import { DocumentTitle } from './DocumentTitle';
 import { isMemoPanelDocument, popoutDocument } from './memo-panel';
 import { DrawingEmbed, drawingViewType, insertDrawing, isDrawingFile } from './drawings';
 import { VideoEmbed, VIDEO_FILE_PATTERN } from './VideoEmbed';
+import { PdfEmbed } from './PdfEmbed';
 import { attachmentPath, isAttachmentPath } from './attachments';
 import type { EditorSettings } from './settings';
 import { watchAttachments } from './attachment-cleanup';
@@ -199,7 +200,7 @@ function InternalEmbedView({
   const embedRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (imageFile || targetsImage || targetFile instanceof TFile && (isDrawingFile(app, targetFile) || VIDEO_FILE_PATTERN.test(targetFile.path))) return;
+    if (imageFile || targetsImage || targetFile instanceof TFile && (isDrawingFile(app, targetFile) || VIDEO_FILE_PATTERN.test(targetFile.path) || targetFile.extension.toLowerCase() === 'pdf')) return;
     let cancelled = false;
     const embedEl = embedRef.current;
     if (!embedEl) return;
@@ -251,6 +252,9 @@ function InternalEmbedView({
   }
   if (targetFile instanceof TFile && VIDEO_FILE_PATTERN.test(targetFile.path)) {
     return <VideoEmbed app={app} file={targetFile} />;
+  }
+  if (targetFile instanceof TFile && targetFile.extension.toLowerCase() === 'pdf') {
+    return <PdfEmbed app={app} file={targetFile} spec={spec} sourcePath={sourcePath} />;
   }
   return <div ref={embedRef} className="wysimark-internal-embed" />;
 }

@@ -1,5 +1,5 @@
 import { clsx } from "clsx"
-import { Dispatch, SetStateAction, useRef } from "react"
+import { Dispatch, SetStateAction, useEffect, useRef } from "react"
 import { Editor, Transforms } from "slate"
 import { ReactEditor, useSlateStatic } from "slate-react"
 
@@ -17,6 +17,7 @@ import {
   ImageSize,
 } from "../../../types"
 import { getEditorWidth, minMax, resizeToWidth } from "../../../utils"
+import { createResizePreview } from './resize-preview'
 
 /**
  * Helper function finds the `img` inside the current Slate `Element`.
@@ -31,7 +32,7 @@ function getImageBoundsFromSlateElement(
   element: ImageBlockElement | ImageInlineElement
 ): DOMRect {
   const imageContainerDOMNode = ReactEditor.toDOMNode(editor, element)
-  const imgDOMNode = imageContainerDOMNode.querySelector("[data-blo-drawing],video,img")
+  const imgDOMNode = imageContainerDOMNode.querySelector("[data-blo-drawing],[data-blo-pdf],video,img")
   if (!imgDOMNode)
     throw new Error(`Image Element could not be found but should exist`)
   return imgDOMNode.getBoundingClientRect()
@@ -44,6 +45,7 @@ export function ImageResizeControl({
   setSize,
   isDragging,
   setIsDragging,
+  heightOffset = 0,
 }: {
   element: ImageBlockElement | ImageInlineElement
   srcSize: ImageSize
@@ -51,15 +53,21 @@ export function ImageResizeControl({
   setSize: Dispatch<SetStateAction<ImageSize | null>>
   isDragging: boolean
   setIsDragging: Dispatch<SetStateAction<boolean>>
+  heightOffset?: number
 }) {
   const editor = useSlateStatic()
-  const resize = useRef<{ startX: number; startWidth: number; initial: ImageSize; next: ImageSize } | null>(null)
+  const resize = useRef<{ startX: number; startWidth: number; maxWidth: number; source: ImageSize; heightOffset: number; initial: ImageSize; next: ImageSize } | null>(null)
+  const preview = useRef<ReturnType<typeof createResizePreview> | null>(null)
+  useEffect(() => () => preview.current?.cancel(), [])
   useResizeBrowser()
   const width = size.width
-  const maxWidth = Math.min(srcSize.width, getEditorWidth(editor))
+  // Reading the editable's width after each preview write forces layout of
+  // the note. A gesture uses the bounds measured once at pointerdown.
+  const maxWidth = resize.current?.maxWidth ?? Math.min(srcSize.width, getEditorWidth(editor))
   const minWidth = Math.min(12, srcSize.width)
   const finish = (commit: boolean) => {
     const pending = resize.current
+    preview.current?.cancel(); preview.current = null
     resize.current = null
     setIsDragging(false)
     if (!pending) return
@@ -67,21 +75,26 @@ export function ImageResizeControl({
       setSize(pending.initial)
       return
     }
+    // The last pointer move may still be waiting for its animation frame.
+    setSize(pending.next)
     const path = ReactEditor.findPath(editor, element)
     withHistoryBatch(editor, () => Transforms.setNodes(editor,
-      { ...pending.next, srcWidth: srcSize.width, srcHeight: srcSize.height }, { at: path }))
+      { ...pending.next, srcWidth: pending.source.width, srcHeight: pending.source.height }, { at: path }))
   }
   const drag = usePointerDrag<HTMLSpanElement>({
     onStart: event => {
       if (editor.wysimark.readOnly) return false
-      resize.current = { startX: event.clientX, startWidth: getImageBoundsFromSlateElement(editor, element).width, initial: size, next: size }
+      resize.current = { startX: event.clientX, startWidth: getImageBoundsFromSlateElement(editor, element).width,
+        maxWidth: Math.min(srcSize.width, getEditorWidth(editor)), source: srcSize, heightOffset, initial: size, next: size }
+      preview.current = createResizePreview(event.currentTarget.ownerDocument.defaultView!, setSize)
       setIsDragging(true)
     },
     onMove: event => {
       const pending = resize.current!
-      const nextWidth = minMax({ value: pending.startWidth + event.clientX - pending.startX, min: minWidth, max: maxWidth })
-      pending.next = resizeToWidth(nextWidth, srcSize)
-      setSize(pending.next)
+      const nextWidth = minMax({ value: pending.startWidth + event.clientX - pending.startX, min: Math.min(12, pending.source.width), max: pending.maxWidth })
+      pending.next = resizeToWidth(nextWidth, pending.source)
+      pending.next.height += pending.heightOffset
+      preview.current?.queue(pending.next)
     },
     onEnd: () => finish(true),
     onCancel: () => finish(false),

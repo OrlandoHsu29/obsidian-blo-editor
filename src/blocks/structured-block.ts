@@ -5,7 +5,7 @@ import { Element } from 'slate'
 const kinds = {
   table: { editable: true, content: 'table' },
   'code-block': { editable: true, content: '[data-wysimark-code-block]' },
-  'image-block': { editable: false, content: '[data-blo-drawing],[data-blo-image]' },
+  'image-block': { editable: false, content: '[data-blo-drawing],[data-blo-image],[data-blo-pdf]' },
   'math-block': { editable: false, content: '[data-blo-math="block"]' },
 } as const
 

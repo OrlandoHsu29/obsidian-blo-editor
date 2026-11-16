@@ -241,7 +241,8 @@ export function AnchorDialog({
 
   const anchorRect = useCallback(() => {
     const rect = destAnchor.getBoundingClientRect(), start = destStartEdge.getBoundingClientRect()
-    return { ...rect.toJSON(), left: start.left, width: rect.right - start.left }
+    const left = destStartEdge.getClientRects().length ? start.left : rect.left
+    return { ...rect.toJSON(), left, width: rect.right - left }
   }, [destAnchor, destStartEdge])
   const style = useAnchoredPanelPosition(destAnchor, ref, { getAnchorRect: anchorRect, offsetX: dragOffset.x, offsetY: dragOffset.y })
 

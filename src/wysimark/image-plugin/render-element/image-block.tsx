@@ -29,7 +29,6 @@ export function ImageBlock({
       <$ImageBlock contentEditable={false}>
         <ImageWithControls
           element={element}
-          presets={editor.image.imageBlockPresets}
         />
       </$ImageBlock>
       <MediaReferenceDialog element={element} />

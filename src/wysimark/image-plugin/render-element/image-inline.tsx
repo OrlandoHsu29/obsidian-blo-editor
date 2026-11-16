@@ -29,7 +29,6 @@ export function ImageInline({
       <$ImageInline contentEditable={false}>
         <ImageWithControls
           element={element}
-          presets={editor.image.imageInlinePresets}
         />
       </$ImageInline>
       <MediaReferenceDialog element={element} />

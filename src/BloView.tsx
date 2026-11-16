@@ -36,6 +36,7 @@ import { MermaidPreview } from './MermaidPreview';
 import { ensureBlockId } from './blocks/block-reference';
 import { PresentationMode } from './presentation/presentation-mode';
 import { restorePresentationScroll } from './presentation/restore-scroll';
+import { WikiImageWithControls } from './wysimark/image-plugin/render-element/image-with-controls';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -234,15 +235,7 @@ function InternalEmbedView({
   }, [app, imageFile, targetFile, sourcePath, spec, targetsImage]);
 
   if (imageFile) {
-    return (
-      <img
-        src={app.vault.getResourcePath(imageFile)}
-        alt={imageFile.basename}
-        className="wysimark-internal-embed-image"
-        data-blo-image
-        style={{ display: 'block', maxWidth: '100%', height: 'auto' }}
-      />
-    );
+    return <WikiImageWithControls />;
   }
 
   if (targetsImage) {
@@ -366,6 +359,11 @@ function KnowledgeSpaceEditorComponent({
   editor.wysimark.documentTitle = memoPanel ? undefined : <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
     onEnterEnd={readOnly ? undefined : () => insertDocumentStartParagraph(editor)} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
+    if (isWikiEmbedUrl(url)) {
+      const target = wikiLinkTarget(wikiEmbedSpecFromUrl(url));
+      const image = plugin.app.vault.getAbstractFileByPath(normalizePath(target)) || plugin.app.metadataCache.getFirstLinkpathDest(target, file.path);
+      return image instanceof TFile ? plugin.app.vault.getResourcePath(image) : url;
+    }
     if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) return url;
     let decoded = url;
     try { decoded = decodeURIComponent(url); } catch { /* Preserve literal filename. */ }

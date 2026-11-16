@@ -1,6 +1,6 @@
 import { clsx } from "clsx"
 import { useEffect, useMemo, useState } from "react"
-import { useReadOnly, useSelected, useSlateStatic } from "slate-react"
+import { useElement, useReadOnly, useSelected, useSlateStatic } from "slate-react"
 
 import {
   $Image,
@@ -9,12 +9,16 @@ import {
 import {
   ImageBlockElement,
   ImageInlineElement,
-  ImageSizePreset,
 } from "../../types"
 import { ImageResizeControl } from "./image-resize-controls/image-resize-control"
 import { ImageSizeStatus } from "./image-size-status/image-size-status"
-import { ImageToolbar } from "./image-toolbar/image-toolbar"
 import { useAttachmentRevision } from '../../attachment-revision'
+
+/** Wiki image references use the same selection, sizing and history as images. */
+export function WikiImageWithControls() {
+  const element = useElement() as ImageBlockElement | ImageInlineElement
+  return <ImageWithControls element={element} />
+}
 
 /**
  * The `Image` Component is responsible for:
@@ -23,7 +27,6 @@ import { useAttachmentRevision } from '../../attachment-revision'
  * - displaying the UI for the image including
  *   - resize controls
  *   - current width/height
- *   - image preset size controls
  *
  * It's outer $ImageContainer is represented as an `inline-block` and is
  * placed inside a `block` element for the `image-block` and a `span` element
@@ -31,10 +34,8 @@ import { useAttachmentRevision } from '../../attachment-revision'
  */
 export function ImageWithControls({
   element,
-  presets,
 }: {
   element: ImageBlockElement | ImageInlineElement
-  presets: ImageSizePreset[]
 }) {
   const editor = useSlateStatic()
   const revision = useAttachmentRevision(editor, element.url)
@@ -80,7 +81,7 @@ export function ImageWithControls({
    * Add classes for different states.
    */
   const className = clsx({
-    "--selected": selected,
+    "--selected": selected && !readOnly,
     "--dragging": isDragging,
     "--small": size && (size.width <= 64 || size.height <= 64),
   })
@@ -109,16 +110,6 @@ export function ImageWithControls({
           current?.width === image.naturalWidth && current.height === image.naturalHeight
             ? current : {width: image.naturalWidth, height: image.naturalHeight})
       }} />
-      {showControls ? (
-        <ImageToolbar
-          element={element}
-          size={displaySize!}
-          setSize={setSize}
-          srcSize={srcSize}
-          presets={presets}
-          isDragging={isDragging}
-        />
-      ) : null}
       {/**
        * Show the size status bar only when the user is dragging to resize the
        * image.

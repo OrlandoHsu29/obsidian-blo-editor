@@ -1,7 +1,7 @@
 import styled from "@emotion/styled"
 import { Fragment, useCallback, useEffect, useRef } from "react"
 import { Transforms } from "slate"
-import { ReactEditor, useSelected, useSlate } from "slate-react"
+import { ReactEditor, useReadOnly, useSelected, useSlate } from "slate-react"
 
 import { splitWikiSpec, wikiEmbedSpecFromUrl, wikiLinkTarget } from "../../convert/obsidian-links"
 import { AnchorDialog } from "../../anchor-plugin/render-element/AnchorDialog"
@@ -30,6 +30,7 @@ export function WikiEmbedView({
   const editor = useSlate()
   const revision = useAttachmentRevision(editor, element.url)
   const selected = useSelected()
+  const readOnly = useReadOnly()
   const dialog = useLayer("dialog")
   const embedRef = useRef<HTMLSpanElement>(null)
   const startEdgeRef = useRef<HTMLSpanElement>(null)
@@ -37,11 +38,12 @@ export function WikiEmbedView({
   const spec = wikiEmbedSpecFromUrl(element.url)
   const display = splitWikiSpec(spec).display
   const description = display && !/^\d+(?:x\d+)?$/.test(display) ? display : undefined
+  const currentElement = useRef(element); currentElement.current = element
 
   const handleEdit = useCallback(() => {
     const fallbackAnchor = embedRef.current
     if (!fallbackAnchor) return
-    const at = ReactEditor.findPath(editor, element)
+    const at = ReactEditor.findPath(editor, currentElement.current)
     const result = editor.anchor.convertToLink(spec, { at })
     if (!result) return
     const [anchor] = result
@@ -67,7 +69,7 @@ export function WikiEmbedView({
   }, [dialog, editor, element, spec])
 
   const handleRemove = useCallback(() => {
-    const at = ReactEditor.findPath(editor, element)
+    const at = ReactEditor.findPath(editor, currentElement.current)
     if(at.length===1)deleteBlockGroup(editor,at[0])
     else Transforms.removeNodes(editor, { at })
   }, [editor, element])
@@ -81,8 +83,10 @@ export function WikiEmbedView({
       editor.selection &&
       editor.selection.anchor.offset !== editor.selection.focus.offset
     // Drawings provide their own edit control rather than a link popover.
-    if (selected && !hasSelection && !anchor.querySelector('[data-blo-drawing],[data-blo-video],[data-blo-pdf]')) {
-      window.setTimeout(() => {
+    if (!readOnly && selected && !hasSelection && !anchor.querySelector('[data-blo-drawing],[data-blo-video],[data-blo-pdf]')) {
+      const win = anchor.ownerDocument.defaultView!
+      const timer = win.setTimeout(() => {
+        if (!anchor.isConnected || editor.wysimark.readOnly) return
         dialog.open(() => (
           <AnchorDialog
             destAnchor={anchor}
@@ -95,10 +99,11 @@ export function WikiEmbedView({
           />
         ))
       })
+      return () => win.clearTimeout(timer)
     } else {
       dialog.close()
     }
-  }, [selected, spec])
+  }, [selected, spec, readOnly])
 
   return (
     <$WikiEmbed ref={embedRef} contentEditable={false} role="group" aria-label={description} data-wysimark-embed-block={element.type === 'image-block' || undefined}>

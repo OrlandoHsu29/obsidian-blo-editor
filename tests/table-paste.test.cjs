@@ -32,6 +32,14 @@ const values=editor=>target(editor).children.map(row=>row.children.map(Node.stri
 const path=editor=>[editor.children.indexOf(target(editor))];
 const select=(editor,x,y)=>selectTableCell(editor,[...path(editor),y,x]);
 
+test('entering the same edited cell again preserves a word selection instead of jumping to its end',()=>{
+ const editor=fixture([['alpha beta gamma','other']]);select(editor,0,0);assert.equal(beginTableCellEdit(editor),true);
+ const textPath=[...path(editor),0,0,0,0],selection={anchor:{path:textPath,offset:6},focus:{path:textPath,offset:10}};
+ Transforms.select(editor,selection);
+ assert.equal(beginTableCellEdit(editor,[...path(editor),0,0]),true);assert.deepEqual(editor.selection,selection);
+ select(editor,1,0);assert.equal(beginTableCellEdit(editor),true);assert.deepEqual(editor.selection.anchor,Editor.end(editor,[...path(editor),0,1]));
+});
+
 test('leaving the table for a task checkbox clears its selection without entering cell editing',()=>{
  const e=fixture([['Header'],['Cell']]);
  Transforms.insertNodes(e,{type:'task-list-item',depth:0,checked:false,children:[{text:'Task'}]},{at:[e.children.length]});

@@ -41,6 +41,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const table = ReactEditor.toDOMNode(editor, element) as HTMLTableElement
     const doc = table.ownerDocument, win = doc.defaultView!
     let origin: Path | undefined, snapped: Range | undefined
+    let enteringEdit = false
     let hoverTimer: number | undefined, leaveTimer: number | undefined
     let pending: Insertion[] | undefined
     let repairing = false
@@ -72,16 +73,17 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const down = (event: MouseEvent) => {
       if (event.button !== 0 || menuRef.current?.contains(event.target as globalThis.Node) || insertRef.current?.contains(event.target as globalThis.Node)) return
       hideInsertions()
-      origin = undefined; snapped = undefined
+      origin = undefined; snapped = undefined; enteringEdit = false
       const target = event.target as HTMLElement
       if (target.closest('[contenteditable="false"],button')) return
       if (table.contains(target)) {
         clearTableAxisSelection(editor)
         origin = cellAt(target)
         if (!origin) return
+        if (isTableCellEditing(editor,origin)) return
         if (event.detail >= 2) {
           event.preventDefault()
-          beginTableCellEdit(editor,origin); ReactEditor.focus(editor)
+          enteringEdit = beginTableCellEdit(editor,origin); ReactEditor.focus(editor)
           origin = undefined
         } else if (!isTableCellEditing(editor,origin)) {
           event.preventDefault()
@@ -96,7 +98,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if(target.closest('[contenteditable="false"],button'))return
       const cell=cellAt(target)
       if(!cell)return
-      if(event.detail>=2) {
+      if(enteringEdit) {
         event.preventDefault();event.stopPropagation()
       } else if(tableCellSelection(editor)?.kind==='cell') {
         event.preventDefault();event.stopPropagation()

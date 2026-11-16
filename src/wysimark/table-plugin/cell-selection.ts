@@ -53,6 +53,7 @@ export function beginTableCellEdit(editor: Editor, cellPath?: Path): boolean {
   const selected = tableCellSelection(editor)
   const path = cellPath ?? (selected?.kind === 'cell' ? [...selected.path, selected.top, selected.left] : undefined)
   if (!path || editor.wysimark.readOnly) return false
+  if (isTableCellEditing(editor, path)) return true
   clearTableAxisSelection(editor); clearBlockSelection(editor)
   withoutAutomaticCellSelection(editor,()=>Transforms.select(editor, Editor.end(editor, path))); trackEditingCell(editor, path)
   return true

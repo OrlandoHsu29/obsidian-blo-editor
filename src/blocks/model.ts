@@ -71,7 +71,7 @@ export function rootCache(editor: Editor) {
         if(Element.isElement(node)&&!node.__subtitle&&!projection.headings.length) {
           if(depth>0&&guideMask)listGuides.set(node,guideMask)
           // Only body list parents start a guide; prose and widgets continue it.
-          if(isListBlock(node)&&node.type!=='task-list-item')guideMask+=2**depth
+          if(isListBlock(node))guideMask+=2**depth
         }
       }
       for(const heading of projection.headings)headings.push({node:heading.node,number:heading.numberedOwner?numbers.get(heading.numberedOwner):undefined,

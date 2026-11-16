@@ -50,6 +50,10 @@ export const $OrderedListItem = styled($ListItem)`
 `
 
 export const $TaskListItem = styled($UnorderedListItem)`
+  &[data-task-checked="true"] > .wysimark-list-content {
+    opacity: .5;
+    text-decoration: line-through;
+  }
   .--list-item-icon {
     color: var(--shade-300);
     .theme-dark & { color: var(--text-muted); }

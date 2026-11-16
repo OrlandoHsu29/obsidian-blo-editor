@@ -14,16 +14,16 @@ const masks=nodes=>{const editor=createEditor();editor.children=nodes;const guid
 test('ordered and unordered parents keep continuous guide levels when mixed',()=>{
  assert.deepEqual(masks([number(0),bullet(1),number(2),bullet(1),number(0)]),[0,1,3,1,0]);
 });
-test('task-only hierarchies do not draw guide lines',()=>{
- assert.deepEqual(masks([task(0),task(1),task(2)]),[0,0,0]);
+test('task-only hierarchies draw the same guide lines as other lists',()=>{
+ assert.deepEqual(masks([task(0),task(1),task(2)]),[0,1,3]);
 });
-test('task parents omit their own guide without breaking non-task ancestors',()=>{
- assert.deepEqual(masks([bullet(0),task(1),bullet(2),number(3)]),[0,1,1,5]);
- assert.deepEqual(masks([task(0),number(1),bullet(2)]),[0,0,2]);
+test('task parents and other lists share continuous ancestor guides',()=>{
+ assert.deepEqual(masks([bullet(0),task(1),bullet(2),number(3)]),[0,1,3,7]);
+ assert.deepEqual(masks([task(0),number(1),bullet(2)]),[0,1,3]);
 });
 test('spacers preserve hierarchy while a new root starts a new guide group',()=>{
  const spacer={type:'paragraph',__collapsible:true,children:[{text:''}]};
- assert.deepEqual(masks([bullet(0),spacer,number(1),task(0),bullet(1)]),[0,0,1,0,0]);
+ assert.deepEqual(masks([bullet(0),spacer,number(1),task(0),bullet(1)]),[0,0,1,0,1]);
 });
 test('skipped indentation levels do not invent parent guides',()=>{
  assert.deepEqual(masks([bullet(2),number(3)]),[0,4]);
@@ -31,7 +31,7 @@ test('skipped indentation levels do not invent parent guides',()=>{
 test('changing a parent list type updates descendant guide masks without editing descendants',()=>{
  const editor=createEditor();editor.children=[number(0),bullet(1)];const child=editor.children[1];
  assert.equal(rootCache(editor).listGuides.get(child),1);Transforms.setNodes(editor,{type:'task-list-item'},{at:[0]});
- assert.equal(editor.children[1],child);assert.equal(rootCache(editor).listGuides.get(child),undefined);
+ assert.equal(editor.children[1],child);assert.equal(rootCache(editor).listGuides.get(child),1);
 });
 
 for(const type of ['ordered-list-item','unordered-list-item'])for(const level of [1,2,3,4,5])test(`${type} H${level} neither draws nor starts a guide`,()=>{
@@ -56,8 +56,8 @@ test('intervening body blocks preserve multiple ancestor guides without starting
  assert.deepEqual(masks([number(0),bullet(1),body,number(3)]),[0,1,3,3]);
 });
 
-test('unindented prose ends a list guide and task parents still do not start one',()=>{
+test('unindented prose ends a list guide while indented prose continues a task guide',()=>{
  const body={type:'paragraph',__blockDepth:0,children:[{text:'body'}]};
  assert.deepEqual(masks([number(0),bullet(1),body,bullet(1)]),[0,1,0,0]);
- assert.deepEqual(masks([task(0),{...body,__blockDepth:1},bullet(1)]),[0,0,0]);
+ assert.deepEqual(masks([task(0),{...body,__blockDepth:1},bullet(1)]),[0,1,1]);
 });

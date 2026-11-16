@@ -30,7 +30,7 @@ export function TaskListItem({
   const align=useFirstLineAlignment(ref,'--wysimark-list-marker-center')
   const marginLeft = `${element.depth * 2}em`
   return (
-    <$TaskListItem {...attributes} ref={attachList} style={{ marginLeft }} onMouseEnter={align}>
+    <$TaskListItem {...attributes} ref={attachList} data-task-checked={element.checked} style={{ marginLeft }} onMouseEnter={align}>
       <div className="--list-item-icon" data-list-marker contentEditable={false}
         onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}>
         {element.checked ? (

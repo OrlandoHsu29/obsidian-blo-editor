@@ -93,89 +93,43 @@ function linkPathFromInternalTarget(target: string): string {
   return (hashIndex >= 0 ? target.slice(0, hashIndex) : target).trim();
 }
 
-function InternalLinkPreview({
-  app,
-  sourcePath,
-  target,
-}: {
-  app: App;
-  sourcePath: string;
-  target: string;
-}) {
-  const previewRef = React.useRef<HTMLDivElement>(null);
+const ignorePreviewChange = () => {};
+const connectPreviewEditor = () => ignorePreviewChange;
 
+function InternalLinkPreview({ plugin, sourcePath, target }: { plugin: BloEditorPlugin; sourcePath: string; target: string }) {
+  const app = plugin.app;
+  const [content, setContent] = React.useState<
+    { kind: 'note'; file: TFile; markdown: string } | { kind: 'image'; src: string; alt: string } | { kind: 'message'; text: string } | null
+  >(null);
   React.useEffect(() => {
     let cancelled = false;
-    const previewEl = previewRef.current;
-    if (!previewEl) return;
-
-    // Use a short-lived Component as the render lifecycle owner instead of the
-    // plugin instance, so the rendered markdown's children are cleaned up when
-    // this preview unmounts.
-    const component = new Component();
-    component.load();
-
-    previewEl.empty();
-    previewEl.setText(ui("Loading preview..."));
-
+    setContent(null);
+    const show = (value: NonNullable<typeof content>) => { if (!cancelled) setContent(value); };
     const render = async () => {
-      const linkPath = linkPathFromInternalTarget(target);
-      const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
-      const targetFile = linkPath
-        ? app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath)
-        : sourceFile;
-
-      if (!(targetFile instanceof TFile)) {
-        if (!cancelled) previewEl.setText(ui('未找到：{target}',{target}));
-        return;
-      }
-
-      if (IMAGE_EXTENSIONS.has(targetFile.extension.toLowerCase())) {
-        if (cancelled) return;
-        previewEl.empty();
-        const image = previewEl.createEl('img', {
-          attr: { src: app.vault.getResourcePath(targetFile), alt: targetFile.basename },
-        });
-        image.setCssStyles({ display: 'block', maxWidth: '100%', height: 'auto' });
-        return;
-      }
-
-      if (targetFile.extension.toLowerCase() !== 'md') {
-        if (!cancelled) previewEl.setText(ui('无法预览：{target}',{target:targetFile.path}));
-        return;
-      }
-
-      let markdown = await app.vault.cachedRead(targetFile);
+      const path = linkPathFromInternalTarget(target);
+      const file = path ? app.metadataCache.getFirstLinkpathDest(path, sourcePath) : app.vault.getAbstractFileByPath(sourcePath);
+      if (!(file instanceof TFile)) { show({ kind: 'message', text: ui('未找到：{target}', { target }) }); return; }
+      if (IMAGE_EXTENSIONS.has(file.extension.toLowerCase())) { show({ kind: 'image', src: app.vault.getResourcePath(file), alt: file.basename }); return; }
+      if (file.extension.toLowerCase() !== 'md') { show({ kind: 'message', text: ui('无法预览：{target}', { target: file.path }) }); return; }
+      let markdown = await app.vault.cachedRead(file);
       const hash = target.indexOf('#');
       if (hash >= 0 && target.slice(hash).startsWith('#^')) {
-        const cache = app.metadataCache.getFileCache(targetFile);
-        const resolved = cache && resolveSubpath(cache, target.slice(hash));
-        if (!resolved || resolved.type !== 'block') {
-          if (!cancelled) previewEl.setText(ui('未找到：{target}', { target }));
-          return;
-        }
+        const cache = app.metadataCache.getFileCache(file), resolved = cache && resolveSubpath(cache, target.slice(hash));
+        if (!resolved || resolved.type !== 'block') { show({ kind: 'message', text: ui('未找到：{target}', { target }) }); return; }
         markdown = markdown.slice(resolved.start.offset, resolved.end?.offset ?? markdown.length);
       }
-      if (!markdown.trim()) {
-        if (!cancelled) previewEl.setText(ui("Empty note"));
-        return;
-      }
-      if (cancelled) return;
-
-      previewEl.empty();
-      await MarkdownRenderer.render(app, markdown, previewEl, targetFile.path, component);
+      show(markdown.trim() ? { kind: 'note', file, markdown: extractFrontmatter(markdown).body } : { kind: 'message', text: ui('Empty note') });
     };
-
-    void render();
-
-    return () => {
-      cancelled = true;
-      component.unload();
-      previewEl.empty();
-    };
+    void render().catch(() => show({ kind: 'message', text: ui('无法预览：{target}', { target }) }));
+    return () => { cancelled = true; };
   }, [app, sourcePath, target]);
-
-  return <div ref={previewRef} />;
+  if (!content) return null;
+  if (content.kind === 'image') return <img src={content.src} alt={content.alt} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />;
+  if (content.kind === 'message') return <div>{content.text}</div>;
+  return <div className="blo-link-preview wysimark-container wysimark-reading">
+    <KnowledgeSpaceEditorComponent key={content.file.path + target} initialValue={content.markdown} onChange={ignorePreviewChange}
+      plugin={plugin} file={content.file} connectEditor={connectPreviewEditor} readOnly memoPanel={false} preview />
+  </div>;
 }
 
 function InternalEmbedView({
@@ -264,6 +218,7 @@ function KnowledgeSpaceEditorComponent({
   connectEditor,
   readOnly,
   memoPanel,
+  preview = false,
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
@@ -273,6 +228,7 @@ function KnowledgeSpaceEditorComponent({
   connectEditor: (editor: Editor) => () => void;
   readOnly: boolean;
   memoPanel: boolean;
+  preview?: boolean;
 }) {
   const openInternalLink = React.useCallback(async (target: string, newLeaf = false) => {
     const normalized = normalizeVaultLinkInput(plugin.app, target).target;
@@ -285,7 +241,7 @@ function KnowledgeSpaceEditorComponent({
   const renderInternalLinkPreview = React.useCallback((target: string) => {
     return (
       <InternalLinkPreview
-        app={plugin.app}
+        plugin={plugin}
         sourcePath={file.path}
         target={target}
       />
@@ -323,7 +279,7 @@ function KnowledgeSpaceEditorComponent({
 
   const editor = useEditor({
     openInternalLink,
-    renderInternalLinkPreview,
+    renderInternalLinkPreview: preview ? undefined : renderInternalLinkPreview,
     renderInternalEmbed,
     renderMermaidPreview,
   });
@@ -356,7 +312,7 @@ function KnowledgeSpaceEditorComponent({
     return drawing instanceof TFile && isDrawingFile(plugin.app, drawing);
   };
   // Glimmer Memo's popout already shows the file name and owns renaming there.
-  editor.wysimark.documentTitle = memoPanel ? undefined : <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
+  editor.wysimark.documentTitle = memoPanel || preview ? undefined : <DocumentTitle app={plugin.app} file={file} save={async()=>{await editor.wysimark.save?.()}}
     onEnterEnd={readOnly ? undefined : () => insertDocumentStartParagraph(editor)} />;
   editor.wysimark.resolveImageUrl = (url: string) => {
     if (isWikiEmbedUrl(url)) {

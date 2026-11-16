@@ -84,7 +84,7 @@ const $AnchorDialog = styled($Panel)`
     border-radius: 0.375em;
     padding: 0.625em 0.75em;
     color: var(--shade-600);
-    background: var(--shade-100);
+    background: var(--background-primary);
     font-size: 0.8125em;
     line-height: 1.45;
     overflow-wrap: break-word;

@@ -535,6 +535,8 @@ export class BloView extends FileView {
     editor.wysimark.setTextColor = color => (this.plugin as any).setTextColor(editor, color);
     editor.wysimark.getTableDefaults = () => (this.plugin as any).settings.tableDefaults;
     editor.wysimark.setTableDefaults = defaults => {
+    editor.wysimark.getHighlightColor = () => this.plugin.settings.defaultHighlightColor;
+    editor.wysimark.setHighlightColor = color => this.plugin.setHighlightColor(editor, color);
       (this.plugin as any).settings.tableDefaults = defaults;
       void this.plugin.saveData((this.plugin as any).settings);
     };

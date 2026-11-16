@@ -4,6 +4,7 @@ import { curryOne } from "../../sink"
 
 import { removeMarks } from "./removeMarks"
 import { toggleMark } from "./toggle-mark"
+import { toggleHighlightColor } from './highlight-color'
 
 export function createMarksMethods(editor: Editor) {
   return {
@@ -13,6 +14,6 @@ export function createMarksMethods(editor: Editor) {
     toggleItalic: () => toggleMark(editor, "italic"),
     toggleUnderline: () => toggleMark(editor, "underline"),
     toggleStrike: () => toggleMark(editor, "strike"),
-    toggleHighlight: () => toggleMark(editor, "highlight"),
+    toggleHighlight: () => toggleHighlightColor(editor),
   }
 }

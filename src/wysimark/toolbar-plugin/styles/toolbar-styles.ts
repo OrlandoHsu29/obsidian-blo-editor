@@ -67,7 +67,7 @@ export const $ToolbarDividerContainer = styled("div")`
 export const $ToolbarDivider = styled("div")`
   display: block;
   background: var(--background-modifier-border);
-  opacity: 35%;
+  opacity: 60%;
   width: 1px;
   height: 1.5em;
 `
@@ -96,12 +96,9 @@ export const $ToolbarButton = styled("div")`
     background: var(--background-modifier-hover);
   }
   &.--active {
-    color: var(--text-on-accent, var(--blue-700));
-    background: var(--interactive-accent, var(--blue-100));
-    border-color: var(--interactive-accent, var(--blue-300));
-    svg {
-      /* stroke-width: 2px; */
-    }
+    color: var(--text-normal);
+    background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+    border-color: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
   }
   svg {
     stroke-width: 1.5px;
@@ -115,8 +112,8 @@ export const $ToolbarButton = styled("div")`
       }
     }
     &.--active:hover {
-      color: var(--text-on-accent, var(--blue-700));
-      background: var(--interactive-accent-hover, var(--blue-200));
+      color: var(--text-normal);
+      background: color-mix(in srgb, var(--interactive-accent) 26%, transparent);
     }
   }
 

@@ -11,7 +11,7 @@ import { expandedQuoteItems } from './quote-items'
 import { blockIndentItems, clearStyleItem, historyItems, utilityItems } from './utility-items'
 
 // Quick memo windows keep these tools on the main row; others go under More.
-const memoButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'find-replace', 'table', 'link', 'attachment'])
+const memoButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'highlight', 'find-replace', 'table', 'link', 'attachment'])
 
 function pick(items:MenuItemData[],title:string):Exclude<MenuItemData,'divider'> {
   const item=items.find(item=>item!=='divider'&&item.title===title)
@@ -29,7 +29,7 @@ export const toolbarGroups: ToolbarEntry[][] = [
     entry('heading-prefix',headingPrefixItem),
     entry('clear-formatting',clearStyleItem)],
   [entry('undo',historyItems[0]),entry('redo',historyItems[1])],
-  [entry('text-color',expandedMarkItems[0]),entry('bold',pick(expandedMarkItems,t('bold'))),
+  [entry('text-color',expandedMarkItems[0]),entry('highlight',pick(expandedMarkItems,ui('高亮'))),entry('bold',pick(expandedMarkItems,t('bold'))),
     entry('italic',pick(expandedMarkItems,t('italic'))),entry('underline',pick(expandedMarkItems,t('underline'))),
     entry('strike',pick(expandedMarkItems,t('strike'))),
     entry('numbered-list',pick(listItems,t('numberedList'))),entry('bullet-list',pick(listItems,t('bulletList'))),

@@ -2,6 +2,7 @@ import { TablerIcon } from "../sink"
 import { useSlate } from "slate-react"
 import { Editor, Element } from "slate"
 import { DEFAULT_TEXT_COLOR } from '../marks-plugin/methods/text-color'
+import { DEFAULT_HIGHLIGHT_COLOR, highlightBackground } from '../marks-plugin/methods/highlight-color'
 export const ImportEmbed = () => <TablerIcon aria-hidden="true">
   <path d="M7 7H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2M12 3v11m-4-4 4 4 4-4M8 18h8" />
 </TablerIcon>
@@ -18,10 +19,17 @@ export const TextColor = () => {
   return <TextColorGlyph color={color} />
 }
 const TextColorGlyph = ({color}: {color: string | null}) => <TablerIcon data-wysimark-text-color-icon>
-    <path d="M6 17L12 4l6 13M8.3 12h7.4" />
-    <path d="M5 21h14" style={{stroke: color || 'var(--text-normal)', strokeWidth: 3}} />
+    <path d="M6.6 16.5 12 4.8l5.4 11.7M8.7 12h6.6" />
+    <path d="M5.7 20.1h12.6" style={{stroke: color || 'var(--text-normal)', strokeWidth: 2.7}} />
   </TablerIcon>
 export const TextColorPreview = () => <TextColorGlyph color={null} />
+export const Highlight = () => {
+  const editor = useSlate(), color = editor.wysimark.getHighlightColor?.() ?? DEFAULT_HIGHLIGHT_COLOR
+  return <TablerIcon data-wysimark-highlight-icon>
+    <rect x="2" y="6" width="20" height="12" rx="1" fill={highlightBackground(color)} stroke="none" />
+    <path d="M7 19 12 5l5 14M9 14h6" transform="translate(12 12) scale(1.07) translate(-12 -12)" />
+  </TablerIcon>
+}
 
 export const H = () => (
   <TablerIcon>
@@ -99,8 +107,7 @@ export const Normal = () => (
 
 export const Bold = () => (
   <TablerIcon>
-    {/* <path d="M0 0h24v24H0z" stroke="none" /> */}
-    <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM13 12h1a3.5 3.5 0 0 1 0 7H7v-7" />
+    <path d="M7.4 5.6h5.52a3.22 3.22 0 0 1 0 6.44H7.4zM12.92 12.04h.92a3.22 3.22 0 0 1 0 6.44H7.4v-6.44" style={{strokeWidth:2.3}} />
   </TablerIcon>
 )
 

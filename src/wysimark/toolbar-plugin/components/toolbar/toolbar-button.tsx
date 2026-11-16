@@ -42,6 +42,7 @@ export function ToolbarButton({
   const menuOpen = menuToggle && !!menuLayer.layer && menuLayer.layer.Component === openedComponent.current
 
   const openMenu = useCallback(() => {
+    if (menuLayer.layer?.Component === openedComponent.current) return
     const dest = menuAnchorRef?.current ?? menuAnchor ?? ref.current
     const items = item.children
     const Component = item.Component
@@ -52,13 +53,15 @@ export function ToolbarButton({
     </div>
     openedComponent.current = render
     menuLayer.open(render)
-  }, [item, menuAnchor, menuAnchorRef, submenuRef])
+  }, [item, menuAnchor, menuAnchorRef, submenuRef, menuLayer.layer])
 
   const onClick = useCallback(() => {
     if (isDisabled) return
     if (item.action) {
       runMenuAction(item, staticEditor)
-      if (inOverflow) { menuLayer.close(); closeOverflow?.() }
+      // Color tools toggle their style immediately and then offer a palette.
+      if (item.Component || item.children) openMenu()
+      else if (inOverflow) { menuLayer.close(); closeOverflow?.() }
       return
     }
     if (menuToggle) {
@@ -99,6 +102,7 @@ export function ToolbarButton({
       aria-disabled={isDisabled || undefined}
       ref={ref}
       onMouseEnter={onMouseEnter}
+      onMouseDown={event => { if (event.button === 0) event.preventDefault() }}
       onClick={onClick}
       tabIndex={menuToggle ? 0 : undefined}
       onKeyDown={menuToggle ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick() } } : undefined}

@@ -4,6 +4,7 @@ import { ui } from "./wysimark/utils/translations"
 import { createEditorStyleCache } from './style-cache';
 import { installOutlineFilter } from './outline';
 import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Notice, setTooltip } from 'obsidian';
+import { applyHighlightColor, HIGHLIGHT_COLORS } from './wysimark/marks-plugin/methods/highlight-color';
 import { DEFAULT_SETTINGS, BloSettingsTab } from './settings';
 import { installEditorHotkeys } from './editor-hotkeys';
 import type { EditorSettings } from './settings';
@@ -11,7 +12,7 @@ import { BloView, VIEW_TYPE_BLO } from "./BloView";
 import type { Editor } from 'slate';
 import { ReactEditor } from 'slate-react';
 import { canOpenSlashMenu } from './slash-menu';
-import { applyTextColor, toggleTextColor } from './wysimark/marks-plugin/methods/text-color';
+import { applyTextColor, toggleCurrentTextColor } from './wysimark/marks-plugin/methods/text-color';
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
@@ -179,8 +180,7 @@ export default class BloEditorPlugin extends Plugin {
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!(view instanceof BloView) || view.readOnly || !view.editor) return false;
       if (!checking) {
-        if (this.settings.defaultTextColor) toggleTextColor(view.editor, this.settings.defaultTextColor);
-        else applyTextColor(view.editor, null);
+        toggleCurrentTextColor(view.editor);
       }
       return true;
     }});
@@ -532,6 +532,11 @@ export default class BloEditorPlugin extends Plugin {
     if (activeFile && isDrawingFile(this.app, activeFile)) {
       await openDrawing(this.app, activeFile);
       return;
+  setHighlightColor(editor: Editor, color: string | null) {
+    if (editor.wysimark.readOnly || color && !HIGHLIGHT_COLORS.includes(color)) return;
+    if (color) { this.settings.defaultHighlightColor = color; void this.saveData(this.settings); }
+    applyHighlightColor(editor, color);
+  }
     }
     if (activeFile && this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(activeFile)) {
       await this.enforceEditingScope(workspace.activeLeaf ?? undefined);

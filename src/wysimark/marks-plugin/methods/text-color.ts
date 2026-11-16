@@ -2,8 +2,15 @@ import { Editor, Node, Range, Text, Transforms } from "slate"
 import { cleanInlineStyle, isDefaultTextColor } from '../../../blocks/typography'
 import { TEXT_COLORS } from '../../../blocks/colors'
 import { formatSelectedTableCells, selectedCellTextEntries, tableCellSelection } from '../../table-plugin/cell-selection'
+import { withHistoryBatch } from '../../utils/with-history-batch'
 
 export const DEFAULT_TEXT_COLOR = TEXT_COLORS.red
+
+/** Shared by the toolbar and its shortcut; palette choices apply explicitly. */
+export function toggleCurrentTextColor(editor: Editor): void {
+  const color = editor.wysimark.getTextColor ? editor.wysimark.getTextColor() : DEFAULT_TEXT_COLOR
+  withHistoryBatch(editor, () => color ? toggleTextColor(editor, color) : applyTextColor(editor, null))
+}
 
 export function toggleTextColor(editor: Editor, color: string) {
   if (!editor.selection || editor.wysimark.readOnly) return

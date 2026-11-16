@@ -9,7 +9,7 @@ export const MARK_KEY_TO_OPEN_TOKEN = {
   sub: "<sub>",
   // ins: "++",
   strike: "~~",
-  highlight: "<mark>",
+  highlight: "==",
   /**
    * IMPORTANT!
    *
@@ -33,7 +33,7 @@ export const MARK_KEY_TO_CLOSE_TOKEN = {
   sub: "</sub>",
   // ins: "++",
   strike: "~~",
-  highlight: "</mark>",
+  highlight: "==",
   code: "",
 } as Record<MarkKey, string>
 

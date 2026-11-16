@@ -3,6 +3,7 @@ import { Notice, PluginSettingTab, Setting, SettingGroup } from 'obsidian'
 import type BloEditorPlugin from './main'
 import { ui } from './wysimark/utils/translations'
 import { DEFAULT_TEXT_COLOR } from './wysimark/marks-plugin/methods/text-color'
+import { DEFAULT_HIGHLIGHT_COLOR } from './wysimark/marks-plugin/methods/highlight-color'
 import { DEFAULT_ATTACHMENT_FOLDER, normalizeAttachmentFolder } from './attachments'
 import { memoPanelStatus } from './memo-panel'
 import { AiSkillPromptModal, copyAiSkillPrompt } from './ai-skill-modal'
@@ -10,6 +11,7 @@ import { AiSkillPromptModal, copyAiSkillPrompt } from './ai-skill-modal'
 export type EditorSettings = {
   preferRichEditing: boolean
   defaultTextColor: string | null
+  defaultHighlightColor: string
   richEditingFolder: string
   restrictExistingBloTabs: boolean
   attachmentFolder: string
@@ -28,6 +30,7 @@ export type EditorSettings = {
 export const DEFAULT_SETTINGS: EditorSettings = {
   preferRichEditing: true,
   defaultTextColor: DEFAULT_TEXT_COLOR,
+  defaultHighlightColor: DEFAULT_HIGHLIGHT_COLOR,
   richEditingFolder: '',
   restrictExistingBloTabs: false,
   attachmentFolder: DEFAULT_ATTACHMENT_FOLDER,

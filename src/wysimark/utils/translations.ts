@@ -129,6 +129,9 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '恢复100%缩放': { zh: '恢复100%缩放', en: 'Reset zoom to 100%' },
+  '缩放比例': { zh: '缩放比例', en: 'Zoom level' },
+  '输入缩放百分比': { zh: '输入缩放百分比', en: 'Enter zoom percentage' },
   '演示模式': { zh: '演示模式', en: 'Presentation mode' },
   '普通光标': { zh: '普通光标', en: 'Normal pointer' },
   '激光笔': { zh: '激光笔', en: 'Laser pointer' },

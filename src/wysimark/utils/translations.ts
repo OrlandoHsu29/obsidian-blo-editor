@@ -129,6 +129,11 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '演示模式': { zh: '演示模式', en: 'Presentation mode' },
+  '普通光标': { zh: '普通光标', en: 'Normal pointer' },
+  '激光笔': { zh: '激光笔', en: 'Laser pointer' },
+  '退出演示（Esc）': { zh: '退出演示（Esc）', en: 'Exit presentation (Esc)' },
+  '无法进入演示模式': { zh: '无法进入演示模式', en: 'Cannot enter presentation mode' },
   '高亮': { zh: '高亮', en: 'Highlight' },
   '保存笔记': { zh: '保存笔记', en: 'Save note' },
   '编辑器快捷键': { zh: '编辑器快捷键', en: 'Editor hotkeys' },

@@ -34,6 +34,8 @@ import { NoteExportModal } from './note-export/modal';
 import { CacheProvider } from '@emotion/react';
 import { MermaidPreview } from './MermaidPreview';
 import { ensureBlockId } from './blocks/block-reference';
+import { PresentationMode } from './presentation/presentation-mode';
+import { restorePresentationScroll } from './presentation/restore-scroll';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -488,6 +490,9 @@ export class BloView extends FileView {
   private windowFocusFrame: number | null = null;
   private lastEditorMarkdown = '';
   private modeAction: HTMLElement;
+  private presentation: PresentationMode | null = null;
+  private presentationPreviousMode: boolean | undefined;
+  private presentationScrollCleanup: (() => void) | null = null;
   private findBar: FindBar | null = null;
   showSearch(replace = false) { this.findBar?.open(replace); }
 
@@ -532,11 +537,11 @@ export class BloView extends FileView {
         (this.plugin as Plugin & { settings: EditorSettings }).settings.attachmentFolder);
     };
     editor.wysimark.getTextColor = () => (this.plugin as any).settings.defaultTextColor;
+    editor.wysimark.getHighlightColor = () => this.plugin.settings.defaultHighlightColor;
+    editor.wysimark.setHighlightColor = color => this.plugin.setHighlightColor(editor, color);
     editor.wysimark.setTextColor = color => (this.plugin as any).setTextColor(editor, color);
     editor.wysimark.getTableDefaults = () => (this.plugin as any).settings.tableDefaults;
     editor.wysimark.setTableDefaults = defaults => {
-    editor.wysimark.getHighlightColor = () => this.plugin.settings.defaultHighlightColor;
-    editor.wysimark.setHighlightColor = color => this.plugin.setHighlightColor(editor, color);
       (this.plugin as any).settings.tableDefaults = defaults;
       void this.plugin.saveData((this.plugin as any).settings);
     };
@@ -566,6 +571,7 @@ export class BloView extends FileView {
       if (this.currentFile && this.editor) new NoteExportModal(this).open();
     });
     this.modeAction.after(exportAction);
+    this.modeAction.after(this.addAction('presentation', ui('演示模式'), () => { void this.togglePresentation(); }));
     this.scope = new Scope(this.app.scope);
     this.scope.register(null, null, (event) => {
       const target = event.target as HTMLElement | null;
@@ -664,6 +670,7 @@ export class BloView extends FileView {
     this.watchMemoPanel();
     this.registerDomEvent(contentEl, 'focusin', () => this.syncOnFocus());
     this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => {
+      if (leaf && leaf !== this.leaf) void this.exitPresentation().catch(error => console.error('Blo Editor: could not exit presentation', error));
       if (leaf === this.leaf) this.syncOnFocus();
       else if (leaf?.view instanceof MarkdownView && leaf.view.file === this.currentFile) this.syncOnFocus(leaf.view);
     }));
@@ -687,6 +694,8 @@ export class BloView extends FileView {
   }
 
   async onClose() {
+    await this.presentation?.exit();
+    this.presentationScrollCleanup?.(); this.presentationScrollCleanup = null;
     if (this.blockNavigationTimer !== null) window.clearTimeout(this.blockNavigationTimer);
     this.blockNavigationTimer = null;
     if (this.viewRedirect !== null) {
@@ -722,7 +731,10 @@ export class BloView extends FileView {
   }
 
   async onLoadFile(file: TFile) { await this.loadContent(file); }
-  async onUnloadFile(_file: TFile) { await this.saveFile(); this.currentFile = null; this.renderEditor(); }
+  async onUnloadFile(_file: TFile) {
+    await this.presentation?.exit(); this.presentationScrollCleanup?.(); this.presentationScrollCleanup = null;
+    await this.saveFile(); this.currentFile = null; this.renderEditor();
+  }
   /** Glimmer Memo asks the hosted view to flush before it hides or closes the popout. */
   async save(): Promise<void> { await this.saveFile(); }
   canAcceptExtension(extension: string) { return extension === 'md'; }
@@ -764,10 +776,32 @@ export class BloView extends FileView {
     this.modeAction.setAttribute('aria-label', hotkey ? `${modeTitle} (${hotkey})` : modeTitle);
   }
   async toggleReading() {
+    if (this.presentation) return;
     await this.saveFile();
     this.readOnly = !this.readOnly; this.updateModeUI(); this.renderEditor();
     this.app.workspace.requestSaveLayout();
   }
+  async togglePresentation() {
+    if (this.presentation) { await this.presentation.exit(); return; }
+    if (!this.currentFile || !this.editor) return;
+    this.presentationScrollCleanup?.(); this.presentationScrollCleanup = null;
+    const file = this.currentFile, previousMode = this.readOnly;
+    const scroller = this.contentEl.querySelector<HTMLElement>('.wysimark-editor-container'), scroll = scroller?.scrollTop ?? 0;
+    this.presentationPreviousMode = previousMode;
+    const controller = new PresentationMode(this.contentEl, () => {
+      if (this.presentation !== controller) return;
+      this.presentation = null; this.presentationPreviousMode = undefined; this.readOnly = previousMode;
+      this.updateModeUI(); this.renderEditor();
+      if (scroller?.isConnected) this.presentationScrollCleanup = restorePresentationScroll(scroller, scroll);
+    });
+    this.presentation = controller;
+    try {
+      await Promise.all([this.saveFile(), controller.enter()]);
+      if (this.presentation === controller && this.currentFile === file) { this.readOnly = true; this.updateModeUI(); this.renderEditor(); }
+    } catch (error) { await controller.exit(); new Notice(ui('无法进入演示模式') + ': ' + String(error).slice(0, 180)); }
+  }
+  /** Leave element fullscreen before navigating to a tab outside this note. */
+  async exitPresentation(): Promise<void> { await this.presentation?.exit(); }
   setEphemeralState(state: { subpath?: string; line?: number }) {
     if (this.blockNavigationTimer !== null) window.clearTimeout(this.blockNavigationTimer);
     this.blockNavigationTimer = null;
@@ -831,7 +865,7 @@ export class BloView extends FileView {
     return {
       ...super.getState(),
       file: this.currentFile?.path,
-      mode: this.getMode(),
+      mode: (this.presentationPreviousMode ?? this.readOnly) ? 'preview' : 'source',
     };
   }
 

@@ -16,6 +16,7 @@ import { applyTextColor, toggleCurrentTextColor } from './wysimark/marks-plugin/
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
+import { mountPresentationOverlay } from './presentation/navigation';
 import { NoteExportModal } from './note-export/modal';
 import { LinkTitlePreferences } from './link-title-preferences';
 import { parseBlockDocument } from './blocks/persistence';
@@ -118,9 +119,14 @@ export default class BloEditorPlugin extends Plugin {
       if (!this.settings.enableImageViewer) return;
       const image = event.target;
       if (!(image instanceof HTMLImageElement) || !image.closest('.wysimark-container')) return;
+      if (image.closest('.oit')) return;
       if (event.type === 'click' && !image.closest('.wysimark-reading')) return;
       const toolkit = (this.app as any).plugins.plugins['obsidian-image-toolkit'];
       toolkit?.clickImage?.(event);
+      for (const view of toolkit?.getAllContainerViews?.() ?? []) {
+        const overlay = view.imgInfo?.oitContainerEl as HTMLElement | undefined;
+        if (overlay && overlay.style.display !== 'none') mountPresentationOverlay(overlay);
+      }
     };
     this.registerDomEvent(document, 'dblclick', previewImage);
     this.registerDomEvent(document, 'click', previewImage);
@@ -526,17 +532,17 @@ export default class BloEditorPlugin extends Plugin {
     void this.saveData(this.settings);
     applyTextColor(editor, color);
   }
+  setHighlightColor(editor: Editor, color: string | null) {
+    if (editor.wysimark.readOnly || color && !HIGHLIGHT_COLORS.includes(color)) return;
+    if (color) { this.settings.defaultHighlightColor = color; void this.saveData(this.settings); }
+    applyHighlightColor(editor, color);
+  }
   async activateBloView(): Promise<void> {
     const { workspace } = this.app;
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile && isDrawingFile(this.app, activeFile)) {
       await openDrawing(this.app, activeFile);
       return;
-  setHighlightColor(editor: Editor, color: string | null) {
-    if (editor.wysimark.readOnly || color && !HIGHLIGHT_COLORS.includes(color)) return;
-    if (color) { this.settings.defaultHighlightColor = color; void this.saveData(this.settings); }
-    applyHighlightColor(editor, color);
-  }
     }
     if (activeFile && this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(activeFile)) {
       await this.enforceEditingScope(workspace.activeLeaf ?? undefined);

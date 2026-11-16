@@ -15,6 +15,7 @@ import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DrawingReference, trackDrawin
 import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
 import { useLayer } from './wysimark/use-layer'
 import { observeDrawingResize } from './drawing-resize'
+import { openOutsidePresentation } from './presentation/navigation'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
 type DrawingPlugin = {
@@ -40,6 +41,9 @@ export async function openDrawing(app: App, file: TFile, origin?: { sourcePath: 
     const source = app.vault.getAbstractFileByPath(origin.sourcePath)
     const leaf = app.workspace.getLeavesOfType('blo-view').find(leaf =>
       (leaf.view as typeof leaf.view & { editor?: Editor }).editor === origin.editor)
+    // Element fullscreen contains only the source note. A new drawing tab would
+    // otherwise open outside that surface, leaving its UI hidden and unusable.
+    await (leaf?.view as { exitPresentation?: () => Promise<void> } | undefined)?.exitPresentation?.()
     if (source instanceof TFile && leaf && await openEmbeddedDrawing(app, file, leaf, source, origin.reference)) return
   }
   const existing = app.workspace.getLeavesOfType('excalidraw').find(leaf =>
@@ -173,8 +177,9 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
         event.stopPropagation()
         dialog.close()
         const reference = trackDrawingReference(app, sourcePath, editor, element)
-        new DrawingSaveAsModal(app, file, reference).open()
-        reference?.path.unref()
+        void openOutsidePresentation(event.currentTarget.ownerDocument, () => new DrawingSaveAsModal(app, file, reference).open())
+          .catch(error => console.error('Blo Editor: could not open drawing save dialog', error))
+          .finally(() => reference?.path.unref())
       }}>
       <span aria-hidden="true" ref={node => { if (node) setIcon(node, DRAWING_SAVE_AS_ICON) }} />
     </button>}

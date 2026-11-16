@@ -12,6 +12,7 @@ import { PdfRenderOwner } from './pdf-render-owner'
 import { PdfScrollbar } from './PdfScrollbar'
 import { observeMediaResize } from './media-resize'
 import { observePdfToolbarOverflow } from './pdf-toolbar-overflow'
+import { openOutsidePresentation } from './presentation/navigation'
 
 /** A bounded viewport keeps the native PDF toolbar independent of page size. */
 export function PdfEmbed({ app, file, spec, sourcePath }: { app: App; file: TFile; spec: string; sourcePath: string }) {
@@ -110,7 +111,8 @@ export function PdfEmbed({ app, file, spec, sourcePath }: { app: App; file: TFil
     onDoubleClickCapture={event => {
       if ((event.target as HTMLElement).closest('.pdf-toolbar,input,button,[data-wysimark-image-resize]')) return
       event.preventDefault(); event.stopPropagation(); dialog.close()
-      void app.workspace.getLeaf('tab').openFile(file)
+      void openOutsidePresentation(event.currentTarget.ownerDocument, () => app.workspace.getLeaf('tab').openFile(file))
+        .catch(error => console.error('Blo Editor: could not open PDF', error))
     }}>
     <div ref={content} className="blo-pdf-content" />
     <div className="blo-pdf-resize-mask" aria-hidden="true" />

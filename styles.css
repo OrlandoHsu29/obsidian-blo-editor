@@ -246,6 +246,7 @@
     padding: 0;
     background-color: var(--background-primary);
 }
+.workspace-leaf-content > .view-content.wysimark-container { padding-bottom:0; }
 
 /*
  * Glimmer Memo's quick memo popout is a small window that draws its own name bar.

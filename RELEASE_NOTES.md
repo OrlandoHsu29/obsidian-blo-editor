@@ -11,7 +11,7 @@
 - 清理引用提示框的延迟回调并使用当前节点；缓存未变化的激光笔平滑曲线，减少逐帧重复计算。
 - 去除主窗口正文滚动区底部多余的 32 像素留白。
 
-验证：类型检查、793 项自动化测试及生产打包通过。已在 Obsidian 中验证演示、图片查看器关闭后继续演示、PDF／画板与标签页导航，以及引用图片的选中、缩放、撤销和只读状态。
+验证：类型检查、794 项自动化测试及生产打包通过。已在 Obsidian 中验证演示、图片查看器关闭后继续演示、PDF／画板与标签页导航，以及引用图片的选中、缩放、撤销和只读状态。
 
 ## English
 
@@ -24,7 +24,7 @@
 - Cancel stale reference-popup callbacks and resolve actions against the current node. Cache unchanged laser curves instead of rebuilding them every frame.
 - Remove the extra 32 px bottom gap around the main note scroller.
 
-Validation: type checking, 793 automated tests and production packaging passed. Live Obsidian checks covered presentation, image-viewer close/resume, PDF/drawing and tab navigation, and Wiki image selection, resizing, undo and read-only behaviour.
+Validation: type checking, 794 automated tests and production packaging passed. Live Obsidian checks covered presentation, image-viewer close/resume, PDF/drawing and tab navigation, and Wiki image selection, resizing, undo and read-only behaviour.
 
 ## 安装 / Installation
 

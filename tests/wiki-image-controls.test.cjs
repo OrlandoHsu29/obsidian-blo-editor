@@ -27,3 +27,10 @@ test('reading mode and unselected wiki images have no editing handles',()=>{
  const f=fixture();f.setReading(true);let view=f.render();assert(!view.props.className.includes('--selected'));assert(!view.props.children.some(child=>child?.type==='resize-control'));
  f.setReading(false);f.setSelected(false);view=f.render();assert(!view.props.children.some(child=>child?.type==='resize-control'));
 });
+test('wiki image display separates dimensions without changing the saved description',()=>{
+ const f=fixture();f.element.alt='attachments/photo.png|745x752';
+ const image=f.render().props.children.find(child=>child?.type==='img');
+ assert.equal(image.props.alt,'attachments/photo.png (745 × 752)');
+ assert.equal(f.element.alt,'attachments/photo.png|745x752');
+ f.element.alt='A descriptive label';assert.equal(f.render().props.children.find(child=>child?.type==='img').props.alt,'A descriptive label');
+});

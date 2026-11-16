@@ -17,7 +17,8 @@ import { useAttachmentRevision } from '../../attachment-revision'
 /** Wiki image references use the same selection, sizing and history as images. */
 export function WikiImageWithControls() {
   const element = useElement() as ImageBlockElement | ImageInlineElement
-  return <ImageWithControls element={element} />
+  const displayAlt = element.alt.replace(/\|(\d+(?:x\d+)?)$/, (_, dimensions: string) => ` (${dimensions.replace('x', ' × ')})`)
+  return <ImageWithControls element={element} displayAlt={displayAlt} />
 }
 
 /**
@@ -34,8 +35,10 @@ export function WikiImageWithControls() {
  */
 export function ImageWithControls({
   element,
+  displayAlt,
 }: {
   element: ImageBlockElement | ImageInlineElement
+  displayAlt?: string
 }) {
   const editor = useSlateStatic()
   const revision = useAttachmentRevision(editor, element.url)
@@ -104,7 +107,7 @@ export function ImageWithControls({
    */
   return (
     <$ImageContainer className={className} data-blo-image>
-      <$Image key={`${url}:${revision}`} src={url} alt={element.alt} width={size?.width ?? element.width} height={size?.height} decoding="async" onLoad={event => {
+      <$Image key={`${url}:${revision}`} src={url} alt={displayAlt ?? element.alt} width={size?.width ?? element.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
         if (image.naturalWidth && image.naturalHeight) setNaturalSize(current =>
           current?.width === image.naturalWidth && current.height === image.naturalHeight

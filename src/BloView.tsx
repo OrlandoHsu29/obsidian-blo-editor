@@ -37,6 +37,7 @@ import { ensureBlockId } from './blocks/block-reference';
 import { PresentationMode } from './presentation/presentation-mode';
 import { restorePresentationScroll } from './presentation/restore-scroll';
 import { WikiImageWithControls } from './wysimark/image-plugin/render-element/image-with-controls';
+import { copyImageFragment } from './image-clipboard';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -468,6 +469,8 @@ export class BloView extends FileView {
       });
     }
     editor.wysimark.save = () => this.saveFile();
+    const clipboardSource = this.currentFile;
+    if (clipboardSource) editor.wysimark.copyImageFragment = (fragment, encoded, current) => copyImageFragment(this, clipboardSource, fragment, encoded, current);
     editor.wysimark.copyBlockLink = async element => {
       const file = this.currentFile;
       if (!file || this.readOnly || this.editor !== editor) throw new Error('Source document changed');

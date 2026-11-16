@@ -12,6 +12,7 @@ function fixture(){
    useState(initial){const i=index++;if(!(i in slots))slots[i]=initial;return [slots[i],next=>{const value=typeof next==='function'?next(slots[i]):next;if(!Object.is(value,slots[i]))updates++;slots[i]=value}]},
   };
   if(id==='slate-react')return {useSlateStatic:()=>editor,useReadOnly:()=>true,useSelected:()=>false};
+  if(id.includes('blocks/use-block-selection'))return {useBlockSelection:()=>false,useMultipleImagesSelected:()=>false};
   if(id.endsWith('/attachment-revision'))return {useAttachmentRevision:()=>revision};
   if(id.includes('image-with-controls-styles'))return {$Image:'img',$ImageContainer:'span'};
   if(id.startsWith('.'))return {};

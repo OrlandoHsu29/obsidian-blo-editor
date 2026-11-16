@@ -6,6 +6,7 @@ function fixture(){
  const m=new Module('wiki-image-controls.cjs');m.require=id=>{
   if(id==='react')return {useEffect(){},useState:initial=>[initial,()=>{}],useMemo:fn=>fn()};
   if(id==='slate-react')return {useSlateStatic:()=>editor,useElement:()=>element,useSelected:()=>selected,useReadOnly:()=>readOnly};
+  if(id.includes('blocks/use-block-selection'))return {useBlockSelection:()=>false,useMultipleImagesSelected:()=>false};
   if(id.includes('image-with-controls-styles'))return {$Image:'img',$ImageContainer:'span'};
   if(id.includes('image-toolbar'))throw Error('Image presets must not be mounted on photos');
   if(id.includes('image-resize-control'))return {ImageResizeControl:'resize-control'};

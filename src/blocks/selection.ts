@@ -8,7 +8,7 @@ import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
 import { isEditableStructure } from './structured-block'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
-type BlockSelection={index:number;range:Range;end?:number}
+type BlockSelection={index:number;range:Range;end?:number;images?:Set<Element>;imageAnchor?:number}
 const staged=new WeakMap<Editor,BlockSelection>()
 const contentSelections=new WeakMap<Editor,Range>()
 const selectingBlock=new WeakSet<Editor>()
@@ -30,7 +30,34 @@ export function clearBlockSelection(editor:Editor){contentSelections.delete(edit
 export function isWholeBlockSelected(editor:Editor,index:number):boolean {
  const pending=staged.get(editor)
  return !!pending&&!!editor.selection&&Range.equals(editor.selection,pending.range)&&
-  index>=pending.index&&index<=Math.max(pending.range.anchor.path[0],pending.range.focus.path[0])
+  (pending.images?pending.images.has(editor.children[index] as Element):index>=pending.index&&index<=Math.max(pending.range.anchor.path[0],pending.range.focus.path[0]))
+}
+export function selectedImageFragment(editor:Editor):Element[]|undefined {
+ const pending=staged.get(editor)
+ if(!pending?.images||!editor.selection||!Range.equals(editor.selection,pending.range))return
+ return Array.from(pending.images).sort((a,b)=>rootCache(editor).indices.get(a)!-rootCache(editor).indices.get(b)!)
+}
+export function hasMultipleImagesSelected(editor:Editor):boolean {
+ const pending=staged.get(editor)
+ return !!pending?.images&&pending.images.size>1&&!!editor.selection&&Range.equals(editor.selection,pending.range)
+}
+/** Modifier selection shares the block-selection store and retains a real void caret. */
+export function selectImageWithModifier(editor:Editor,index:number,shift:boolean):boolean {
+ const image=editor.children[index]
+ if(editor.wysimark.readOnly||!Element.isElement(image)||image.type!=='image-block')return false
+ const pending=staged.get(editor),previous=editor.selection?.anchor.path[0]
+ const images=new Set(selectedImageFragment(editor)??[])
+ const previousNode=previous===undefined?undefined:editor.children[previous],previousImage=Element.isElement(previousNode)&&previousNode.type==='image-block'
+ if(!images.size&&previousImage)images.add(previousNode)
+ if(shift&&!images.size)return false
+ const anchor=pending?.imageAnchor??(previousImage?previous!:index)
+ if(shift){images.clear();for(let i=Math.min(anchor,index);i<=Math.max(anchor,index);i++){const node=editor.children[i];if(Element.isElement(node)&&node.type==='image-block')images.add(node)}}
+ else if(images.has(image))images.delete(image);else images.add(image)
+ if(!images.size){clearBlockSelection(editor);Transforms.deselect(editor);return true}
+ const focus=images.has(image)?image:Array.from(images).at(-1)!,at=rootCache(editor).indices.get(focus)!
+ const point=Editor.start(editor,[at]),range={anchor:point,focus:point}
+ selectStructuralRange(editor,at,range,undefined,{images,imageAnchor:anchor})
+ return true
 }
 /** Keep explicit block selection after indentation, including repeated Tab. */
 export function indentBlockSelection(editor:Editor,delta:1|-1):boolean {
@@ -46,6 +73,12 @@ export function deleteWholeBlockSelection(editor:Editor):boolean {
  const pending=staged.get(editor)
  if(editor.wysimark.readOnly||!editor.selection)return false
  const selected=pending&&isWholeBlockSelected(editor,pending.index)?pending:undefined
+ if(selected?.images){
+  const indices=Array.from(selected.images,n=>rootCache(editor).indices.get(n)!).sort((a,b)=>b-a)
+  clearBlockSelection(editor)
+  withHistoryBatch(editor,()=>{for(const index of indices)Transforms.removeNodes(editor,{at:[index]})})
+  return true
+ }
  let index=selected?.index
  if(index===undefined&&Range.isCollapsed(editor.selection)) {
   const entry=Editor.above(editor,{match:n=>isStructuredBlock(n)&&editor.isVoid(n)})
@@ -100,11 +133,11 @@ export function selectBlockContents(editor:Editor,index:number):boolean {
  if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
  return selectStructuralRange(editor,index,blockSelectionRange(editor,index))
 }
-function selectStructuralRange(editor:Editor,index:number,range:Range,end?:number):boolean {
+function selectStructuralRange(editor:Editor,index:number,range:Range,end?:number,extra?:Pick<BlockSelection,'images'|'imageAnchor'>):boolean {
  contentSelections.delete(editor)
  selectingBlock.add(editor)
  try{Transforms.select(editor,range)}finally{selectingBlock.delete(editor)}
- setBlockSelection(editor,{index,range,end})
+ setBlockSelection(editor,{index,range,end,...extra})
  return true
 }
 /** Select text first; reserve structural block selection for handles and media. */

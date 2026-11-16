@@ -4,6 +4,7 @@ import { Editor, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useReadOnly, useSelected, useSlateStatic } from 'slate-react'
 import { AnchorDialog } from '../../anchor-plugin/render-element/AnchorDialog'
+import { useMultipleImagesSelected } from '../../../blocks/use-block-selection'
 import { $Input, $PrimaryButton, $CancelButton } from '../../shared-styles'
 import { $Panel, CloseMask } from '../../shared-overlays'
 import { useAnchoredPanelPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
@@ -30,11 +31,12 @@ function EditMediaReference({ anchor, target, onSave }: { anchor: HTMLElement; t
 /** Information about a vault source outside the managed attachment directory. */
 export function MediaReferenceDialog({ element }: { element: ImageBlockElement | ImageInlineElement }) {
   const editor = useSlateStatic(), selected = useSelected(), readOnly = useReadOnly()
+  const multipleImagesSelected = useMultipleImagesSelected()
   const dialog = useLayer('dialog'), dialogRef = useRef(dialog), elementRef = useRef(element)
   dialogRef.current = dialog; elementRef.current = element
   const owned = useRef<FunctionComponent<Record<string, never>> | null>(null)
   useEffect(() => {
-    if (!selected || readOnly || !editor.selection || !Range.isCollapsed(editor.selection)) return
+    if (!selected || multipleImagesSelected || readOnly || !editor.selection || !Range.isCollapsed(editor.selection)) return
     const file = editor.wysimark.getReferencedMedia?.(element.url)
     if (!file) return
     const doc = ReactEditor.toDOMNode(editor, element).ownerDocument
@@ -69,6 +71,6 @@ export function MediaReferenceDialog({ element }: { element: ImageBlockElement |
       doc.defaultView!.clearTimeout(timer)
       if (dialogRef.current.layer?.Component === owned.current) dialogRef.current.close()
     }
-  }, [selected, readOnly, element.url])
+  }, [selected, multipleImagesSelected, readOnly, element.url])
   return null
 }

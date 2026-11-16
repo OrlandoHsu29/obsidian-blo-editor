@@ -37,6 +37,7 @@ export type WysimarkEditor = {
     memoPanel?: boolean
     integrationPreferences?: IntegrationPreferences
     resolveImageUrl?: (url: string) => string
+    copyImageFragment?: (fragment: Descendant[], encoded: string, current: () => boolean) => Promise<void>
     save?: () => Promise<void>
     copyBlockLink?: (element: Element) => Promise<void>
     toggleReading?: () => Promise<void>

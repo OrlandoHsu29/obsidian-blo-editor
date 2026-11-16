@@ -8,7 +8,7 @@ import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBloc
 import type { BlockDragGroup } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
-import { clearBlockSelection, selectBlockContents } from './selection'
+import { clearBlockSelection, selectBlockContents, selectImageWithModifier } from './selection'
 import { showBlockMenu } from './block-menu'
 import { startBlockDragAutoScroll } from './drag-auto-scroll'
 import { BlockHighlight, highlightBlockDrag } from './block-highlight'
@@ -93,6 +93,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
   const guideLevels=guideMask?Array.from({length:depth},(_,level)=>level).filter(level=>Math.floor(guideMask/2**level)%2===1):[]
   const [drop, setDrop] = useState<DropPreview | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const imageModifierClick = useRef(false)
   const foldMotion = useRef({ hidden: foldHidden, enabled: false })
   const animateFold = foldMotion.current.enabled || foldMotion.current.hidden !== foldHidden
   useLayoutEffect(() => { foldMotion.current = { hidden: foldHidden, enabled: animateFold } }, [foldHidden, animateFold])
@@ -195,7 +196,18 @@ export function RootBlock({ element, children }: { element: Element; children: R
       '--blo-drop-left':`${drop?.left??0}px`,'--blo-drop-top':`${drop?.top??0}px` } as CSSProperties}
     data-drop-depth={drop?.depth}
     onMouseDownCapture={event => {
+      imageModifierClick.current = false
+      const target=event.target as HTMLElement
+      if(event.button===0&&(event.shiftKey||event.ctrlKey||event.metaKey)&&target.closest('[data-blo-image]')&&!target.closest('[data-wysimark-image-resize]')&&selectImageWithModifier(editor,index,event.shiftKey)){
+        imageModifierClick.current = true
+        event.preventDefault();event.stopPropagation();if(editor.selection)ReactEditor.focus(editor);return
+      }
       if (!(event.target as HTMLElement).closest('.wysimark-block-handle')) clearBlockSelection(editor)
+    }}
+    onClickCapture={event => {
+      if (!imageModifierClick.current) return
+      imageModifierClick.current = false
+      event.preventDefault(); event.stopPropagation()
     }}
     onMouseEnter={alignHandle} onFocusCapture={alignHandle}
     onDragEnter={onDragOver}

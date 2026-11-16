@@ -4,7 +4,7 @@ import { clearBlockSelection, isWholeBlockSelected } from '../../blocks/selectio
 import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../blocks/model'
 import { selectStructuredBoundary } from '../../blocks/boundary'
 import type { TableElement } from './types'
-import { clipboardFragmentHtml } from '../paste-markdown-plugin/clipboard-html'
+import { clipboardFragmentHtml, prepareImageClipboard } from '../paste-markdown-plugin/clipboard-html'
 
 export type TableCellSelection = {
   table: TableElement; path: Path; left: number; right: number; top: number; bottom: number
@@ -306,7 +306,8 @@ export function installTableCellClipboard(editor: Editor): void {
     const fragment = selectedFragment(selected)
     const encoded = window.btoa(encodeURIComponent(JSON.stringify([fragment])))
     data.setData('application/x-slate-fragment', encoded)
-    data.setData('text/html', clipboardFragmentHtml([fragment], encoded))
+    data.setData('text/html', clipboardFragmentHtml([fragment], encoded, undefined, editor.wysimark.resolveImageUrl))
     data.setData('text/plain', fragment.children.map(row => row.children.map(cell => Node.string(cell)).join('\t')).join('\n'))
+    prepareImageClipboard(editor, [fragment], encoded)
   }
 }

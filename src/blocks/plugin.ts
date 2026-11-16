@@ -4,7 +4,7 @@ import { cleanPastedFragment } from './typography'
 import { Editor, Element, Node, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import type { Descendant } from 'slate'
-import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary } from './selection'
+import { clearBlockSelection, deleteAtBlockBoundary, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary, selectedImageFragment } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
 import { boundaryBlockIndex, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary, outdentEmptyParagraph } from './boundary'
 import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
@@ -17,7 +17,7 @@ import { copiedTextContent, pasteTextContent } from './paste-style'
 type Types={Name:'block-structure';Editor:{}}
 export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  const {insertFragment,insertText,getFragment}=editor
- editor.getFragment=()=>copiedTextContent(editor,getFragment())
+ editor.getFragment=()=>copiedTextContent(editor,selectedImageFragment(editor)??getFragment())
  const {apply}=editor
  let pendingDefaults:HeadingDefaults|undefined
  editor.apply=operation=>{
@@ -74,7 +74,10 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   deleteForward:()=>deleteWholeBlockSelection(editor),
   deleteFragment:()=>deleteWholeBlockSelection(editor),
  },
- editableProps:{onKeyDown:event=>{
+ editableProps:{onCut:event=>{
+  if((selectedImageFragment(editor)?.length??0)<=1)return false
+  event.preventDefault();editor.setFragmentData(event.clipboardData,'cut');deleteWholeBlockSelection(editor);return true
+ },onKeyDown:event=>{
   if(handleTableCellKey(editor,event)){event.preventDefault();event.stopPropagation();return true}
   if(navigateBlockBoundary(editor,event)){event.preventDefault();event.stopPropagation();return true}
   if(event.key!=='Tab'||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false

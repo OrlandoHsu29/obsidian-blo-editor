@@ -4,9 +4,10 @@ import { blockDepth, isEditorSpacer, isListBlock, resolveOrderedNumbers, rootCac
 import { cleanInlineStyle } from '../../blocks/typography'
 import { serializeMath } from "../math-plugin/serialize"
 import { serialize } from "../convert"
+let clipboardRevision = 0
 
 /** Build semantic HTML from just the copied fragment, without editor controls/CSS. */
-export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>()): string {
+export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>(), resolveImageUrl?: (url: string) => string): string {
   const document = window.document.implementation.createHTMLDocument('')
   const container = document.createElement('div')
   container.setAttribute('data-slate-fragment', encoded)
@@ -66,8 +67,10 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
       return table
     }
     if (node.type === 'image-inline' || node.type === 'image-block') {
-      const image = document.createElement('img'); image.setAttribute('src', node.url)
+      const image = document.createElement('img'); image.setAttribute('src', resolveImageUrl?.(node.url) ?? node.url)
       if (node.alt) image.alt = node.alt
+      if (node.width) image.width = node.width
+      if (node.height) image.height = node.height
       return image
     }
     const tag = node.type === 'heading' ? `h${node.level}` : node.type === 'paragraph' ? 'p' :
@@ -122,6 +125,14 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
   return container.outerHTML
 }
 
+/** Both text selections and rectangular table selections share this path. */
+export function prepareImageClipboard(editor: Editor, fragment: Descendant[], encoded: string): void {
+  const revision = ++clipboardRevision
+  if (!editor.wysimark.copyImageFragment || !fragment.some(node => [...Node.elements(node)].some(([element]) => element.type === 'image-inline' || element.type === 'image-block'))) return
+  void editor.wysimark.copyImageFragment(fragment, encoded, () => revision === clipboardRevision)
+    .catch(error => console.error('Blo Editor: could not prepare image clipboard', error))
+}
+
 export function installRichClipboard(editor: Editor): void {
   const { setFragmentData } = editor
   editor.setFragmentData = (data, origin) => {
@@ -134,10 +145,11 @@ export function installRichClipboard(editor: Editor): void {
       const label = cache.numberLabels.get(editor.children[start.path[0] + index])
       if (label) labels.set(node, label)
     })
-    data.setData('text/html', clipboardFragmentHtml(fragment, encoded, labels))
-    if (fragment.some(node => [...Node.elements(node)].some(([element]) => element.type === 'math-inline' || element.type === 'math-block'))) {
-      data.setData('text/plain', serialize(fragment as Element[]))
+    data.setData('text/html', clipboardFragmentHtml(fragment, encoded, labels, editor.wysimark.resolveImageUrl))
+    if (fragment.some(node => [...Node.elements(node)].some(([element]) => ['math-inline', 'math-block', 'image-inline', 'image-block'].includes(element.type)))) {
+      data.setData('text/plain', serialize(fragment as Element[], { enableInternalLinks: true }))
     }
+    prepareImageClipboard(editor, fragment, encoded)
     return result
   }
 }

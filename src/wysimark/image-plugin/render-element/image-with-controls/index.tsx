@@ -13,6 +13,7 @@ import {
 import { ImageResizeControl } from "./image-resize-controls/image-resize-control"
 import { ImageSizeStatus } from "./image-size-status/image-size-status"
 import { useAttachmentRevision } from '../../attachment-revision'
+import { useBlockSelection, useMultipleImagesSelected } from '../../../../blocks/use-block-selection'
 
 /** Wiki image references use the same selection, sizing and history as images. */
 export function WikiImageWithControls() {
@@ -46,7 +47,9 @@ export function ImageWithControls({
   // A size/selection render must not remount the image and trigger onLoad again.
   const url = useMemo(() => editor.wysimark.resolveImageUrl?.(element.url) ?? element.url,
     [editor, element.url, revision])
-  const selected = useSelected()
+  const selectedBySlate = useSelected(), selectedByBlock = useBlockSelection(element)
+  const multipleImagesSelected = useMultipleImagesSelected()
+  const selected = selectedBySlate || selectedByBlock
   const readOnly = useReadOnly()
   const [naturalSize, setNaturalSize] = useState<{width: number; height: number} | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -78,7 +81,7 @@ export function ImageWithControls({
    * Show resize controls if the element is selected, it has a `size` and
    * it has a `srcSize`
    */
-  const showControls = !readOnly && selected && displaySize && srcSize
+  const showControls = !readOnly && selected && displaySize && srcSize && !multipleImagesSelected
 
   /**
    * Add classes for different states.

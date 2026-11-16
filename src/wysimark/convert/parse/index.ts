@@ -47,8 +47,8 @@ function repairYuqueListContinuations(source: string, ast: Root): string {
   return changed ? lines.join('\n') : source
 }
 
-function repairYuqueStrong(source:string,ast:Root):string {
-  if(!source.includes('**')||!/<font\b/i.test(source))return source
+function repairYuqueStrong(source:string,ast:Root,repairFonts:boolean):string {
+  if(!source.includes('**')||!(repairFonts&&/<font\b/i.test(source))&&!/\*\*[ \t]+[（(]/.test(source))return source
   const codeRanges:{start:number;end:number}[]=[]
   visit(ast,node=>{
     if(node.type!=='code'&&node.type!=='inlineCode'&&node.type!=='math'&&node.type!=='inlineMath')return
@@ -67,12 +67,12 @@ function repairYuqueStrong(source:string,ast:Root):string {
   }
   parts.push(source.slice(cursor))
   const masked=parts.join(''),result:string[]=[]
+  const escaped=(index:number)=>{let count=0;for(let i=index-1;i>=0&&source[i]==='\\';i--)count++;return count%2===1}
   cursor=0
   for(const match of masked.matchAll(/\*\*((?:(?!\*\*)[^\n])+)\*\*/g)){
     const start=match.index!,end=start+match[0].length,wrapped=source.slice(start+2,end-2)
-    let escapes=0
-    for(let i=start-1;i>=0&&source[i]==='\\';i--)escapes++
-    if(escapes%2||!/<font\b/i.test(wrapped))continue
+    const styledFont=repairFonts&&/<font\b/i.test(wrapped),spacedParenthesis=/^[ \t]+[（(]/.test(wrapped)
+    if(escaped(start)||escaped(end-2)||(!styledFont&&!spacedParenthesis))continue
     // HTML strong tags avoid Markdown delimiter ambiguity at adjacent bold
     // runs, nested underline tags, and font/code boundaries (including spaces).
     result.push(source.slice(cursor,start),'<strong>',wrapped,'</strong>')
@@ -90,9 +90,9 @@ export function parseToAst(
   if(options.yuqueFormatting){
     const continued = repairYuqueListContinuations(source, ast)
     if (continued !== source) { source = continued; ast = parseMarkdown(source) }
-    const repaired=repairYuqueStrong(source,ast)
-    if(repaired!==source){source=repaired;ast=parseMarkdown(source)}
   }
+  const repaired=repairYuqueStrong(source,ast,!!options.yuqueFormatting)
+  if(repaired!==source){source=repaired;ast=parseMarkdown(source)}
   visit(ast, 'paragraph', node => {
     const start=node.position?.start.offset
     if(start!==undefined&&/^\d{1,6}\\\. /.test(source.slice(start)))node.data={...node.data,escapedOrderedPrefix:true}

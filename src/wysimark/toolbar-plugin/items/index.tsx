@@ -11,7 +11,7 @@ import { expandedQuoteItems } from './quote-items'
 import { blockIndentItems, clearStyleItem, historyItems, utilityItems } from './utility-items'
 
 // Quick memo windows keep these tools on the main row; others go under More.
-const memoButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'highlight', 'find-replace', 'table', 'link', 'attachment'])
+const memoButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'highlight', 'outdent', 'indent', 'find-replace', 'table', 'link', 'attachment'])
 
 function pick(items:MenuItemData[],title:string):Exclude<MenuItemData,'divider'> {
   const item=items.find(item=>item!=='divider'&&item.title===title)

@@ -45,6 +45,7 @@ test('memo toolbars preserve primary tools and put every other tool in More exac
  const {items,primaryCount}=toolbarItemLayout(()=>true,true),primary=visibleToolbarItems(()=>true,true);
  assert.deepEqual(items.slice(0,primaryCount),primary);assert.ok(items.length>primaryCount);
  const actual=buttons(items),expected=buttons(visibleToolbarItems());assert.equal(actual.length,expected.length);
+ for(const id of ['outdent','indent'])assert.ok(primary.includes(toolbarGroups.flat().find(entry=>entry.id===id).item));
  assert.equal(new Set(actual).size,expected.length);for(const item of expected)assert.ok(actual.includes(item));
  assert.notEqual(items[0],'divider');assert.notEqual(items.at(-1),'divider');
  for(let i=1;i<items.length;i++)assert.ok(items[i]!=='divider'||items[i-1]!=='divider');
@@ -63,5 +64,5 @@ test('collapse order hides optional tools right-to-left before any memo primary 
  const primaryIndices=items.flatMap((item,index)=>item!=='divider'&&primary.has(item)?[index]:[]).reverse();
  assert.deepEqual(collapseOrder,[...optionalIndices,...primaryIndices]);
  const idFor=item=>toolbarGroups.flat().find(entry=>entry.item===item)?.id;
- assert.deepEqual(collapseOrder.slice(0,5).map(index=>idFor(items[index])),['drawing','indent','outdent','horizontal-rule','inline-math']);
+ assert.deepEqual(collapseOrder.slice(0,5).map(index=>idFor(items[index])),['drawing','horizontal-rule','inline-math','code-block','quote']);
 });

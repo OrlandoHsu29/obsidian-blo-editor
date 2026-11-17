@@ -57,7 +57,15 @@ const launch = (note: Block[]) => note.map(connect);
 
 <!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
 
-- [x] 让编号与结构一起生长
+- [x] 完成发射前检查
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A1%7D -->
+
+- [ ] 核对收件人与落点坐标
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A1%7D -->
+
+- [x] 校准通信频段，确认信号送达
 
 <!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
 

@@ -32,7 +32,15 @@ Embed editable **Excalidraw** drawings, resize their previews, open the drawing 
 
 Images and PDFs have resizable previews; PDFs retain their toolbar and page navigation. Media links can be downloaded into the attachment folder and embedded as separate blocks. Native Obsidian block links connect specific ideas across notes.
 
-![An editable drawing alongside syntax-highlighted TypeScript](assets/tour-drawing.png)
+Task lists have hierarchy guides too. Completing a parent fades and strikes through its children; unchecking it restores their appearance while preserving each child's own checkbox state.
+
+![Editable drawings, syntax highlighting and nested task lists](assets/tour-drawing.png)
+
+## Present straight from your note
+
+**Presentation mode** puts your note in a centered fullscreen view with whole-content zoom. Highlight ideas with a laser pointer: its trail follows page scrolling and fades after release.
+
+![Centered presentation content, a fading laser trail and whole-content zoom controls](assets/tour-presentation.png)
 
 ## Take the note with you
 

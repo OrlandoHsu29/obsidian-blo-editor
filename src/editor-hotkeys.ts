@@ -3,7 +3,7 @@ import type { Hotkey, Plugin } from 'obsidian'
 import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { HistoryEditor } from 'slate-history'
-import { indentSelectedBlocks } from './blocks/model'
+import { indentCurrentBlock } from './blocks/model'
 import { t, ui } from './wysimark/utils/translations'
 
 type EditorCommand = { id: string; name: string; hotkeys: Hotkey[]; run?: (editor: Editor) => void; readOnly?: boolean }
@@ -23,8 +23,8 @@ export function editorCommands(): EditorCommand[] {
     { id: 'toggle-unordered-list', name: t('bulletList'), hotkeys: key('8', 'Mod', 'Shift'), run: e => e.list.convertUnorderedList(true) },
     { id: 'toggle-task-list', name: t('checkList'), hotkeys: key('9', 'Mod', 'Shift'), run: e => e.list.convertTaskList(true) },
     { id: 'toggle-quote', name: ui('引用'), hotkeys: key('u', 'Mod', 'Shift'), run: e => e.blockQuotePlugin.isActive() ? e.blockQuotePlugin.outdent() : e.blockQuotePlugin.indent() },
-    { id: 'indent-block', name: t('increaseDepth'), hotkeys: key(']', 'Mod'), run: e => { indentSelectedBlocks(e, 1) } },
-    { id: 'outdent-block', name: t('decreaseDepth'), hotkeys: key('[', 'Mod'), run: e => { indentSelectedBlocks(e, -1) } },
+    { id: 'indent-block', name: ui('仅缩进当前块'), hotkeys: key(']', 'Mod'), run: e => { indentCurrentBlock(e, 1) } },
+    { id: 'outdent-block', name: ui('仅回退当前块'), hotkeys: key('[', 'Mod'), run: e => { indentCurrentBlock(e, -1) } },
     { id: 'insert-link', name: t('insertLink'), hotkeys: key('k', 'Mod'), run: e => e.wysimark.openLink?.() },
     ...(['insertTable', 'insertAttachment', 'codeBlock', 'horizontalRule'] as const).map((title, index) => ({
       id: ['insert-table', 'insert-attachment', 'insert-code-block', 'insert-horizontal-rule'][index],

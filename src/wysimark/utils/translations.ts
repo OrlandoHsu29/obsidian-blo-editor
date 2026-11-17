@@ -129,6 +129,10 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '缩进（包含子项）': { zh: '缩进（包含子项）', en: 'Indent with children' },
+  '回退（包含子项）': { zh: '回退（包含子项）', en: 'Outdent with children' },
+  '仅缩进当前块': { zh: '仅缩进当前块', en: 'Indent current block only' },
+  '仅回退当前块': { zh: '仅回退当前块', en: 'Outdent current block only' },
   '项目主页': { zh: '项目主页', en: 'Project home' },
   '查看源码、版本更新与反馈问题。': { zh: '查看源码、版本更新与反馈问题。', en: 'Browse the source, releases and issue tracker.' },
   '恢复100%缩放': { zh: '恢复100%缩放', en: 'Reset zoom to 100%' },

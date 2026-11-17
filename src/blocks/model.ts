@@ -199,11 +199,28 @@ function indentBlockGroups(editor:Editor,indices:number[],delta:1|-1):boolean {
   batch(editor,()=>{for(const group of groups){if(delta<0&&blockDepth(editor.children[group.start])===0)continue;for(let i=group.start;i<group.end;i++)Transforms.setNodes(editor,depthProps(editor.children[i],blockDepth(editor.children[i])+delta),{at:[i]})}})
   return true
 }
-export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1) {
+export function changeBlockIndent(editor: Editor, index: number, delta: 1|-1, includeChildren = true) {
   if(editor.wysimark.readOnly||!editor.children[index]||isEditorSpacer(editor.children[index]))return false
   if(!canIndentBlock(editor.children[index]))return false
   if(delta<0&&blockDepth(editor.children[index])===0)return false
-  return indentBlockGroups(editor,[index],delta)
+  if(includeChildren)return indentBlockGroups(editor,[index],delta)
+  const node=editor.children[index],depth=blockDepth(node)+delta
+  if(depth>32)return false
+  batch(editor,()=>Transforms.setNodes(editor,depthProps(node,depth),{at:[index]}))
+  return true
+}
+
+/** The caret/original selection anchor owns current-block commands. */
+export function currentRootBlock(editor: Editor) {
+  if(!editor.selection)return
+  let index=editor.selection.anchor.path[0],node=editor.children[index]
+  if(isEditorSpacer(node)&&index>0&&isStructuredBlock(editor.children[index-1]))node=editor.children[--index]
+  if(!Element.isElement(node)||isEditorSpacer(node))return
+  return {node,index}
+}
+export function indentCurrentBlock(editor: Editor, delta: 1|-1): boolean {
+  const current=currentRootBlock(editor)
+  return !!current&&changeBlockIndent(editor,current.index,delta,false)
 }
 /** Remove the same subtree that the block handle selects, as one undo step. */
 export function deleteBlockGroup(editor: Editor, index: number, selectedEnd?: number): boolean {

@@ -3,6 +3,8 @@ import type { TableElement } from '../types'
 import { createTableMeasure, fitTableWidth, runTableFit } from './table-fit'
 import { VIEWPORT_IDLE_MS } from '../../../viewport-work'
 
+const RESIZE_IDLE_MS = 120
+
 /** Keep Slate's table mounted; only the temporary measurement copy is resized. */
 export function useTableOverflow(element: TableElement) {
   const frame = useRef<HTMLDivElement>(null)
@@ -14,11 +16,11 @@ export function useTableOverflow(element: TableElement) {
     let near = false, dirty = true, ready = false, disposed = false
     let lastWidth = 0, lastHeight = 0, lastTableWidth = 0, lastFrameHeight = 0, observedWidth = 0
     let timer = 0, settling = 0, cancelFit: (() => void) | undefined
-    let scrollUntil = 0, priority = 0
+    let scrollUntil = 0, resizeUntil = 0, priority = 0
     let fittedWidth: number | undefined
     let measurement: ReturnType<typeof createTableMeasure> | undefined
     const pending = () => host.dataset.tableLayout === 'pending'
-    const resized = () => host.clientWidth !== lastWidth || table.offsetHeight !== lastHeight || table.offsetWidth !== lastTableWidth
+    const resized = () => host.clientWidth !== lastWidth || !pending() && (table.offsetHeight !== lastHeight || table.offsetWidth !== lastTableWidth)
     const hint = () => {
       const left = String(scroll.scrollLeft > 2), right = String(scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 2)
       if (host.dataset.moreLeft !== left) host.dataset.moreLeft = left
@@ -42,7 +44,7 @@ export function useTableOverflow(element: TableElement) {
     }
     const mask = () => {
       if (pending()) return
-      const height = settling ? host.offsetHeight : lastFrameHeight || Math.max(48, table.rows.length * 3.25 * (parseFloat(win.getComputedStyle(host).fontSize) || 16))
+      const height = lastFrameHeight || Math.max(48, table.rows.length * 3.25 * (parseFloat(win.getComputedStyle(host).fontSize) || 16))
       win.clearTimeout(settling); settling = 0
       host.style.setProperty('--blo-table-hold-height', `${height}px`)
       // Keep wrapping stable while the surrounding viewport is being resized.
@@ -71,7 +73,7 @@ export function useTableOverflow(element: TableElement) {
     const start = () => {
       timer = 0
       if (disposed || !near || !host.isConnected || host.clientWidth < 1) return
-      const idle = scrollUntil + (priority > 0 ? 80 : 0)
+      const idle = Math.max(resizeUntil, scrollUntil + (priority > 0 ? 80 : 0))
       if (win.performance.now() < idle) { schedule(idle - win.performance.now()); return }
       if (!dirty && !resized()) { if (pending()) publish(fittedWidth); return }
       stopFit()
@@ -86,11 +88,13 @@ export function useTableOverflow(element: TableElement) {
       }, error => {
         stopFit(); finish(); dirty = true
         console.error('Blo Editor: table layout failed', error)
-      }, () => priority, () => scrollUntil)
+      }, () => priority, () => Math.max(scrollUntil, resizeUntil))
     }
     const schedule = (delay: number) => {
       win.clearTimeout(timer); timer = 0
-      if (!disposed && near && host.clientWidth > 0 && (dirty || !ready || pending() || resized())) timer = win.setTimeout(start, delay)
+      // Event handlers only schedule work. Read geometry once in start(), after
+      // the resize/scroll deadline, rather than forcing layout on every event.
+      if (!disposed && near) timer = win.setTimeout(start, delay)
     }
     refresh.current = () => { dirty = true; stopFit(); schedule(120) }
     // Reserve a simple box before the first paint; pre-fit before it is on screen.
@@ -103,7 +107,7 @@ export function useTableOverflow(element: TableElement) {
         const initial = observedWidth === 0 && !ready
         observedWidth = width
         if (initial) schedule(0)
-        else { stopFit(); mask(); schedule(120) }
+        else { resizeUntil = win.performance.now() + RESIZE_IDLE_MS; stopFit(); mask(); schedule(RESIZE_IDLE_MS) }
       } else if (ready && !pending()) {
         if (table.offsetWidth !== lastTableWidth) schedule(120)
         else {
@@ -133,7 +137,15 @@ export function useTableOverflow(element: TableElement) {
       else { win.clearTimeout(timer); timer = 0; stopFit() }
     }, { root: host.closest('.wysimark-editor-container'), rootMargin: '1000px' })
     intersection.observe(host)
-    const release = () => { if (timer && pending()) { win.clearTimeout(timer); start() } }
+    const windowResized = () => {
+      // Also gate viewport re-entry and content/font refreshes while resizing.
+      // They must not bypass the observer's trailing debounce.
+      resizeUntil = win.performance.now() + RESIZE_IDLE_MS
+      stopFit()
+      if (near) mask()
+      schedule(RESIZE_IDLE_MS)
+    }
+    const release = () => { if (timer && pending()) { resizeUntil = 0; win.clearTimeout(timer); start() } }
     const scrolling = (event: Event) => {
       const target = event.target as globalThis.Node | null
       if (target !== scroll && !target?.contains?.(host)) return
@@ -145,6 +157,7 @@ export function useTableOverflow(element: TableElement) {
     scroll.addEventListener('pointerleave', leaveScrollbar)
     doc.addEventListener('pointerup', release, true)
     doc.addEventListener('scroll', scrolling, { capture: true, passive: true })
+    win.addEventListener('resize', windowResized)
     doc.fonts?.addEventListener('loadingdone', refresh.current)
     const fontChanged = refresh.current
     return () => {
@@ -154,6 +167,7 @@ export function useTableOverflow(element: TableElement) {
       scroll.removeEventListener('pointermove', hoverScrollbar); scroll.removeEventListener('pointerleave', leaveScrollbar)
       doc.removeEventListener('pointerup', release, true); doc.fonts?.removeEventListener('loadingdone', fontChanged)
       doc.removeEventListener('scroll', scrolling, true)
+      win.removeEventListener('resize', windowResized)
       finish()
     }
   }, [])

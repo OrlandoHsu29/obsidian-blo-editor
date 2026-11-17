@@ -633,7 +633,7 @@
 .blo-table-frame[data-table-layout="pending"] { overflow:hidden; }
 .blo-table-frame[data-table-layout] > .blo-table-scroll { position:absolute; left:0; top:0; width:100%; }
 .blo-table-frame[data-table-placeholder="true"] > .blo-table-placeholder { display:block; }
-.blo-table-frame[data-table-layout="pending"] > .blo-table-scroll { visibility:hidden; opacity:0; pointer-events:none; }
+.blo-table-frame[data-table-layout="pending"] > .blo-table-scroll { content-visibility:hidden; visibility:hidden; opacity:0; pointer-events:none; }
 .blo-table-frame[data-table-layout="settling"] > .blo-table-scroll { opacity:1; transition:opacity 140ms ease-out; }
 .blo-table-frame[data-table-layout="settling"] > .blo-table-placeholder { opacity:0; transition:opacity 140ms ease-out; }
 .wysimark-block[data-block-type="table"]:not([data-block-fold-animated="true"]):has(> .blo-table-frame[data-table-layout]) { transition:margin-top 160ms cubic-bezier(.2,.8,.2,1); }

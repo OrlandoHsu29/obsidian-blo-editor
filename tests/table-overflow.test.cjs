@@ -61,13 +61,13 @@ const hooks={
 };
 const measured={
  createTableMeasure(host,width){const e=host.env;e.fits++;e.copies++;return {host:{env:e,width},dispose(){e.copies--}}},
- *fitTableWidth(copy){yield;yield;return {width:copy.env.overflow?copy.width*2:undefined}},runTableFit,
+ *fitTableWidth(copy){copy.env.probes++;yield;copy.env.probes++;yield;copy.env.probes++;return {width:copy.env.overflow?copy.width*2:undefined}},runTableFit,
 };
 const {useTableOverflow}=compile('src/wysimark/table-plugin/render-element/use-table-overflow.ts',['react','./table-fit'],id=>id==='react'?hooks:id==='./table-fit'?measured:require(id));
 function fixture(){
- const e=Object.assign(clock(),{refs:[],effects:[],width:320,height:160,fits:0,copies:0,overflow:true,styles:new Map(),listeners:new Map(),disconnected:0});
+ const e=Object.assign(clock(),{refs:[],effects:[],width:320,height:160,fits:0,copies:0,probes:0,overflow:true,styles:new Map(),listeners:new Map(),windowListeners:new Map(),disconnected:0});
  const events={addEventListener:(name,fn)=>e.listeners.set(name,fn),removeEventListener:name=>e.listeners.delete(name)};
- Object.assign(e.win,{getComputedStyle:()=>({fontSize:'16px'}),matchMedia:()=>({matches:false}),ResizeObserver:class{constructor(fn){e.resize=fn}observe(){}disconnect(){e.disconnected++}},IntersectionObserver:class{constructor(fn){e.intersection=fn}observe(){}disconnect(){e.disconnected++}}});
+ Object.assign(e.win,{addEventListener:(name,fn)=>e.windowListeners.set(name,fn),removeEventListener:name=>e.windowListeners.delete(name),getComputedStyle:()=>({fontSize:'16px'}),matchMedia:()=>({matches:false}),ResizeObserver:class{constructor(fn){e.resize=fn}observe(){}disconnect(){e.disconnected++}},IntersectionObserver:class{constructor(fn){e.intersection=fn}observe(){}disconnect(){e.disconnected++}}});
  const table={rows:Array(10),get offsetWidth(){return parseFloat(e.styles.get('--blo-table-width'))||e.width},get offsetHeight(){return e.height}};
  const scroll={scrollLeft:127,dataset:{},get offsetHeight(){return e.height+(e.host.dataset.overflow==='true'?31:0)},get clientWidth(){return e.width},get scrollWidth(){return table.offsetWidth},querySelector:()=>table,...events};
  e.host={env:e,isConnected:true,dataset:{},get clientWidth(){return e.width},get offsetHeight(){return parseFloat(e.styles.get('--blo-table-hold-height'))||scroll.offsetHeight},closest:()=>null,ownerDocument:{defaultView:e.win,...events},querySelector:()=>scroll,setAttribute:()=>{},removeAttribute:()=>{},style:{setProperty:(k,v)=>e.styles.set(k,v),removeProperty:k=>e.styles.delete(k),getPropertyValue:k=>e.styles.get(k)||''}};
@@ -88,6 +88,26 @@ test('a zero-width offscreen observation does not mask or invalidate a cached ta
 });
 test('continuous resize holds the rectangle and delays computation until settling',()=>{
  const e=fixture();e.enter(true);for(let i=0;i<15;i++){e.width=400+i*10;e.resize();e.advance(16);e.frame();assert.equal(e.host.dataset.tableLayout,'pending');assert.equal(e.fits,1)}e.settle();assert.equal(e.fits,2);assert.equal(e.copies,0);assert.equal(e.table.offsetWidth,e.width*2);e.cleanup();
+});
+
+test('viewport re-entry and content refresh cannot bypass the resize deadline',()=>{
+ const e=fixture();e.enter(true);const probes=e.probes;
+ for(let i=0;i<15;i++){
+  e.width=400+i*10;e.resize();e.render({...e.element,children:[{}]});
+  e.intersection([{isIntersecting:true}]);e.advance(16);e.frame();
+  assert.equal(e.fits,1);assert.equal(e.probes,probes);assert.equal(e.copies,0);
+ }
+ e.settle();assert.equal(e.fits,2);assert.equal(e.table.offsetWidth,e.width*2);e.cleanup();
+});
+
+test('window resize cancels an active measurement and suppresses all probes until stable',()=>{
+ const e=fixture();e.enter(true);e.render({...e.element,children:[{}]});e.advance(120);e.frame();assert.equal(e.copies,1);
+ const probes=e.probes;
+ for(let i=0;i<15;i++){
+  e.windowListeners.get('resize')();e.intersection([{isIntersecting:true}]);e.advance(16);e.frame();
+  assert.equal(e.probes,probes);assert.equal(e.copies,0);assert.equal(e.host.dataset.tableLayout,'pending');
+ }
+ e.settle();assert.equal(e.fits,3);assert.equal(e.copies,0);e.cleanup();assert.equal(e.windowListeners.size,0);
 });
 test('pointer release starts the final fit without waiting for resize debounce',()=>{
  const e=fixture();e.enter(true);e.width=500;e.resize();assert.equal(e.fits,1);e.listeners.get('pointerup')();e.frame();assert.equal(e.fits,2);e.settle();e.cleanup();

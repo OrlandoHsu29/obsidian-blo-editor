@@ -35,7 +35,7 @@ import { CacheProvider } from '@emotion/react';
 import { MermaidPreview } from './MermaidPreview';
 import { ensureBlockId } from './blocks/block-reference';
 import { PresentationMode } from './presentation/presentation-mode';
-import { restorePresentationScroll } from './presentation/restore-scroll';
+import { capturePresentationScroll, restorePresentationScroll } from './presentation/restore-scroll';
 import { WikiImageWithControls } from './wysimark/image-plugin/render-element/image-with-controls';
 import { copyImageFragment } from './image-clipboard';
 
@@ -626,11 +626,7 @@ export class BloView extends FileView {
     this.root = createRoot(this.reactContainer);
     this.watchMemoPanel();
     this.registerDomEvent(contentEl, 'focusin', () => this.syncOnFocus());
-    this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => {
-      if (leaf && leaf !== this.leaf) void this.exitPresentation().catch(error => console.error('Blo Editor: could not exit presentation', error));
-      if (leaf === this.leaf) this.syncOnFocus();
-      else if (leaf?.view instanceof MarkdownView && leaf.view.file === this.currentFile) this.syncOnFocus(leaf.view);
-    }));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => this.handleActiveLeafChange(leaf)));
     const ownerWindow = contentEl.ownerDocument.defaultView;
     if (ownerWindow) this.registerDomEvent(ownerWindow, 'focus', () => {
       if (this.app.workspace.activeLeaf === this.leaf || popoutDocument(this.leaf)) this.syncOnFocus();
@@ -648,6 +644,16 @@ export class BloView extends FileView {
       }));
     }
     this.renderEditor();
+  }
+
+  private handleActiveLeafChange(leaf: WorkspaceLeaf | null) {
+    // Active-leaf changes are workspace-wide, including independent popouts.
+    // Only navigation inside this presentation's document hides its surface.
+    if (leaf && leaf !== this.leaf && leaf.view.containerEl.ownerDocument === this.contentEl.ownerDocument) {
+      void this.exitPresentation().catch(error => console.error('Blo Editor: could not exit presentation', error));
+    }
+    if (leaf === this.leaf) this.syncOnFocus();
+    else if (leaf?.view instanceof MarkdownView && leaf.view.file === this.currentFile) this.syncOnFocus(leaf.view);
   }
 
   async onClose() {
@@ -743,18 +749,26 @@ export class BloView extends FileView {
     if (!this.currentFile || !this.editor) return;
     this.presentationScrollCleanup?.(); this.presentationScrollCleanup = null;
     const file = this.currentFile, previousMode = this.readOnly;
-    const scroller = this.contentEl.querySelector<HTMLElement>('.wysimark-editor-container'), scroll = scroller?.scrollTop ?? 0;
+    const scroller = this.contentEl.querySelector<HTMLElement>('.wysimark-editor-container');
+    const enteredAt = scroller ? capturePresentationScroll(scroller) : 0;
+    let exitedAt = enteredAt;
     this.presentationPreviousMode = previousMode;
     const controller = new PresentationMode(this.contentEl, () => {
       if (this.presentation !== controller) return;
       this.presentation = null; this.presentationPreviousMode = undefined; this.readOnly = previousMode;
       this.updateModeUI(); this.renderEditor();
-      if (scroller?.isConnected) this.presentationScrollCleanup = restorePresentationScroll(scroller, scroll);
+      if (scroller?.isConnected) this.presentationScrollCleanup = restorePresentationScroll(scroller, exitedAt);
+    }, () => {
+      this.presentationScrollCleanup?.(); this.presentationScrollCleanup = null;
+      if (scroller?.isConnected) exitedAt = capturePresentationScroll(scroller);
     });
     this.presentation = controller;
     try {
       await Promise.all([this.saveFile(), controller.enter()]);
-      if (this.presentation === controller && this.currentFile === file) { this.readOnly = true; this.updateModeUI(); this.renderEditor(); }
+      if (this.presentation === controller && this.currentFile === file) {
+        this.readOnly = true; this.updateModeUI(); this.renderEditor();
+        if (scroller?.isConnected) this.presentationScrollCleanup = restorePresentationScroll(scroller, enteredAt);
+      }
     } catch (error) { await controller.exit(); new Notice(ui('无法进入演示模式') + ': ' + String(error).slice(0, 180)); }
   }
   /** Leave element fullscreen before navigating to a tab outside this note. */

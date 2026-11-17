@@ -53,6 +53,15 @@ test('save requests serialize and retain edits made during a write',async()=>{
  assert.equal(f.disk,'two');assert.equal(v.isDirty,false);
 });
 
+test('activating an independent memo or popout keeps presentation while same-window navigation exits',()=>{
+ const f=fixture(),v=f.view(),doc=v.contentEl.ownerDocument;let exits=0,focus=0;
+ v.leaf={view:{containerEl:{ownerDocument:doc}}};v.exitPresentation=async()=>{exits++};v.syncOnFocus=()=>{focus++};
+ v.handleActiveLeafChange({view:{containerEl:{ownerDocument:{}}}});assert.equal(exits,0);
+ v.handleActiveLeafChange(null);assert.equal(exits,0);
+ v.handleActiveLeafChange(v.leaf);assert.equal(exits,0);assert.equal(focus,1);
+ v.handleActiveLeafChange({view:{containerEl:{ownerDocument:doc}}});assert.equal(exits,1);
+});
+
 test('block navigation waits for the target document editor and cancels if the view changes files',()=>{
  const {createEditor}=require('slate');
  const f=fixture(),v=f.view(),editor=createEditor(),timers=new Map();let next=0,calls=0;

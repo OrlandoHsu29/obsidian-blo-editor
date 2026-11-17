@@ -36,7 +36,7 @@ export class PresentationMode {
   private readonly cleanups: (() => void)[] = []
   private readonly overlays = new Set<HTMLElement>()
 
-  constructor(private host: HTMLElement, private onExit: () => void) {
+  constructor(private host: HTMLElement, private onExit: () => void, private beforeExit?: () => void) {
     this.doc = host.ownerDocument; this.win = this.doc.defaultView!
     this.scroller = host.querySelector<HTMLElement>('.wysimark-editor-container')
   }
@@ -217,11 +217,13 @@ export class PresentationMode {
   }
   exit(): Promise<void> { return this.exiting ??= this.leave() }
   private async leave() {
+    this.beforeExit?.()
     try { if (this.doc.fullscreenElement === this.host) await this.doc.exitFullscreen() }
     finally { this.finish() }
   }
   private finish() {
     if (this.finished) return
+    if (!this.exiting) this.beforeExit?.()
     this.finished = true; this.up(); this.win.cancelAnimationFrame(this.frame); this.frame = 0; this.trail.clear()
     this.win.cancelAnimationFrame(this.zoomFrame); this.zoomFrame = 0
     this.cleanups.splice(0).forEach(cleanup => cleanup()); this.canvas?.remove(); this.dot?.remove(); this.controls?.remove()

@@ -12,7 +12,7 @@ function borderBoxSize(style: CSSStyleDeclaration, axis: 'width' | 'height'): nu
     total + (parseFloat(style[`padding${side}`]) || 0) + (parseFloat(style[`border${side}Width`]) || 0), 0))
 }
 
-/** The editor's visible client area, excluding its own toolbar and find panel. */
+/** The editor's visible client area, excluding its own toolbar. */
 export function editorOverlayViewport(anchor: HTMLElement, avoidChrome = true): Rect {
   const viewport = getFixedViewport(anchor), win = anchor.ownerDocument.defaultView!
   const scroller = anchor.closest<HTMLElement>('.wysimark-editor-container')
@@ -35,9 +35,8 @@ export function editorOverlayViewport(anchor: HTMLElement, avoidChrome = true): 
   }
   if (avoidChrome) {
     const root = anchor.closest('.wysimark-container')
-    for (const obstacle of [root?.querySelector<HTMLElement>('[data-wysimark-toolbar]:not([data-wysimark-toolbar="image"])'), root?.querySelector<HTMLElement>('.wysimark-find-panel:not([hidden])')]) {
-      if (obstacle && obstacle.getClientRects().length && win.getComputedStyle(obstacle).visibility !== 'hidden') viewport.top = Math.max(viewport.top, obstacle.getBoundingClientRect().bottom)
-    }
+    const toolbar = root?.querySelector<HTMLElement>('[data-wysimark-toolbar]:not([data-wysimark-toolbar="image"])')
+    if (toolbar && toolbar.getClientRects().length && win.getComputedStyle(toolbar).visibility !== 'hidden') viewport.top = Math.max(viewport.top, toolbar.getBoundingClientRect().bottom)
   }
   viewport.width = Math.max(0, viewport.right - viewport.left)
   viewport.height = Math.max(0, viewport.bottom - viewport.top)
@@ -50,7 +49,6 @@ export function observeAnchoredOverlay(anchor: HTMLElement, panel: HTMLElement, 
   const root = anchor.closest<HTMLElement>('.wysimark-container')
   const scroller = anchor.closest<HTMLElement>('.wysimark-editor-container')
   const toolbar = root?.querySelector<HTMLElement>('[data-wysimark-toolbar]:not([data-wysimark-toolbar="image"])')
-  const findSlot = root?.querySelector<HTMLElement>('[data-wysimark-find-slot]')
   let frame = 0, disposed = false
   const place = () => {
     if (disposed) return
@@ -91,12 +89,10 @@ export function observeAnchoredOverlay(anchor: HTMLElement, panel: HTMLElement, 
   }
   const resize = new win.ResizeObserver(schedule)
   for (const target of [anchor, panel, scroller, toolbar]) if (target) resize.observe(target)
-  const findChanges = findSlot ? new win.MutationObserver(schedule) : undefined
-  if (findSlot) findChanges?.observe(findSlot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] })
   doc.addEventListener('scroll', scroll, true); win.addEventListener('resize', schedule)
   function dispose() {
     if (disposed) return
-    disposed = true; resize.disconnect(); findChanges?.disconnect(); win.cancelAnimationFrame(frame)
+    disposed = true; resize.disconnect(); win.cancelAnimationFrame(frame)
     doc.removeEventListener('scroll', scroll, true); win.removeEventListener('resize', schedule)
   }
   return {

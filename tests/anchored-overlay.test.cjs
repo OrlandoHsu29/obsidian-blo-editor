@@ -45,6 +45,13 @@ test('unmount cancels queued resize measurements',()=>{
  const e=fixture();e.resize();assert.equal(e.frames.size,1);e.tracker.dispose();assert.equal(e.frames.size,0);
 });
 
+test('find panel never reserves space for transient menus, even when they overlap',()=>{
+ const e=fixture();e.tracker.place();const expected=e.updates.at(-1);
+ const find={getClientRects:()=>[{}],getBoundingClientRect:()=>({left:0,right:1200,top:0,bottom:800})};
+ e.anchor.closest=selector=>selector==='.wysimark-container'?{querySelector:selector=>selector.includes('find')?find:null}:null;
+ e.tracker.place();assert.deepEqual(e.updates.at(-1),expected);e.tracker.dispose();
+});
+
 test('only scrolling an anchor ancestor schedules overlay measurements',()=>{
  const e=fixture(),scroll=e.listeners.get('scroll');
  scroll({target:{contains:()=>false}});assert.equal(e.frames.size,0);

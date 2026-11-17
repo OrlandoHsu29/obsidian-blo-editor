@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.3 — 2026-11-17
+
+### 中文
+
+- 引用竖线跟随已有缩进，引用子项保留连续的列表层级竖线。
+- Backspace 依次移除列表、引用，再让空行退缩进；只退当前空块，子项保持原缩进。Shift+Tab 继续带整个子树一起退缩进。
+- 简化只读预览：隐藏画板编辑按钮，使用轻量表格边缘渐隐，并修复画板 SVG 被卡片图标样式缩小的问题。
+
+### English
+
+- Align quote borders with existing indentation and preserve list hierarchy guides through quoted children.
+- Remove list and quote prefixes before outdenting empty blocks. Backspace changes only the current empty block; Shift+Tab retains subtree indentation.
+- Simplify read-only previews, hide drawing edit controls and fix drawing SVG dimensions inside link cards.
+
+Validation: type checking, 838 automated tests and production packaging passed, with live Obsidian checks for quote/list behavior and preview layout.
+
 ## 0.2.2 — 2026-11-17
 
 ### 中文

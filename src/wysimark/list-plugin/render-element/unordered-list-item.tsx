@@ -11,7 +11,7 @@ export function UnorderedListItem({
   attributes,
   children,
 }: ConstrainedRenderElementProps<UnorderedListItemElement>) {
-  const marginLeft = `${element.depth * 2}em`
+  const marginLeft = `calc(${element.depth * 2}em - var(--blo-quote-content-indent, 0em))`
   const ref=useRef<HTMLLIElement>(null)
   const attachList=useCallback((node:HTMLLIElement|null)=>{
     ref.current=node

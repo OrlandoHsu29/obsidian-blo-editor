@@ -5,6 +5,19 @@ import { isStructuredBlock } from './structured-block'
 type Block = Element & { __blockDepth?: number; __numbering?: 'continue' | 'restart' | 'explicit'; __firstAtDepth?: boolean; depth?: number; start?: number }
 export const MAX_BODY_LIST_NUMBER = 99
 export const blockDepth = (node: Node): number => Element.isElement(node) ? Math.max(0, (node as Block).__blockDepth ?? (node as Block).depth ?? 0) : 0
+const quoteDepths=new WeakMap<Element,number>()
+/** Quotes retain content indentation in saved Markdown. Project their shared
+ * leading depth for the border and list guides without rewriting those nodes. */
+export function quoteContentIndent(node: Node): number {
+  if(!Element.isElement(node)||node.type!=='block-quote')return blockDepth(node)
+  const cached=quoteDepths.get(node)
+  if(cached!==undefined)return cached
+  let depth=Infinity
+  for(const child of node.children){depth=Math.min(depth,quoteContentIndent(child));if(!depth)break}
+  depth=Number.isFinite(depth)?depth:0
+  quoteDepths.set(node,depth)
+  return depth
+}
 export const isListBlock = (node: Node) => Element.isElement(node) && ['ordered-list-item','unordered-list-item','task-list-item'].includes(node.type)
 export const isFoldableList = (node: Node) => Element.isElement(node)&&['ordered-list-item','unordered-list-item'].includes(node.type)
 export const isEditorSpacer = (node: Node) => Element.isElement(node)&&node.type==='paragraph'&&node.__collapsible&&Node.string(node)===''
@@ -71,7 +84,7 @@ export function rootCache(editor: Editor) {
       }
       const projection=blockHeadings(node)
       if(!isEditorSpacer(node)) {
-        const depth=blockDepth(node)
+        const depth=Math.max(blockDepth(node),quoteContentIndent(node))
         guideMask%=2**depth
         if(Element.isElement(node)&&!node.__subtitle&&!projection.headings.length) {
           if(depth>0&&guideMask)listGuides.set(node,guideMask)

@@ -28,7 +28,7 @@ export function TaskListItem({
     attributes.ref(node)
   },[attributes.ref])
   const align=useFirstLineAlignment(ref,'--wysimark-list-marker-center')
-  const marginLeft = `${element.depth * 2}em`
+  const marginLeft = `calc(${element.depth * 2}em - var(--blo-quote-content-indent, 0em))`
   return (
     <$TaskListItem {...attributes} ref={attachList} data-task-checked={element.checked} style={{ marginLeft }} onMouseEnter={align}>
       <div className="--list-item-icon" data-list-marker contentEditable={false}

@@ -4,7 +4,7 @@ import type { Menu } from 'obsidian'
 import type { Editor, Element, Node } from 'slate'
 import { ReactEditor, useReadOnly, useSlateSelector, useSlateStatic } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBlock, moveBlockGroup, rootCache, selectedBlockDragGroup } from './model'
+import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBlock, moveBlockGroup, quoteContentIndent, rootCache, selectedBlockDragGroup } from './model'
 import type { BlockDragGroup } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
@@ -91,7 +91,8 @@ export function RootBlock({ element, children }: { element: Element; children: R
       gap:index===undefined||isEditorSpacer(element)||foldHidden?'0px':blockGap(editor.children,index,previous) }
   }, [element]), (previous, next) => previous?.index === next.index && previous?.gap === next.gap && previous?.guideMask === next.guideMask && previous?.previousGuides === next.previousGuides && previous?.foldable === next.foldable && previous?.foldHidden === next.foldHidden && previous?.taskCompleted === next.taskCompleted)
   const depth = blockDepth(element)
-  const guideLevels=guideMask?Array.from({length:depth},(_,level)=>level).filter(level=>Math.floor(guideMask/2**level)%2===1):[]
+  const guideDepth=Math.max(depth,quoteContentIndent(element))
+  const guideLevels=guideMask?Array.from({length:guideDepth},(_,level)=>level).filter(level=>Math.floor(guideMask/2**level)%2===1):[]
   const [drop, setDrop] = useState<DropPreview | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const imageModifierClick = useRef(false)

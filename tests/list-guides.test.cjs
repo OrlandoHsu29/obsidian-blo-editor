@@ -61,3 +61,14 @@ test('unindented prose ends a list guide while indented prose continues a task g
  assert.deepEqual(masks([number(0),bullet(1),body,bullet(1)]),[0,1,0,0]);
  assert.deepEqual(masks([task(0),{...body,__blockDepth:1},bullet(1)]),[0,1,1]);
 });
+
+test('quotes with indentation stored on their children do not cut the ancestor guide',()=>{
+ for(const content of [bullet(1),number(1),task(1),{type:'paragraph',__blockDepth:1,children:[{text:''}]}]){
+  for(const metadata of [{},{__blockDepth:0}]){
+   const quote={type:'block-quote',...metadata,children:[content]};
+   assert.deepEqual(masks([number(0),bullet(1),quote,bullet(1),number(0)]),[0,1,1,1,0]);
+  }
+ }
+ const quote={type:'block-quote',children:[{type:'block-quote',children:[bullet(2)]}]};
+ assert.deepEqual(masks([number(0),bullet(1),quote,task(2)]),[0,1,3,3]);
+});

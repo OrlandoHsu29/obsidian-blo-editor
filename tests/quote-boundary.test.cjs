@@ -15,6 +15,7 @@ loaded._compile(buildSync({stdin:{contents:`
  import {NormalizeAfterDeletePlugin} from './src/wysimark/normalize-after-delete-plugin';
  export const withQuotes=createWithSink([ConvertElementPlugin.fn,BlockQuotePlugin.fn,AtomicDeletePlugin.fn,NormalizeAfterDeletePlugin.fn]);
  export {handleLinkKey} from './src/wysimark/anchor-plugin/link-keyboard';
+ export {quoteContentIndent} from './src/blocks/model';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react'],write:false}).outputFiles[0].text,'quote-boundary.cjs');
 const {withQuotes,handleLinkKey}=loaded.exports;
 const paragraph=text=>({type:'paragraph',children:[{text}]});
@@ -36,6 +37,17 @@ function backspace(editor){
  if(editor.selection&&Range.isExpanded(editor.selection))editor.deleteFragment({direction:'backward'});
  else editor.deleteBackward('character');
 }
+
+test('quote borders follow the shared content indentation without modifying stored depths',()=>{
+ const {quoteContentIndent}=loaded.exports;
+ for(const type of ['ordered-list-item','unordered-list-item','task-list-item','paragraph']){
+  const child={type,...(type==='paragraph'?{__blockDepth:2}:{depth:2}),children:[{text:'content'}]},node=quote(child),before=structuredClone(node);
+  assert.equal(quoteContentIndent(node),2);assert.equal(quoteContentIndent(quote(node)),2);assert.deepEqual(node,before);
+  assert.equal(quoteContentIndent(quote(child,{...child,depth:3,__blockDepth:3})),2);
+  assert.equal(quoteContentIndent({...node,children:[{...child,depth:1,__blockDepth:1}]}),1);
+ }
+ assert.equal(quoteContentIndent(quote()),0);
+});
 
 for(const insideLink of [false,true]){
  test(`first Backspace removes quote at ${insideLink?'link start':'empty boundary'} without changing text`,()=>{

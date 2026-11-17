@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react"
+import type { CSSProperties } from "react"
 import { selectionHasHeading } from '../../blocks/heading-policy'
 import { Descendant, Editor, Element, Node, Transforms } from "slate"
 import { ReactEditor, useSlateStatic } from "slate-react"
@@ -15,6 +16,7 @@ import {
 
 import { getCalloutInfo } from "./callout"
 import { deleteQuotePrefix } from "./delete-backward"
+import { blockDepth, quoteContentIndent } from '../../blocks/model'
 import {
   $BlockQuote, $Callout, $CalloutBody, $CalloutFoldIcon, $CalloutIcon,
   $CalloutTitle, $CalloutTitleText,
@@ -70,7 +72,12 @@ function BlockQuote({
     )
   }
 
-  return <$BlockQuote {...attributes}>{children}</$BlockQuote>
+  const indent=quoteContentIndent(element)
+  const path=ReactEditor.findPath(editor,element)
+  const parent=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='block-quote'})
+  const inherited=parent?quoteContentIndent(parent[0]):path.length===1?blockDepth(element):0
+  return <$BlockQuote {...attributes} style={{marginLeft:`calc(${Math.max(0,indent-inherited)*2}em + 2px)`,
+    '--blo-quote-content-indent':`${indent*2}em`} as CSSProperties}>{children}</$BlockQuote>
 }
 
 export type BlockQuoteEditor = {

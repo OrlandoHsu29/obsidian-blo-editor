@@ -39,7 +39,7 @@ export function OrderedListItem({
     normalizeOrderedFirstAtDepth(editor, [element, path])
   }, [])
   const style = {
-    marginLeft: `${element.depth * 2}em`,
+    marginLeft: `calc(${element.depth * 2}em - var(--blo-quote-content-indent, 0em))`,
     "--list-item-var": `list-item-depth-${element.depth}`,
     counterReset: element.start != null ? `list-item-depth-${element.depth} ${element.start - 1}` : undefined,
   } as React.CSSProperties

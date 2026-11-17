@@ -10,6 +10,7 @@ const kinds = {
 } as const
 
 type StructuredType = keyof typeof kinds
+export const mediaContentSelector = kinds['image-block'].content
 type StructuredBlock = Extract<Element, { type: StructuredType }>
 
 function isStructuredType(type: string | undefined): type is StructuredType {

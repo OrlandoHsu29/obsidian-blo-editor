@@ -1,7 +1,8 @@
 import type { MouseEvent } from 'react'
 import { Editor, Element as SlateElement, Node, Path, Point, Range, Text } from 'slate'
 import { ReactEditor } from 'slate-react'
-import { isPointerSelecting, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
+import { isPointerSelecting, mediaRangeFromPointer, pointerRangeFromPoint, tableEdgeRangeFromPointer, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
+import { mediaContentSelector } from '../../blocks/structured-block'
 import { pointBeforeLink, selectLink } from './link-keyboard'
 
 /** Shared geometry for starting a gesture and extending one across the icon. */
@@ -47,14 +48,17 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   if (event.defaultPrevented || isPointerSelecting(editor) || editor.wysimark.readOnly || event.button !== 0 || event.detail > 1 ||
     event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
   const host = event.currentTarget, doc = host.ownerDocument, win = doc.defaultView!
+  if((event.target as HTMLElement|null)?.closest?.(mediaContentSelector))return
   const x = event.clientX, y = event.clientY
   // The native hit target can be the line container above/below the glyph.
   // Resolve the nearest caret as well, without scanning other document links.
   const hit = doc.elementFromPoint(x, y)?.closest<HTMLAnchorElement>('a[data-link-icon]')
   let startLink = hit
+  let startPoint: Point | undefined
   if (!startLink) {
     const caret = doc.caretRangeFromPoint(x, y)
     const point = caret && ReactEditor.toSlatePoint(editor, [caret.startContainer, caret.startOffset], { exactMatch: false, suppressThrow: true })
+    startPoint=point??undefined
     if (point) {
       let entry = Editor.above(editor, { at: point, match: n => SlateElement.isElement(n) && n.type === 'anchor' })
       if (!entry && Text.isText(Node.get(editor, point.path))) {
@@ -79,7 +83,7 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   let anchor: ReturnType<typeof Editor.pointRef> | undefined, moved = false, frame = 0
   let pointer: globalThis.MouseEvent | undefined
   let lastLink: HTMLAnchorElement | undefined
-  let active = true, correcting = false
+  let active = true, correcting = false, managedDrag = false
   const cleanup = () => {
     if (!active) return
     active = false
@@ -87,13 +91,17 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
     lastLink = undefined; pointer = undefined
     doc.removeEventListener('mousemove', move, true)
     doc.removeEventListener('mouseup', up, true)
+    doc.removeEventListener('dragstart', preventDrag, true)
     doc.removeEventListener('selectionchange', selectionChanged, true)
     win.cancelAnimationFrame(frame); frame = 0
     win.removeEventListener('blur', cleanup)
   }
-  const correct = (event: globalThis.MouseEvent) => {
+  const correct = (event: globalThis.MouseEvent, blockRange?: Range) => {
     if (!active || correcting || !anchor?.current) return
     if (isPointerSelecting(editor) || editor.wysimark.readOnly || host.isConnected === false) { cleanup(); return }
+    blockRange ??= mediaRangeFromPointer(editor,host,event.clientX,event.clientY,anchor.current)
+    const tableEdgeRange=tableEdgeRangeFromPointer(editor,host,event.clientX,event.clientY,anchor.current)
+    if(blockRange||tableEdgeRange)managedDrag=true
     const native = doc.getSelection(), node = native?.focusNode
     const focusElement = node?.nodeType === 1 ? node as Element : node?.parentElement
     const hit = doc.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLAnchorElement>('a[data-link-icon]')
@@ -118,15 +126,16 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
       lastLink = link
       break
     }
-    // Ordinary text dragging belongs to the browser. Anchor repair is needed
-    // only after this gesture has actually crossed a link's non-editable icon.
-    if (!target && !lastLink) return
+    // Ordinary text dragging belongs to the browser until it crosses an icon
+    // or non-editable media.
+    if (!target && !lastLink && !managedDrag && !tableEdgeRange) return
     current ??= native && ReactEditor.toSlateRange(editor, native, { exactMatch: false, suppressThrow: true })
     // Chromium can restart its native drag anchor at the label's first text
     // point after crossing contentEditable=false. Keep the original anchor
     // throughout the gesture, including after the pointer leaves the icon.
-    const range = target ? linkIconSelectionRange(editor, target.path, anchor.current, target.before) :
-      current ? { anchor: anchor.current, focus: current.focus } : undefined
+    const range = tableEdgeRange ?? blockRange ?? (target ? linkIconSelectionRange(editor, target.path, anchor.current, target.before) :
+      managedDrag ? pointerRangeFromPoint(editor,host,event.clientX,event.clientY,anchor.current) :
+      current ? { anchor: anchor.current, focus: current.focus } : undefined)
     if (!range) return
     if (editor.selection && Range.equals(editor.selection, range) && current && Range.equals(current, range)) return
     correcting = true
@@ -140,21 +149,34 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
     moved = true
     if (!anchor) {
       const selection = doc.getSelection()
-      const point = selection?.anchorNode && host.contains(selection.anchorNode) && ReactEditor.toSlatePoint(editor,
-        [selection.anchorNode, selection.anchorOffset], { exactMatch: false, suppressThrow: true })
+      const point = startPoint ?? (selection?.anchorNode && host.contains(selection.anchorNode) && ReactEditor.toSlatePoint(editor,
+        [selection.anchorNode, selection.anchorOffset], { exactMatch: false, suppressThrow: true }))
       if (!point) return
       anchor = Editor.pointRef(editor, point)
     }
     pointer = event
+    // Once a media or gutter correction replaces the native range, keep the
+    // original anchor and resolve following moves from the pointer as well.
+    const blockRange = mediaRangeFromPointer(editor, host, event.clientX, event.clientY, anchor.current!)
+    if (blockRange || managedDrag || tableEdgeRangeFromPointer(editor,host,event.clientX,event.clientY,anchor.current!)) {
+      event.preventDefault()
+      correct(event, blockRange)
+      return
+    }
     // Native selection is updated after mousemove. Normalize it before Slate's
     // selectionchange listener, and once before paint if the native caret did
     // not change while crossing the non-editable icon.
     if (!frame) frame = win.requestAnimationFrame(() => { frame = 0; if (pointer) correct(pointer) })
   }
   const selectionChanged = () => { if (moved && pointer) correct(pointer) }
+  const preventDrag = (event: DragEvent) => {
+    if (!managedDrag) return
+    event.preventDefault(); event.stopPropagation()
+  }
   const up = (event: globalThis.MouseEvent) => { if (moved) correct(event); cleanup() }
   doc.addEventListener('mousemove', move, true)
   doc.addEventListener('mouseup', up, true)
+  doc.addEventListener('dragstart', preventDrag, true)
   doc.addEventListener('selectionchange', selectionChanged, true)
   win.addEventListener('blur', cleanup)
   return cleanup

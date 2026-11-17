@@ -1,7 +1,7 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
 import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, selectStructuredBoundary } from './boundary'
+import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, rangeToMediaBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
 import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
@@ -39,20 +39,30 @@ export function selectedImageFragment(editor:Editor):Element[]|undefined {
 }
 export function hasMultipleImagesSelected(editor:Editor):boolean {
  const pending=staged.get(editor)
- return !!pending?.images&&pending.images.size>1&&!!editor.selection&&Range.equals(editor.selection,pending.range)
+ return !!editor.selection&&(Range.isExpanded(editor.selection)||!!pending?.images&&pending.images.size>1&&Range.equals(editor.selection,pending.range))
 }
-/** Modifier selection shares the block-selection store and retains a real void caret. */
+/** Shift extends Slate's real range; only Ctrl uses a disjoint image set. */
 export function selectImageWithModifier(editor:Editor,index:number,shift:boolean):boolean {
  const image=editor.children[index]
  if(editor.wysimark.readOnly||!Element.isElement(image)||image.type!=='image-block')return false
- const pending=staged.get(editor),previous=editor.selection?.anchor.path[0]
- const images=new Set(selectedImageFragment(editor)??[])
+ const pending=staged.get(editor),previous=editor.selection?(boundaryBlockIndex(editor,editor.selection.anchor)??editor.selection.anchor.path[0]):undefined
  const previousNode=previous===undefined?undefined:editor.children[previous],previousImage=Element.isElement(previousNode)&&previousNode.type==='image-block'
- if(!images.size&&previousImage)images.add(previousNode)
- if(shift&&!images.size)return false
  const anchor=pending?.imageAnchor??(previousImage?previous!:index)
- if(shift){images.clear();for(let i=Math.min(anchor,index);i<=Math.max(anchor,index);i++){const node=editor.children[i];if(Element.isElement(node)&&node.type==='image-block')images.add(node)}}
- else if(images.has(image))images.delete(image);else images.add(image)
+ if(shift){
+  if(!editor.selection)return false
+  const range=rangeToMediaBlock(editor,index,pending?.imageAnchor===undefined?editor.selection.anchor:Editor.start(editor,[anchor]))
+  if(!range)return false
+  clearBlockSelection(editor)
+  Transforms.select(editor,range)
+  return true
+ }
+ const images=new Set(selectedImageFragment(editor)??[])
+ if(!images.size&&editor.selection&&Range.isExpanded(editor.selection)){
+  const [start,end]=Range.edges(editor.selection)
+  for(let i=start.path[0];i<=end.path[0];i++){const node=editor.children[i];if(Element.isElement(node)&&node.type==='image-block')images.add(node)}
+ }
+ if(!images.size&&previousImage)images.add(previousNode)
+ if(images.has(image))images.delete(image);else images.add(image)
  if(!images.size){clearBlockSelection(editor);Transforms.deselect(editor);return true}
  const focus=images.has(image)?image:Array.from(images).at(-1)!,at=rootCache(editor).indices.get(focus)!
  const point=Editor.start(editor,[at]),range={anchor:point,focus:point}

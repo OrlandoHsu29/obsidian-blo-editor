@@ -1,4 +1,4 @@
-import { Editor, Element, Node, NodeEntry, Range, Transforms } from 'slate'
+import { Editor, Element, Node, NodeEntry, Point, Range, Transforms } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { blockDepth, changeBlockIndent, isEditorSpacer } from './model'
 import { isStructuredBlock } from './structured-block'
@@ -42,11 +42,31 @@ export function normalizeStructuredBoundary(editor: Editor, [node, path]: NodeEn
   return true
 }
 
-export function boundaryBlockIndex(editor: Editor): number | undefined {
+export function boundaryBlockIndex(editor: Editor, point?: Point): number | undefined {
   const selection = editor.selection
-  if (!selection || !Range.isCollapsed(selection)) return
-  const index = selection.anchor.path[0]
+  if (!point && (!selection || !Range.isCollapsed(selection))) return
+  const index = (point ?? selection!.anchor).path[0]
   if (index > 0 && isEditorSpacer(editor.children[index]) && isStructuredBlock(editor.children[index - 1])) return index - 1
+}
+
+/** Include the complete media block while retaining a real text/void anchor. */
+export function rangeToMediaBlock(editor: Editor, index: number, anchor: Point): Range | undefined {
+  const node=editor.children[index]
+  if(!Element.isElement(node)||node.type!=='image-block')return
+  const origin=boundaryBlockIndex(editor,anchor)??anchor.path[0],original=editor.children[origin]
+  const after=(at:number)=>Editor.after(editor,[at],{voids:true})??Editor.end(editor,[at])
+  if(Element.isElement(original)&&original.type==='image-block')anchor=origin>index?after(origin):Editor.start(editor,[origin])
+  const start=Editor.start(editor,[index])
+  return {anchor,focus:Point.compare(anchor,start)>0?start:after(index)}
+}
+
+/** Slate unhangs a range ending at the next paragraph's start by default.
+ * Our empty boundary is after the entire widget, so keep that endpoint intact. */
+export function deleteRangeEndingAtBoundary(editor: Editor): boolean {
+  const selection=editor.selection
+  if(editor.wysimark.readOnly||!selection||!Range.isExpanded(selection)||boundaryBlockIndex(editor,Range.end(selection))===undefined)return false
+  withHistoryBatch(editor,()=>Transforms.delete(editor,{hanging:true}))
+  return true
 }
 
 export function selectStructuredBoundary(editor: Editor, index: number): boolean {

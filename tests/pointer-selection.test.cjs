@@ -11,8 +11,8 @@ const {startPointerSelection,isPointerSelecting,consumePointerSelectionClick,sel
 function fixture(){
  const e=withHistory(createEditor());e.wysimark={};e.isInline=n=>n.type==='anchor';e.children=[{type:'paragraph',children:[{text:'body'},{type:'anchor',href:'https://example.test',children:[{text:'Title'}]},{text:'after'}]}];
  const listeners=new Map(),classes=new Set();let target={path:[0,1,0],offset:2};
- const doc={defaultView:{addEventListener:(t,f)=>listeners.set('win:'+t,f),removeEventListener:t=>listeners.delete('win:'+t)},documentElement:{classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)}},addEventListener:(t,f)=>listeners.set(t,f),removeEventListener:t=>listeners.delete(t),caretRangeFromPoint:()=>({startContainer:{point:target},startOffset:target.offset}),getSelection:()=>({setBaseAndExtent(){}})};
- const event={currentTarget:{ownerDocument:doc},clientX:30,clientY:20,preventDefault(){this.prevented=true}};e.host={contains:()=>true};
+ const doc={elementFromPoint:()=>null,defaultView:{addEventListener:(t,f)=>listeners.set('win:'+t,f),removeEventListener:t=>listeners.delete('win:'+t)},documentElement:{classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)}},addEventListener:(t,f)=>listeners.set(t,f),removeEventListener:t=>listeners.delete(t),caretRangeFromPoint:()=>({startContainer:{point:target},startOffset:target.offset}),getSelection:()=>({setBaseAndExtent(){}})};
+ const event={currentTarget:{ownerDocument:doc,contains:()=>true},clientX:30,clientY:20,preventDefault(){this.prevented=true}};e.host={contains:()=>true};
  const cleanup=startPointerSelection(e,{path:[0,0],offset:4},event);selectLink(e,[0,1]);
  return {e,event,cleanup,listeners,classes,setTarget:p=>target=p,dispatch(type,extra={}){const event={buttons:1,clientX:60,clientY:20,preventDefault(){this.prevented=true},stopPropagation(){this.stopped=true},...extra};listeners.get(type)?.(event);return event}};
 }

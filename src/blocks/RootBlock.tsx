@@ -13,6 +13,7 @@ import { showBlockMenu } from './block-menu'
 import { startBlockDragAutoScroll } from './drag-auto-scroll'
 import { BlockHighlight, highlightBlockDrag } from './block-highlight'
 import { toggleBlockFold } from './folding'
+import { mediaContentSelector } from './structured-block'
 
 type DropPosition = 'before' | 'after'
 type DropPreview={position:DropPosition;depth:number;maxDepth:number;origin:number;step:number;left:number;top:number}
@@ -199,7 +200,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
     onMouseDownCapture={event => {
       imageModifierClick.current = false
       const target=event.target as HTMLElement
-      if(event.button===0&&(event.shiftKey||event.ctrlKey||event.metaKey)&&target.closest('[data-blo-image]')&&!target.closest('[data-wysimark-image-resize]')&&selectImageWithModifier(editor,index,event.shiftKey)){
+      if(event.button===0&&(event.shiftKey||event.ctrlKey||event.metaKey)&&target.closest(mediaContentSelector)&&!target.closest('[data-wysimark-image-resize],button,input,textarea,select')&&selectImageWithModifier(editor,index,event.shiftKey)){
         imageModifierClick.current = true
         event.preventDefault();event.stopPropagation();if(editor.selection)ReactEditor.focus(editor);return
       }

@@ -23,7 +23,7 @@ function fixture(){
  const selection={anchorNode:{point:anchor},anchorOffset:5,range:{anchor,focus},setBaseAndExtent(a,_a,f,_f){writes++;this.anchorNode=a;this.focusNode=f;this.range={anchor:a.point,focus:f.point}}};
  const link={getClientRects:()=>[{left:6,right:100,top:8,bottom:32,height:24}],querySelector:selector=>selector==='.wysimark-link-icon'?{getBoundingClientRect:()=>({left:10,right:30,width:20,height:20,top:10,bottom:30})}:{getClientRects:()=>[{left:36,right:100}]}};
  let hit=true,previousLine,nativePoint,caretOffset=4;
- const doc={defaultView:win,addEventListener:(t,f,c)=>listen('doc:',t,f,c),removeEventListener:t=>remove('doc:',t),getSelection:()=>selection,elementFromPoint:()=>({closest:()=>hit?link:null}),caretRangeFromPoint:()=>previousLine||nativePoint?{startContainer:{point:nativePoint},startOffset:nativePoint?.offset,getBoundingClientRect:()=>previousLine}:null,createRange:()=>({setStart(_node,offset){caretOffset=offset},collapse(){},getBoundingClientRect:()=>({left:4-(e.children[0].children[0].text.length-caretOffset)*6,top:10,bottom:30,height:20})})};
+ const doc={defaultView:win,addEventListener:(t,f,c)=>listen('doc:',t,f,c),removeEventListener:t=>remove('doc:',t),getSelection:()=>selection,elementFromPoint:()=>({closest:selector=>hit&&selector==='a[data-link-icon]'?link:null}),caretRangeFromPoint:()=>previousLine||nativePoint?{startContainer:{point:nativePoint},startOffset:nativePoint?.offset,getBoundingClientRect:()=>previousLine}:null,createRange:()=>({setStart(_node,offset){caretOffset=offset},collapse(){},getBoundingClientRect:()=>({left:4-(e.children[0].children[0].text.length-caretOffset)*6,top:10,bottom:30,height:20})})};
  link.ownerDocument=doc;
  doc.documentElement={classList:{remove(){}}};
  const host={ownerDocument:doc,contains:()=>true};
@@ -192,4 +192,37 @@ test('synchronous selection notifications do not reenter a correction',()=>{
  f.selection.setBaseAndExtent=function(...args){f.dispatch('selectionchange');set.apply(this,args)};
  f.dispatch('mousemove');f.dispatch('selectionchange');f.paint();
  assert.equal(f.writes,1);cleanup();assert.equal(f.listeners.size,0);
+});
+
+test('crossing a media border claims the move before native selection can replace the block range',()=>{
+ const f=fixture();f.missIcon();
+ const anchor={path:[0,0],offset:2};f.setNativeCaret(anchor);Transforms.select(f.e,anchor);
+ f.e.children.push({type:'image-block',url:'diagram.excalidraw.md',children:[{text:''}]},{type:'paragraph',children:[{text:'after'}]});
+ f.e.isVoid=n=>n.type==='image-block';
+ const doc=f.event.currentTarget.ownerDocument,originalHit=doc.elementFromPoint;
+ const originalNode=reactEditor.toSlateNode,originalPath=reactEditor.findPath;
+ const media={closest:()=>media};let overMedia=false;
+ doc.elementFromPoint=()=>overMedia?{closest:selector=>selector.includes('data-blo-drawing')?media:null}:originalHit();
+ reactEditor.toSlateNode=(e,el)=>el===media?e.children[1]:originalNode(e,el);
+ reactEditor.findPath=(e,node)=>node===e.children[1]?[1]:originalPath(e,node);
+ const cleanup=trackLinkIconSelection(f.e,f.event);
+ try{
+  let blocked=false;
+  f.dispatch('dragstart',{preventDefault(){blocked=true},stopPropagation(){}});
+  assert.equal(blocked,false); // native text dragging has not been taken over
+  overMedia=true;
+  for(let i=0;i<4;i++){
+   let prevented=false;
+   f.dispatch('mousemove',{clientY:40+i,preventDefault(){prevented=true}});
+   assert.equal(prevented,true);
+   assert.deepEqual(f.e.selection,{anchor,focus:Editor.start(f.e,[2])});
+   assert.equal(f.frames.size,0);
+  }
+  f.dispatch('dragstart',{preventDefault(){blocked=true},stopPropagation(){}});
+  assert.equal(blocked,true); // extending the corrected range must not turn into native drag/drop
+  overMedia=false;let prevented=false;
+  f.dispatch('mousemove',{clientY:90,preventDefault(){prevented=true}});
+  assert.equal(prevented,true);
+  assert.deepEqual(f.e.selection,{anchor,focus:anchor});
+ }finally{cleanup();reactEditor.toSlateNode=originalNode;reactEditor.findPath=originalPath}
 });

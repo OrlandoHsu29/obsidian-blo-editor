@@ -4,15 +4,16 @@ import { useSlateSelector, useSlateStatic } from 'slate-react'
 import { rootCache } from './model'
 import { hasMultipleImagesSelected, isWholeBlockSelected, subscribeBlockSelection } from './selection'
 
-/** Control visibility also changes when the focused image stays selected but
- * another image is removed from a multi-selection. */
+/** Follow both native ranges and disjoint image selections, including when
+ * another image is removed while the focused image stays selected. */
 export function useMultipleImagesSelected(): boolean {
   const editor = useSlateStatic()
-  return useSyncExternalStore(
+  const snapshot = useSyncExternalStore(
     useCallback(listener => subscribeBlockSelection(editor, listener), [editor]),
     useCallback(() => hasMultipleImagesSelected(editor), [editor]),
     () => false,
   )
+  return useSlateSelector(useCallback(editor => hasMultipleImagesSelected(editor), [snapshot]))
 }
 
 export function useBlockSelection(element: Element): boolean {

@@ -173,7 +173,8 @@ const $AnchorDialog = styled($Panel)`
     }
   }
 
-  svg {
+  .--icons > .--icon > svg,
+  .--link > svg {
     flex: 0 0 auto;
     width: 1.25em;
     height: 1.25em;

@@ -171,7 +171,7 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
   }
   return <div ref={frame} className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
     style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
-    {enabled && <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
+    {enabled && !readOnly && <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}
       onClick={event => {
         event.stopPropagation()
@@ -183,7 +183,7 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
       }}>
       <span aria-hidden="true" ref={node => { if (node) setIcon(node, DRAWING_SAVE_AS_ICON) }} />
     </button>}
-    {available && enabled && <button className="blo-drawing-open" type="button" aria-label={ui('编辑画板')}
+    {available && enabled && !readOnly && <button className="blo-drawing-open" type="button" aria-label={ui('编辑画板')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={event => { event.stopPropagation(); open() }}>
       <span aria-hidden="true" ref={node => { if (node) setIcon(node, 'pencil') }} />
     </button>}

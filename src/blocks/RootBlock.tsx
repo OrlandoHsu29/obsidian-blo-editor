@@ -83,12 +83,12 @@ export function RootBlock({ element, children }: { element: Element; children: R
   const readOnly = useReadOnly()
   const foldLabelId = useId()
   // A preceding block can change without Slate re-rendering this element.
-  const { index, gap, guideMask, previousGuides, foldable, foldHidden } = useSlateSelector(useCallback((editor: Editor) => {
+  const { index, gap, guideMask, previousGuides, foldable, foldHidden, taskCompleted } = useSlateSelector(useCallback((editor: Editor) => {
     const cache=rootCache(editor),index = cache.indices.get(element)
     const previous=cache.previousVisible.get(element)??-1,prior=editor.children[previous],foldHidden=cache.foldedBy.has(element)
-    return { index,foldHidden,foldable:cache.foldable.has(element),guideMask:foldHidden?0:cache.listGuides.get(element)??0,previousGuides:prior?cache.listGuides.get(prior)??0:0,
+    return { index,foldHidden,taskCompleted:cache.completedTasks.has(element),foldable:cache.foldable.has(element),guideMask:foldHidden?0:cache.listGuides.get(element)??0,previousGuides:prior?cache.listGuides.get(prior)??0:0,
       gap:index===undefined||isEditorSpacer(element)||foldHidden?'0px':blockGap(editor.children,index,previous) }
-  }, [element]), (previous, next) => previous?.index === next.index && previous?.gap === next.gap && previous?.guideMask === next.guideMask && previous?.previousGuides === next.previousGuides && previous?.foldable === next.foldable && previous?.foldHidden === next.foldHidden)
+  }, [element]), (previous, next) => previous?.index === next.index && previous?.gap === next.gap && previous?.guideMask === next.guideMask && previous?.previousGuides === next.previousGuides && previous?.foldable === next.foldable && previous?.foldHidden === next.foldHidden && previous?.taskCompleted === next.taskCompleted)
   const depth = blockDepth(element)
   const guideLevels=guideMask?Array.from({length:depth},(_,level)=>level).filter(level=>Math.floor(guideMask/2**level)%2===1):[]
   const [drop, setDrop] = useState<DropPreview | null>(null)
@@ -185,6 +185,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
   handlers.current={over:onDragOver,drop:onDrop}
 
   return <div ref={ref} data-wysimark-block data-block-type={element.type}
+    data-task-completed={taskCompleted||undefined}
     data-block-id={element.__blockId}
     data-block-foldable={foldable||undefined} data-block-collapsed={foldable&&element.__collapsed||undefined} data-block-fold-hidden={foldHidden||undefined}
     data-block-depth={depth} data-subtitle={element.__subtitle || undefined} data-block-fold-animated={animateFold||undefined}

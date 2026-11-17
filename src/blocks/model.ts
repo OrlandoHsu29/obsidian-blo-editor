@@ -40,21 +40,26 @@ function blockHeadings(node:Node):HeadingProjection {
   }
   return projection
 }
-const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number;listGuides:Map<Node,number>;foldable:Set<Node>;foldedBy:Map<Node,Node>;previousVisible:Map<Node,number>}>()
+const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number;listGuides:Map<Node,number>;completedTasks:Set<Node>;foldable:Set<Node>;foldedBy:Map<Node,Node>;previousVisible:Map<Node,number>}>()
 export function rootCache(editor: Editor) {
   let cache=caches.get(editor)
   if (!cache || cache.children!==editor.children) {
     const {numbers,numberLabels}=resolveOrderedNumbers(editor.children),indices=new Map<Node,number>(),headings:BlockHeading[]=[]
     const listGuides=new Map<Node,number>()
+    const completedTasks=new Set<Node>()
     const foldable=new Set<Node>(),foldedBy=new Map<Node,Node>(),previousVisible=new Map<Node,number>()
     let previous:Node|undefined,visible=-1,collapsed:Node|undefined,collapsedDepth=0
     let listCount=0,guideMask=0
+    let completedDepth:number|undefined
     editor.children.forEach((node,index)=>{
       indices.set(node,index)
       if(isEditorSpacer(node)) {
         if(collapsed)foldedBy.set(node,collapsed)
       } else {
         const depth=blockDepth(node)
+        if(completedDepth!==undefined&&depth<=completedDepth)completedDepth=undefined
+        if(completedDepth===undefined&&Element.isElement(node)&&node.type==='task-list-item'&&node.checked)completedDepth=depth
+        if(completedDepth!==undefined)completedTasks.add(node)
         if(previous&&depth>blockDepth(previous)&&isFoldableList(previous))foldable.add(previous)
         if(collapsed&&depth<=collapsedDepth)collapsed=undefined
         if(collapsed)foldedBy.set(node,collapsed)
@@ -81,7 +86,7 @@ export function rootCache(editor: Editor) {
     })
     // Body edits retain the outline projection when heading nodes/numbers are unchanged.
     const unchanged=cache?.headings.length===headings.length&&headings.every((heading,index)=>heading.node===cache!.headings[index].node&&heading.numberLabel===cache!.headings[index].numberLabel&&heading.listIndex===cache!.headings[index].listIndex)
-    cache={children:editor.children,indices,numbers,numberLabels,headings:unchanged?cache!.headings:headings,listCount,listGuides,foldable,foldedBy,previousVisible};caches.set(editor,cache)
+    cache={children:editor.children,indices,numbers,numberLabels,headings:unchanged?cache!.headings:headings,listCount,listGuides,completedTasks,foldable,foldedBy,previousVisible};caches.set(editor,cache)
   }
   return cache
 }

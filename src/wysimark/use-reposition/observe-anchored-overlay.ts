@@ -54,6 +54,7 @@ export function observeAnchoredOverlay(anchor: HTMLElement, panel: HTMLElement, 
   let frame = 0, disposed = false
   const place = () => {
     if (disposed) return
+    if (!anchor.isConnected || !panel.isConnected) { dispose(); return }
     const viewport = editorOverlayViewport(anchor)
     let rect: Rect = anchor.getBoundingClientRect()
     if (anchor.isConnected && options.getAnchorRect) {
@@ -81,17 +82,26 @@ export function observeAnchoredOverlay(anchor: HTMLElement, panel: HTMLElement, 
     update({ ...position, maxWidth: position.maxWidth / (scaleX || 1), maxHeight: position.maxHeight / (scaleY || 1) })
   }
   const schedule = () => { if (!disposed && !frame) frame = win.requestAnimationFrame(() => { frame = 0; place() }) }
+  const scroll = (event: Event) => {
+    if (!anchor.isConnected || !panel.isConnected) { dispose(); return }
+    // Other notes and preview panels share this document. Their scrolling
+    // cannot move our anchor and must not force its hidden chunk to lay out.
+    const target = event.target as Node | null
+    if (target === doc || target?.contains(anchor)) schedule()
+  }
   const resize = new win.ResizeObserver(schedule)
   for (const target of [anchor, panel, scroller, toolbar]) if (target) resize.observe(target)
   const findChanges = findSlot ? new win.MutationObserver(schedule) : undefined
   if (findSlot) findChanges?.observe(findSlot, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] })
-  doc.addEventListener('scroll', schedule, true); win.addEventListener('resize', schedule)
+  doc.addEventListener('scroll', scroll, true); win.addEventListener('resize', schedule)
+  function dispose() {
+    if (disposed) return
+    disposed = true; resize.disconnect(); findChanges?.disconnect(); win.cancelAnimationFrame(frame)
+    doc.removeEventListener('scroll', scroll, true); win.removeEventListener('resize', schedule)
+  }
   return {
     refresh: schedule,
     place,
-    dispose() {
-      disposed = true; resize.disconnect(); findChanges?.disconnect(); win.cancelAnimationFrame(frame)
-      doc.removeEventListener('scroll', schedule, true); win.removeEventListener('resize', schedule)
-    },
+    dispose,
   }
 }

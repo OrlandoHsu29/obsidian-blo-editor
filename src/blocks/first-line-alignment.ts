@@ -23,8 +23,8 @@ export function firstTextRect(root: HTMLElement): DOMRect | undefined {
   return Array.from(root.querySelectorAll<HTMLElement>('[data-slate-zero-width]')).map(leaf=>leaf.getBoundingClientRect()).find(rect=>rect.height>0)
 }
 
-type Target={variable:string;visibleOnly:boolean;inViewport?:boolean}
-const documents=new WeakMap<Document,{add:(root:HTMLElement,target:Target)=>()=>void;schedule:(root:HTMLElement)=>void}>()
+type Target={variable:string;visibleOnly:boolean;inViewport?:boolean;dirty?:boolean;width?:number;height?:number}
+const documents=new WeakMap<Document,ReturnType<typeof createFirstLineAlignmentRegistry>>()
 function measurements(root:HTMLElement,target:Target) {
   if(target.inViewport===false)return
   if(target.visibleOnly&&!root.matches(':hover,:focus-within'))return
@@ -37,16 +37,28 @@ function measurements(root:HTMLElement,target:Target) {
 }
 export function createFirstLineAlignmentRegistry(doc:Document) {
   const targets=new Map<HTMLElement,Target>(),pending=new Set<HTMLElement>(),win=doc.defaultView!;let frame=0
-  const flush=()=>{frame=0;const updates=Array.from(pending,root=>({root,target:targets.get(root)})).filter(item=>item.target).map(({root,target})=>({root,target:target!,value:measurements(root,target!)}));pending.clear();for(const {root,target,value} of updates)if(value&&root.style.getPropertyValue(target.variable)!==value)root.style.setProperty(target.variable,value)}
+  const flush=()=>{frame=0;const updates=Array.from(pending,root=>({root,target:targets.get(root)})).filter(item=>item.target?.dirty).map(({root,target})=>({root,target:target!,value:measurements(root,target!)}));pending.clear();for(const {root,target,value} of updates)if(value){target.dirty=false;if(root.style.getPropertyValue(target.variable)!==value)root.style.setProperty(target.variable,value)}}
   const enqueue=(root:HTMLElement)=>{
     const target=targets.get(root)
-    if(!target||target.inViewport===false||target.visibleOnly&&!root.matches(':hover,:focus-within'))return
+    if(!target||!target.dirty||target.inViewport===false||target.visibleOnly&&!root.matches(':hover,:focus-within'))return
     pending.add(root)
   }
-  const schedule=(root:HTMLElement)=>{enqueue(root);if(pending.size&&!frame)frame=win.requestAnimationFrame(flush)}
+  const request=()=>{if(pending.size&&!frame)frame=win.requestAnimationFrame(flush)}
+  const schedule=(root:HTMLElement)=>{const target=targets.get(root);if(target)target.dirty=true;enqueue(root);request()}
+  const align=(root:HTMLElement)=>{
+    const target=targets.get(root);if(!target?.dirty)return
+    const value=measurements(root,{...target,visibleOnly:false})
+    if(value){target.dirty=false;if(root.style.getPropertyValue(target.variable)!==value)root.style.setProperty(target.variable,value)}
+  }
   const refresh=()=>targets.forEach((_target,root)=>schedule(root))
   const observer=new win.ResizeObserver(entries=>{
-    entries.forEach(({target})=>enqueue(target as HTMLElement))
+    entries.forEach(({target:element,contentRect})=>{
+      const root=element as HTMLElement,target=targets.get(root);if(!target)return
+      if(!contentRect||target.width!==contentRect.width||target.height!==contentRect.height){
+        target.width=contentRect?.width;target.height=contentRect?.height;target.dirty=true
+      }
+      enqueue(root)
+    })
     if(!pending.size)return
     // Marker/handle offsets do not size the observed blocks. Read together,
     // then update before this frame paints instead of following one frame late.
@@ -54,13 +66,16 @@ export function createFirstLineAlignmentRegistry(doc:Document) {
     flush()
   })
   const visibility=new win.IntersectionObserver(entries=>{
-    for(const {target,isIntersecting}of entries){const config=targets.get(target as HTMLElement);if(!config)continue;config.inViewport=isIntersecting;if(isIntersecting)schedule(target as HTMLElement)}
+    // Scrolling changes viewport position, not the first line's local offset.
+    // Reuse it until content, dimensions or fonts actually change.
+    for(const {target,isIntersecting}of entries){const config=targets.get(target as HTMLElement);if(!config)continue;config.inViewport=isIntersecting;if(isIntersecting)enqueue(target as HTMLElement)}
+    request()
   })
   // Width changes already reach the block observer; a window-wide sweep
   // repeats the work and queues roots that are not visible.
   const attach=()=>{doc.fonts?.addEventListener('loadingdone',refresh)}
   const detach=()=>{doc.fonts?.removeEventListener('loadingdone',refresh);if(frame)win.cancelAnimationFrame(frame);frame=0;pending.clear()}
-  return {schedule,add:(root:HTMLElement,target:Target)=>{if(!targets.size)attach();target.inViewport=false;targets.set(root,target);observer.observe(root);visibility.observe(root);return()=>{observer.unobserve(root);visibility.unobserve(root);targets.delete(root);pending.delete(root);if(!targets.size)detach()}}}
+  return {schedule,align,add:(root:HTMLElement,target:Target)=>{if(!targets.size)attach();target.inViewport=false;target.dirty=true;targets.set(root,target);observer.observe(root);visibility.observe(root);return()=>{observer.unobserve(root);visibility.unobserve(root);targets.delete(root);pending.delete(root);if(!targets.size)detach()}}}
 }
 function registry(doc:Document) {
   let entry=documents.get(doc)
@@ -68,7 +83,7 @@ function registry(doc:Document) {
   return entry
 }
 export function useFirstLineAlignment(ref:RefObject<HTMLElement|null>,variable:string,visibleOnly=false,enabled=true) {
-  const align=useCallback(()=>{const root=ref.current;if(!root)return;const value=measurements(root,{variable,visibleOnly:false});if(value)root.style.setProperty(variable,value)},[ref,variable])
+  const align=useCallback(()=>{const root=ref.current;if(enabled&&root)registry(root.ownerDocument).align(root)},[ref,enabled])
   useLayoutEffect(()=>{const root=ref.current;if(enabled&&root)return registry(root.ownerDocument).add(root,{variable,visibleOnly})},[ref,variable,visibleOnly,enabled])
   // Content can change without resizing its block, such as deleting an empty leaf.
   useLayoutEffect(()=>{const root=ref.current;if(enabled&&root)registry(root.ownerDocument).schedule(root)})

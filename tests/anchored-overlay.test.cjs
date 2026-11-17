@@ -15,9 +15,11 @@ function fixture(scale=1,boxSizing='border-box'){
   getComputedStyle:()=>({boxSizing,width:`${e.width-(boxSizing==='border-box'?0:22)}px`,height:`${height()-(boxSizing==='border-box'?0:21.5)}px`,paddingLeft:'10px',paddingRight:'10px',paddingTop:'10px',paddingBottom:'10px',borderLeftWidth:'1px',borderRightWidth:'1px',borderTopWidth:'.75px',borderBottomWidth:'.75px'}),
  };
  Object.defineProperty(win,'innerHeight',{get:()=>e.viewportHeight});
- const doc={nodeType:9,defaultView:win,documentElement:{get clientWidth(){return e.viewportWidth}},addEventListener(){},removeEventListener(){}};
+ const listeners=new Map();
+ const doc={nodeType:9,defaultView:win,documentElement:{get clientWidth(){return e.viewportWidth}},addEventListener(name,fn){listeners.set(name,fn)},removeEventListener(name){listeners.delete(name)}};
  const anchor={ownerDocument:doc,isConnected:true,closest:()=>null,getBoundingClientRect:()=>rect(120,600,100,20)};
- const panel={offsetWidth:e.width,offsetHeight:245,get clientWidth(){return e.maxHeight>=245.5?278:267},get clientHeight(){return e.maxHeight>=245.5?244:243},get scrollHeight(){return e.scrollHeight},get scrollWidth(){return this.clientWidth},getBoundingClientRect:()=>rect(0,0,e.width*scale,height()*scale)};
+ const panel={isConnected:true,offsetWidth:e.width,offsetHeight:245,get clientWidth(){return e.maxHeight>=245.5?278:267},get clientHeight(){return e.maxHeight>=245.5?244:243},get scrollHeight(){return e.scrollHeight},get scrollWidth(){return this.clientWidth},getBoundingClientRect:()=>rect(0,0,e.width*scale,height()*scale)};
+ Object.assign(e,{anchor,panel,doc,listeners});
  e.tracker=observeAnchoredOverlay(anchor,panel,next=>{e.updates.push(next);e.maxHeight=next.maxHeight},{allowResize:true});
  e.settle=()=>{for(let i=0;i<15;i++)e.tracker.place()};
  return e;
@@ -41,4 +43,20 @@ test('real content and viewport changes still update overlay constraints',()=>{
 });
 test('unmount cancels queued resize measurements',()=>{
  const e=fixture();e.resize();assert.equal(e.frames.size,1);e.tracker.dispose();assert.equal(e.frames.size,0);
+});
+
+test('only scrolling an anchor ancestor schedules overlay measurements',()=>{
+ const e=fixture(),scroll=e.listeners.get('scroll');
+ scroll({target:{contains:()=>false}});assert.equal(e.frames.size,0);
+ scroll({target:{contains:node=>node===e.anchor}});assert.equal(e.frames.size,1);
+ scroll({target:e.doc});assert.equal(e.frames.size,1);
+ e.tracker.dispose();
+});
+
+test('detached anchors or panels release observers and queued callbacks before measuring',()=>{
+ for(const key of ['anchor','panel']){
+  const e=fixture();e.resize();e[key].isConnected=false;e.tracker.place();
+  assert.equal(e.updates.length,0);assert.equal(e.frames.size,0);assert.equal(e.disconnected,true);assert.equal(e.listeners.size,0);
+  e.tracker.dispose();
+ }
 });

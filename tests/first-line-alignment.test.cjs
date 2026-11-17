@@ -17,7 +17,7 @@ function fixture(){
   matches(){return this.hover},querySelectorAll:()=>[{text}],getBoundingClientRect:()=>({top:100,width:300}),
   style:{getPropertyValue:key=>values.get(key)||'',setProperty(key,value){log.push('write');values.set(key,value)}}}});
  const registry=createFirstLineAlignmentRegistry(doc),dispose=roots.map((root,i)=>registry.add(root,{variable:'--center',visibleOnly:i===1}));
- return {roots,registry,frames,listeners,log,resize(indices){resize(indices.map(i=>({target:roots[i]})))},show(indices){visibility(indices.map(i=>({target:roots[i],isIntersecting:true})))},flush(){const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn())},dispose(){dispose.forEach(fn=>fn())}};
+ return {roots,registry,frames,listeners,log,resize(indices,contentRect){resize(indices.map(i=>({target:roots[i],contentRect})))},show(indices,isIntersecting=true){visibility(indices.map(i=>({target:roots[i],isIntersecting})))},flush(){const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn())},dispose(){dispose.forEach(fn=>fn())}};
 }
 
 test('only visible markers and active handles enter the measurement queue in long documents',()=>{
@@ -41,4 +41,24 @@ test('content/font updates still align and final cleanup releases callbacks',()=
  f.registry.schedule(f.roots[1]);f.flush();assert.equal(f.roots[1].style.getPropertyValue('--center'),'12px');
  f.roots[0].text.top=110;f.listeners.get('loadingdone')();assert.equal(f.frames.size,1);f.flush();assert.equal(f.roots[0].style.getPropertyValue('--center'),'20px');
  f.registry.schedule(f.roots[0]);f.dispose();assert.equal(f.frames.size,0);assert.equal(f.listeners.size,0);
+});
+
+test('scrolling back to unchanged blocks reuses offsets without measuring text again',()=>{
+ const f=fixture();try{
+  f.resize([0,2],{width:300,height:40});f.show([0,2]);f.flush();f.log.length=0;
+  for(let i=0;i<10;i++){f.show([0,2],false);f.show([0,2]);f.resize([0,2],{width:300,height:40});f.flush()}
+  assert.equal(f.log.length,0);assert.equal(f.frames.size,0);
+  f.show([0],false);f.roots[0].text.top=108;f.resize([0],{width:300,height:60});
+  assert.equal(f.log.length,0);f.show([0]);f.flush();assert.equal(f.roots[0].style.getPropertyValue('--center'),'18px');
+  f.log.length=0;f.registry.schedule(f.roots[0]);f.flush();assert.equal(f.log.filter(x=>x==='read').length,1);
+ }finally{f.dispose()}
+});
+
+test('hover alignment reuses cached markers and does not repeat an already queued measurement',()=>{
+ const f=fixture();try{
+  f.show([1]);f.registry.align(f.roots[1]);f.flush();assert.equal(f.log.filter(x=>x==='read').length,1);
+  f.log.length=0;f.registry.align(f.roots[1]);assert.equal(f.log.length,0);
+  f.roots[1].text.top=106;f.registry.schedule(f.roots[1]);f.registry.align(f.roots[1]);f.flush();
+  assert.equal(f.log.filter(x=>x==='read').length,1);assert.equal(f.roots[1].style.getPropertyValue('--center'),'16px');
+ }finally{f.dispose()}
 });

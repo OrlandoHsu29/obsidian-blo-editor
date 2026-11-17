@@ -54,7 +54,7 @@ export function TableDialog({
 
   return (
     <>
-      <CloseMask close={close} />
+      <CloseMask close={close} isInside={target => dest.contains(target)} />
       <$TableDialog ref={ref} style={style}>
         <div className="wysimark-table-settings">
           <label><input type="checkbox" checked={defaults.headerRow} onChange={event=>changeDefault('headerRow',event.target.checked)} />{ui('默认标题行')}</label>

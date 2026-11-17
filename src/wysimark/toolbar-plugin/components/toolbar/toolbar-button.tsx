@@ -38,6 +38,7 @@ export function ToolbarButton({
     hotkey: () => staticEditor.wysimark.getHotkeyLabel ? staticEditor.wysimark.getHotkeyLabel(item.title, item.hotkey ? formatHotkey(item.hotkey) : undefined) : item.hotkey ? formatHotkey(item.hotkey) : undefined,
   })
   const menuLayer = useLayer(inOverflow ? 'toolbar-submenu' : 'menu')
+  const expandable = !!(item.Component || item.children)
   const openedComponent = useRef<FunctionComponent<Record<string, never>> | null>(null)
   const menuOpen = menuToggle && !!menuLayer.layer && menuLayer.layer.Component === openedComponent.current
 
@@ -64,15 +65,8 @@ export function ToolbarButton({
       else if (inOverflow) { menuLayer.close(); closeOverflow?.() }
       return
     }
-    if (menuToggle) {
-      if (menuOpen) menuLayer.close()
-      else openMenu()
-    } else if (menuLayer.layer?.Component === openedComponent.current && !inOverflow && !menuAnchor) {
-      menuLayer.close()
-    } else {
-      openMenu()
-    }
-  }, [menuLayer.layer, item, isDisabled, inOverflow, menuAnchor, closeOverflow, menuToggle, menuOpen, openMenu])
+    openMenu()
+  }, [item, isDisabled, inOverflow, closeOverflow, openMenu])
 
   return (
     <$ToolbarButton
@@ -86,8 +80,12 @@ export function ToolbarButton({
       aria-haspopup={menuToggle ? 'menu' : undefined}
       aria-disabled={isDisabled || undefined}
       ref={ref}
-      onMouseDown={event => { if (event.button === 0) event.preventDefault() }}
-      onClick={onClick}
+      onMouseDown={event => {
+        if (event.button !== 0) return
+        event.preventDefault()
+        if (expandable) onClick()
+      }}
+      onClick={event => { if (!expandable || event.detail === 0) onClick() }}
       tabIndex={menuToggle ? 0 : undefined}
       onKeyDown={menuToggle ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick() } } : undefined}
       className={clsx({

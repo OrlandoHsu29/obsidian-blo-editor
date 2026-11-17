@@ -135,7 +135,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
     ? ui(source === 'vault' ? '直接引用库内文件' : '保存到附件目录并预览')
     : ''
   return <>
-    <CloseMask close={dismiss} />
+    <CloseMask close={dismiss} isInside={target => dest.contains(target)} />
     <$AnchorDialog ref={ref} style={style} className="wysimark-reference-dialog" data-reference-kind={attachment ? 'attachment' : 'link'} role="dialog" aria-labelledby={labelId}>
       <span id={labelId} hidden>{attachment ? ui('附件') : ui('链接')}</span>
       <DraggableHeader onDrag={handleDrag} />

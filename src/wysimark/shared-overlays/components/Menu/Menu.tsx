@@ -23,7 +23,7 @@ export function Menu({
 
   return (
     <>
-      <CloseMask close={close} />
+      <CloseMask close={close} isInside={target => dest.contains(target)} />
       <$Menu ref={ref} style={style}>
         {items.map((item, index) => {
           if (item === "divider") {

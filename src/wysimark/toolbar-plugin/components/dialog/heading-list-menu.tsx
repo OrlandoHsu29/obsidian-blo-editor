@@ -28,7 +28,7 @@ export function HeadingListMenu({ dest, close }: { dest: HTMLElement; close: () 
   ]
   const choose = (value: HeadingListStyle) => setHeadingListStyle(editor, value)
   return <>
-    <CloseMask close={close} />
+    <CloseMask close={close} isInside={target => dest.contains(target)} />
     <$Panel ref={ref} style={style} className="blo-heading-list-menu" role="dialog" aria-labelledby={labelId}
       onMouseDown={event => event.preventDefault()}>
       <span id={labelId} hidden>{ui('标题列表')}</span>

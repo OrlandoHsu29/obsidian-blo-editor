@@ -1,7 +1,7 @@
 type Work = { load: () => void | Promise<void>; suspend?: () => void; resume?: () => void }
 type Entry = { host: HTMLElement; work: Work; near: boolean; priority: number; started: boolean; paused: boolean; revision: number; loading?: Promise<void> }
 const queues = new WeakMap<HTMLElement, ReturnType<typeof createViewportWorkQueue>>()
-export const VIEWPORT_IDLE_MS = 300
+export const VIEWPORT_IDLE_MS = 80
 
 /** Shared by heavy embeds: no polling, one load/resume per idle frame. */
 export function createViewportWorkQueue(scroller: HTMLElement) {

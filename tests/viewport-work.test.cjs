@@ -8,10 +8,10 @@ function fixture(){
  return {queue,scroller,frames,timers,events,add(work,kind='pdf'){const host={dataset:{},matches:selector=>selector==='.'+'blo-'+kind};hosts.push(host);return {host,dispose:queue.add(host,work)}},enter(host,near=true,top=100,bottom=300){intersection([{target:host,isIntersecting:near,boundingClientRect:{top,bottom},rootBounds:{top:-1000,bottom:1900}}])},frame(){const tasks=[...frames.values()];frames.clear();tasks.forEach(fn=>fn())},advance(ms){now+=ms;for(const[id,t]of[...timers])if(t.at<=now){timers.delete(id);t.fn()}},get disconnected(){return disconnected}};
 }
 
-test('distant embeds do not render and continuous scrolling waits for 300ms of quiet',async()=>{
+test('distant embeds do not render and continuous scrolling waits for 80ms of quiet',async()=>{
  const f=fixture();let loads=0;const item=f.add({load(){loads++}});f.frame();assert.equal(loads,0);f.enter(item.host);
  for(let i=0;i<10;i++){f.events.get('scroll')();f.advance(20);f.frame();assert.equal(loads,0)}
- f.events.get('scroll')();f.advance(299);f.frame();assert.equal(loads,0);f.advance(1);f.frame();await Promise.resolve();assert.equal(loads,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
+ f.events.get('scroll')();f.advance(79);f.frame();assert.equal(loads,0);f.advance(1);f.frame();await Promise.resolve();assert.equal(loads,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
 });
 
 test('one expensive embed starts per frame, with the viewport before nearest buffers',()=>{
@@ -25,7 +25,7 @@ test('a new jump drops stale buffered jobs before starting expensive work',()=>{
 
 test('cached embeds keep their preview while offscreen work suspends and resumes without reloading',async()=>{
  const f=fixture();let loads=0,pauses=0,resumes=0;const item=f.add({load(){loads++},suspend(){pauses++},resume(){resumes++}});f.enter(item.host);f.frame();await Promise.resolve();f.enter(item.host,false);assert.equal(pauses,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);
- f.events.get('scroll')();f.enter(item.host);f.advance(299);f.frame();assert.equal(resumes,0);f.advance(1);f.frame();assert.equal(loads,1);assert.equal(resumes,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
+ f.events.get('scroll')();f.enter(item.host);f.advance(79);f.frame();assert.equal(resumes,0);f.advance(1);f.frame();assert.equal(loads,1);assert.equal(resumes,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
 });
 
 test('an old asynchronous completion cannot expose an embed outside the new window',async()=>{
@@ -44,7 +44,7 @@ test('scrollbar jumps never remask cached controls inside the existing window',a
  const f=fixture();let loads=0,pauses=0,resumes=0;const item=f.add({load(){loads++},suspend(){pauses++},resume(){resumes++}});f.enter(item.host);f.frame();await Promise.resolve();
  f.scroller.scrollTop=1600;f.events.get('scroll')();assert.equal(pauses,0);assert.equal(item.host.dataset.bloRenderPaused,undefined);
  for(let i=0;i<8;i++){f.scroller.scrollTop+=100;f.events.get('scroll')();f.advance(25);f.frame();assert.equal(resumes,0)}
- f.events.get('scroll')();f.advance(299);f.frame();assert.equal(resumes,0);f.advance(1);f.frame();assert.equal(resumes,0);assert.equal(loads,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
+ f.events.get('scroll')();f.advance(79);f.frame();assert.equal(resumes,0);f.advance(1);f.frame();assert.equal(resumes,0);assert.equal(loads,1);assert.equal(item.host.dataset.bloRenderPaused,undefined);item.dispose();
 });
 
 test('short independent gestures keep cached controls visible instead of accumulating distance',async()=>{

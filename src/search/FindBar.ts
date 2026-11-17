@@ -3,6 +3,8 @@ import { setIcon } from 'obsidian'
 import { Editor, Range } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { findText, replaceMatches } from './model'
+import { revealFoldedSelection } from '../blocks/folding'
+import { replacementIcon } from './icons'
 
 let nextId = 0
 export class FindBar {
@@ -12,6 +14,7 @@ export class FindBar {
   private replaceRow: HTMLDivElement
   private count: HTMLSpanElement
   private caseButton: HTMLButtonElement
+  private replaceToggle: HTMLButtonElement
   private results: Range[] = []
   private index = 0
   private matchCase = false
@@ -28,17 +31,18 @@ export class FindBar {
     this.panel.setAttribute('role','search'); this.panel.setAttribute('aria-labelledby',this.name+'-label')
     this.panel.createSpan({text:ui("当前文档查找和替换"),attr:{id:this.name+'-label',hidden:''}})
     const row = this.panel.createDiv({cls:'wysimark-find-row'})
+    this.replaceToggle=this.button(row,ui("展开或收起替换"),'chevron-right',()=>{this.replaceRow.hidden=!this.replaceRow.hidden||this.readonlyMode();this.replaceToggle.setAttribute('aria-expanded',String(!this.replaceRow.hidden));this.updateHeight()})
+    this.replaceToggle.classList.add('blo-find-replace-toggle');this.replaceToggle.setAttribute('aria-expanded','false')
     this.query=row.createEl('input',{type:'text',placeholder:ui("查找文字"),attr:{'aria-label':ui("查找文字")}})
     this.count=row.createSpan({cls:'wysimark-find-count',attr:{'aria-live':'polite'}})
     this.caseButton=this.button(row,ui("区分大小写"),'case-sensitive',()=>{this.matchCase=!this.matchCase;this.caseButton.setAttribute('aria-pressed',String(this.matchCase));this.refresh(true)})
     this.caseButton.setAttribute('aria-pressed','false')
     this.button(row,ui("上一个（Shift+Enter）"),'chevron-up',()=>this.navigate(-1))
     this.button(row,ui("下一个（Enter）"),'chevron-down',()=>this.navigate(1))
-    this.button(row,ui("展开或收起替换"),'replace',()=>{this.replaceRow.hidden=!this.replaceRow.hidden||this.readonlyMode();this.updateHeight()})
     this.button(row,ui("关闭（Esc）"),'x',()=>this.close(true))
     this.replaceRow=this.panel.createDiv({cls:'wysimark-find-row'});this.replaceRow.hidden=true
     this.replacement=this.replaceRow.createEl('input',{type:'text',placeholder:ui("替换为"),attr:{'aria-label':ui("替换为")}})
-    this.button(this.replaceRow,ui("替换当前"),'replace',()=>this.replace(false))
+    this.button(this.replaceRow,ui("替换当前"),'replace-current',()=>this.replace(false))
     this.button(this.replaceRow,ui("全部替换"),'replace-all',()=>this.replace(true))
     this.query.addEventListener('input',()=>this.refresh(true))
     this.panel.addEventListener('keydown',event=>{
@@ -53,7 +57,14 @@ export class FindBar {
     this.resize=new this.win.ResizeObserver(()=>this.updateHeight());this.resize.observe(host)
   }
   private button(row:HTMLElement,title:string,icon:string,action:()=>void) {
-    const button=row.createEl('button',{type:'button',attr:{'aria-label':title,'data-tooltip-position':'bottom'}});setIcon(button,icon);button.addEventListener('click',action);return button
+    const button=row.createEl('button',{type:'button',attr:{'aria-label':title,'data-tooltip-position':'bottom'}})
+    if(icon==='replace-current'||icon==='replace-all'){button.innerHTML=replacementIcon(icon==='replace-all');button.classList.add('blo-find-replace-action')}
+    else setIcon(button,icon)
+    button.addEventListener('click',action);return button
+  }
+  toggle() {
+    if (this.panel.hidden) this.open()
+    else this.close(true)
   }
   open(replace=false) {
     this.attach();
@@ -62,6 +73,7 @@ export class FindBar {
       const selected=Editor.string(editor,editor.selection);if(selected&&!selected.includes('\n'))this.query.value=selected
     }
     this.panel.hidden=false;this.replaceRow.hidden=!replace||this.readonlyMode();this.updateHeight();this.refresh(true);this.query.focus();this.query.select()
+    this.replaceToggle.setAttribute('aria-expanded',String(!this.replaceRow.hidden))
   }
   attach(){
     const slot=this.host.querySelector('[data-wysimark-find-slot]')
@@ -81,16 +93,31 @@ export class FindBar {
     this.index=reset?0:Math.min(this.index,Math.max(0,this.results.length-1))
     this.count.textContent=this.query.value?(this.results.length?`${this.index+1} / ${this.results.length}`:ui("无结果")):''
     this.replaceRow.hidden=this.replaceRow.hidden||this.readonlyMode()
+    this.replaceToggle.setAttribute('aria-expanded',String(!this.replaceRow.hidden))
     for(const button of this.replaceRow.querySelectorAll('button'))button.disabled=this.readonlyMode()||!this.results.length
     this.win.cancelAnimationFrame(this.frame);this.frame=this.win.requestAnimationFrame(()=>{this.frame=0;this.highlight(reset)})
   }
   navigate(direction:number) {
     if(!this.results.length)return
     this.index=(this.index+direction+this.results.length)%this.results.length
+    this.win.cancelAnimationFrame(this.frame);this.frame=0
     this.count.textContent=`${this.index+1} / ${this.results.length}`;this.highlight(true)
   }
-  private highlight(scroll=false) {
+  private highlight(scroll=false, prepared=false) {
     const editor=this.getEditor();if(!editor||this.panel.hidden)return
+    const result=this.results[this.index]
+    if(scroll&&result&&!prepared) {
+      const unfolded=revealFoldedSelection(editor,result)
+      try {
+        const root=ReactEditor.toDOMNode(editor,editor.children[result.focus.path[0]])
+        const skipped=root.closest<HTMLElement>('.ks-editor-chunk-leaf')?.dataset.bloChunkSkipped==='true'
+        if(unfolded||skipped) {
+          if(skipped)root.scrollIntoView({block:'nearest',inline:'nearest'})
+          this.frame=this.win.requestAnimationFrame(()=>{this.frame=0;this.highlight(true,true)})
+          return
+        }
+      }catch{/* A changed Slate node may not have committed its DOM yet. */}
+    }
     const view=this.host.ownerDocument.defaultView as any
     const highlights=view?.CSS?.highlights,Highlight=view?.Highlight
     let active:globalThis.Range|undefined

@@ -35,6 +35,12 @@ test('existing command IDs use current custom bindings instead of hardcoded sear
 test('labels reflect custom bindings and removal immediately',()=>{
  const f=fixture(),name=editorCommands().find(c=>c.id==='toggle-strikethrough').name;assert.equal(f.commands.label(name),'Mod+Shift+x');f.custom.set('blo-editor:toggle-strikethrough',[{key:'F8',modifiers:[]}]);assert.equal(f.commands.label(name),'F8');f.custom.set('blo-editor:toggle-strikethrough',[]);assert.equal(f.commands.label(name),undefined);assert.equal(f.commands.label('unknown','Tab'),'Tab');
 });
+
+test('find toolbar label follows the find command binding rather than a fixed fallback',()=>{
+ const f=fixture(),title='Find / replace';assert.equal(f.commands.label(title,'Ctrl+F'),'Mod+f');
+ f.custom.set('blo-editor:find-text',[{key:'F8',modifiers:[]}]);assert.equal(f.commands.label(title,'Ctrl+F'),'F8');
+ f.custom.set('blo-editor:find-text',[]);assert.equal(f.commands.label(title,'Ctrl+F'),undefined);
+});
 test('read-only views and composition do not mutate text; unrelated shortcuts pass through',()=>{
  const f=fixture();f.e.wysimark.readOnly=true;f.commands.handle(f.e,event('x',{ctrlKey:true,shiftKey:true}));assert.deepEqual(f.calls,[]);
  assert.equal(f.commands.handle(f.e,event('b',{ctrlKey:true,isComposing:true})),false);assert.equal(f.commands.handle(f.e,event('c',{ctrlKey:true})),false);assert.equal(f.commands.handle(f.e,event('a',{ctrlKey:true})),false);

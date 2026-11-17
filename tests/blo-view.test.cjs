@@ -20,6 +20,11 @@ const loaded=compile('src/BloView.tsx',['./*','obsidian','react','react/*','reac
  return new Proxy({__esModule:true,default:stub},{get:(o,k)=>k in o?o[k]:stub});
 });
 const BloView=loaded.BloView;
+test('find command toggles while replace command explicitly opens replacement',()=>{
+ const calls=[],view=Object.create(BloView.prototype);
+ view.findBar={toggle:()=>calls.push('toggle'),open:replace=>calls.push(replace)};
+ view.showSearch();view.showSearch();view.showSearch(true);assert.deepEqual(calls,['toggle','toggle',true]);
+});
 function fixture(){
  let disk='base',writes=0;const files=new Map(),file=Object.assign(new TFile(),{path:'note.md',basename:'note',parent:{path:'/'}});files.set(file.path,file);
  const vault={read:async()=>disk,process:async(f,fn)=>{const current=f===file?disk:files.get(f.path).content;const next=fn(current);writes++;if(f===file)disk=next;else f.content=next;return next},getFileByPath:path=>files.get(path),getAbstractFileByPath:path=>files.get(path),create:async(path,content)=>{if(files.has(path))throw Error('exists');const f=Object.assign(new TFile(),{path,content});files.set(path,f);return f}};

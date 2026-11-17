@@ -31,5 +31,5 @@ export const historyItems:MenuItemData[]=[
   {title:ui('重做'),icon:Icon.Redo,hotkey:'mod+shift+z',disabled:editor=>!HistoryEditor.isHistoryEditor(editor)||!editor.history.redos.length,action:editor=>{if(HistoryEditor.isHistoryEditor(editor)&&editor.history.redos.length)editor.redo()}},
 ]
 export const utilityItems:MenuItemData[]=[
-  {title:ui("查找／替换"),icon:Icon.FindReplace,focusEditor:false,action:editor=>editor.wysimark.openSearch?.(true)},
+  {title:ui("查找／替换"),icon:Icon.FindReplace,hotkey:'mod+f',focusEditor:false,action:editor=>editor.wysimark.openSearch?.(false)},
 ]

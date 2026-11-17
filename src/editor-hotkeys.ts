@@ -66,7 +66,7 @@ export function installEditorHotkeys(plugin: Plugin, getEditor: () => Editor | u
   // command cannot fall through to an old Slate or Wysimark format shortcut.
   const legacy = [key('j', 'Mod'), ...['0','1','2','3','4','5','7','8','9','k','.',','].map(k => key(k, 'Mod', Platform.isMacOS ? 'Alt' : 'Shift'))].flat()
   const retiredBindings = [...commands.flatMap(c => c.hotkeys), ...legacy]
-  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color' }
+  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text' }
   return {
     handle(editor: Editor, event: KeyboardEvent): boolean {
       if (event.isComposing) return false

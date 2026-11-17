@@ -449,7 +449,10 @@ export class BloView extends FileView {
   private presentationPreviousMode: boolean | undefined;
   private presentationScrollCleanup: (() => void) | null = null;
   private findBar: FindBar | null = null;
-  showSearch(replace = false) { this.findBar?.open(replace); }
+  showSearch(replace = false) {
+    if (replace) this.findBar?.open(true);
+    else this.findBar?.toggle();
+  }
 
   private connectEditor = (editor: Editor) => {
     this.editor = editor;

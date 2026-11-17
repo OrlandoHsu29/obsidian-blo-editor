@@ -67,27 +67,12 @@ export function ToolbarButton({
     if (menuToggle) {
       if (menuOpen) menuLayer.close()
       else openMenu()
-    } else if (menuLayer.layer && !inOverflow && !menuAnchor) {
+    } else if (menuLayer.layer?.Component === openedComponent.current && !inOverflow && !menuAnchor) {
       menuLayer.close()
     } else {
       openMenu()
     }
   }, [menuLayer.layer, item, isDisabled, inOverflow, menuAnchor, closeOverflow, menuToggle, menuOpen, openMenu])
-
-  /**
-   * On hover
-   */
-  const onMouseEnter = useCallback(
-    () => {
-      /**
-       * If any `menu` is already open, then we open up the currently hovered
-       * `menu` automatically. This replicates behavior in menus in windowing
-       * systems.
-       */
-      if (!isDisabled && menuLayer.layer && !inOverflow && !menuToggle) openMenu()
-    },
-    [menuLayer.layer, openMenu, inOverflow, menuToggle, isDisabled]
-  )
 
   return (
     <$ToolbarButton
@@ -101,7 +86,6 @@ export function ToolbarButton({
       aria-haspopup={menuToggle ? 'menu' : undefined}
       aria-disabled={isDisabled || undefined}
       ref={ref}
-      onMouseEnter={onMouseEnter}
       onMouseDown={event => { if (event.button === 0) event.preventDefault() }}
       onClick={onClick}
       tabIndex={menuToggle ? 0 : undefined}

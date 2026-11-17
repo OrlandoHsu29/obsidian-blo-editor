@@ -31,6 +31,7 @@ export function Table({
     const path=ReactEditor.findPath(editor,element)
     return !Path.isAncestor(path,selection.anchor.path)||!Path.isAncestor(path,selection.focus.path)
   },[editor,element]))
+  const controlsActive=!readOnly&&!crossBlockSelection&&(isSelected||blockSelected)
   const [deletePreview,setDeletePreview]=useState<TableDeletePreview>(null)
   const axis=useSyncExternalStore(useCallback(listener=>subscribeTableAxisSelection(editor,listener),[editor]),
     useCallback(()=>getTableAxisSelection(editor),[editor]))
@@ -57,16 +58,17 @@ export function Table({
     }
   }, [])
   return (
-    <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:!readOnly?deletePreview:null,setDeletePreview }}>
+    <TableContext.Provider value={{ isSelected:isSelected&&!readOnly,controlsActive,blockSelected:blockSelected&&!readOnly,cells,headerRow:element.headerRow!==false,headerColumn:!!element.headerColumn,deletePreview:controlsActive?deletePreview:null,setDeletePreview }}>
       <div ref={frame} className="blo-table-frame" data-scrollbar-active={isSelected||blockSelected||!!cells||undefined}>
         <div className="blo-table-placeholder" aria-hidden="true" />
         <div className="blo-table-scroll">
-          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}>
+          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}
+            data-text-selection={readOnly||isSelected&&!cells&&!blockSelected&&!crossBlockSelection||undefined}>
             <tbody>{children}</tbody>
           </$Table>
         </div>
       </div>
-      <TableInteractions element={element} readOnly={readOnly} active={isSelected||blockSelected} />
+      <TableInteractions element={element} readOnly={readOnly} active={controlsActive} />
     </TableContext.Provider>
   )
 }

@@ -466,6 +466,10 @@
 .wysimark-editor [data-wysimark-code-block][data-block-selected="true"] { caret-color:transparent; }
 .wysimark-editor table[data-cell-selection="true"] { caret-color:transparent; }
 .wysimark-editor table[data-cell-selection="true"] td.--selected { background:var(--text-selection); outline:none; }
+/* Native text paint must not precede Slate's cell highlights on an outside
+   drag. Enable it only for text editing inside the table (or reading mode). */
+.wysimark-editor table:not([data-text-selection="true"])::selection,
+.wysimark-editor table:not([data-text-selection="true"]) ::selection { background:transparent; color:inherit; }
 /* Slate's row-major range also marks links in cells outside the selected rectangle. */
 .wysimark-editor table[data-cell-selection="true"] a.--selected { background:transparent; transition:none; }
 .wysimark-editor table[data-cell-selection="true"] td.--selected::selection,

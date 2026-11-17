@@ -257,7 +257,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         </svg>
       </button>)}
     </div>, hostDocument().body)}
-    {insertions.length > 0 && createPortal(<div ref={insertRef} contentEditable={false}>
+    {active && insertions.length > 0 && createPortal(<div ref={insertRef} contentEditable={false}>
       {insertions.map(insertion => <div key={insertion.axis} className="wysimark-overlay wysimark-table-actions wysimark-table-insert" data-table-insert={insertion.axis} data-insert-index={insertion.index} style={{ position: 'fixed', left: insertion.left, top: insertion.top }}>
       <button aria-label={ui(insertion.axis === 'row' ? insertion.index === element.children.length ? '下方插入行' : '上方插入行' : insertion.index === element.columns.length ? '右侧插入列' : '左侧插入列')} onMouseDown={event => { event.preventDefault(); event.stopPropagation(); insert(insertion) }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 12h14M12 5v14" /></svg>

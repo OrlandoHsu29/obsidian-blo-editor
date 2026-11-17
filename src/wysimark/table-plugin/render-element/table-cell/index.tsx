@@ -20,8 +20,8 @@ export function TableCell({
   const cellSelected=tableContext.isSelected&&(tableContext.blockSelected||(cells
     ?element.x!==undefined&&element.y!==undefined&&element.x>=cells.left&&element.x<=cells.right&&element.y>=cells.top&&element.y<=cells.bottom
     :selected))
-  const showRowMenu = tableContext.isSelected && element.x === 0
-  const showColumnMenu = tableContext.isSelected && element.y === 0
+  const showRowMenu = tableContext.controlsActive && element.x === 0
+  const showColumnMenu = tableContext.controlsActive && element.y === 0
   return (
     <$TableCell
       className={cellSelected ? "--selected" : ""}

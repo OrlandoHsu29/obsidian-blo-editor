@@ -1,35 +1,31 @@
-# Blo Editor 0.2.0
+# Blo Editor 0.2.2
 
 ## 中文
 
-- 新增居中全屏演示模式，退出后恢复编辑／阅读状态及滚动位置，滚动条位于窗口右侧。
-- 新增平滑、收尖的激光笔，轨迹随页面滚动；普通松手停顿 300 毫秒后，用约 600 毫秒加速追赶终点并收细。已消退的轨迹沿用当前速度，短尾迹可提前完成。
-- 图片查看器覆盖在演示上方，关闭后继续演示；PDF、画板及标签页切换会安全退出演示，避免旧全屏区域挡住新界面。
-- 新增六色高亮工具，放在字体颜色与加粗之间，并优先显示在紧凑工具栏中。颜色按钮点击即切换样式并展开菜单，保持选区，重复点击不闪烁。
-- 工具栏使用半透明紫色选中背景，调整字体颜色、高亮、加粗图标及分隔线。
-- 引用图片复用普通图片的选中和边缘缩放，保留 Wiki 引用、尺寸、撤销及引用提示框；移除图片尺寸预设浮动工具栏，避免遮挡。
-- 清理引用提示框的延迟回调并使用当前节点；缓存未变化的激光笔平滑曲线，减少逐帧重复计算。
-- 去除主窗口正文滚动区底部多余的 32 像素留白。
+- 完成父任务后，子项继承半透明和删除线样式；保留各子任务自己的勾选状态。
+- Shift 点击图片、画板或 PDF 时，连续选择中间的文字和媒体；Ctrl/Cmd 点击仍可单独多选图片。正文拖到媒体即可完整选中，删除与撤销保留正确边界。
+- 修复媒体边缘拖选的选区跳动，统一处理表格上下空白边缘，避免误选整表或从整表退回首格。
+- 消除跨块拖入表格时原生文字高亮的短暂闪烁。选区包含表格外内容时，仅保留高亮，隐藏对齐工具栏与行列控件；表内选择和文字编辑保留原有操作。
+- 修复演示控制栏内边距及控件间空白处光标消失的问题。
+- 设置页新增 GitHub 项目入口，调整右侧操作控件的垂直对齐；更新中英文 README、演示模式及任务清单截图。
 
-验证：类型检查、794 项自动化测试及生产打包通过。已在 Obsidian 中验证演示、图片查看器关闭后继续演示、PDF／画板与标签页导航，以及引用图片的选中、缩放、撤销和只读状态。
+验证：类型检查、821 项自动化测试及生产打包通过。实际 Obsidian 检查覆盖正文与标题拖入表格、表格上下边缘、跨表格与全文选中、单元格编辑、媒体范围选择、任务继承样式及演示控制栏光标。
 
 ## English
 
-- Add centered fullscreen presentation with a window-edge scrollbar. Restore the previous editing/reading state and scroll position on exit.
-- Add a smoothed, tapered laser trail that follows document scrolling. Ordinary release pauses for 300 ms before an accelerating sweep and thinning over about 600 ms. Already decaying trails retain their speed; short remnants may finish sooner.
-- Keep image viewers above the presentation and resume it on close. Safely exit presentation for PDF/drawing navigation and tab changes.
-- Add six-color highlighting between text color and bold, with priority in compact toolbars. Color buttons toggle the style and open a stable palette while preserving the selection.
-- Use translucent purple active backgrounds and refine color, highlight, bold and separator appearance.
-- Reuse image selection and edge resizing for Wiki image references, preserving references, dimensions, undo and reference popovers. Remove image size-preset toolbars to avoid overlap.
-- Cancel stale reference-popup callbacks and resolve actions against the current node. Cache unchanged laser curves instead of rebuilding them every frame.
-- Remove the extra 32 px bottom gap around the main note scroller.
+- Inherit dimmed, struck-through styling from completed parent tasks while preserving each child's own checkbox state.
+- Shift-click images, drawings and PDFs to select a continuous range including intervening text and media. Ctrl/Cmd-click retains individual image selection. Preserve complete media boundaries during dragging, deletion and undo.
+- Stabilize media-edge dragging and resolve both vertical table gutters consistently, preventing accidental whole-table selection or a jump back to the first cell.
+- Prevent the native text-selection flash when dragging into a table from outside. Hide alignment and row/column controls for cross-block selections while retaining cell highlights and normal in-table editing.
+- Restore the normal cursor over presentation toolbar padding and gaps between controls.
+- Add a GitHub project link to settings, center action controls vertically, and refresh both READMEs with presentation and nested-task screenshots.
 
-Validation: type checking, 794 automated tests and production packaging passed. Live Obsidian checks covered presentation, image-viewer close/resume, PDF/drawing and tab navigation, and Wiki image selection, resizing, undo and read-only behaviour.
+Validation: type checking, 821 automated tests and production packaging passed. Live Obsidian checks covered text/heading-to-table dragging, table edges, cross-table and document selection, cell editing, media ranges, inherited task styling and presentation toolbar cursors.
 
 ## 安装 / Installation
 
-将 `blo-editor-0.2.0.zip` 中的 `blo-editor/` 解压到笔记库的 `.obsidian/plugins/`，升级时保留 `data.json`。需要桌面版 Obsidian 1.8.7+。
+将 `blo-editor-0.2.2.zip` 中的 `blo-editor/` 解压到笔记库的 `.obsidian/plugins/`，升级时保留 `data.json`。需要桌面版 Obsidian 1.8.7+。
 
-Extract `blo-editor/` from `blo-editor-0.2.0.zip` into your vault's `.obsidian/plugins/`, preserving `data.json`. Requires desktop Obsidian 1.8.7+.
+Extract `blo-editor/` from `blo-editor-0.2.2.zip` into your vault's `.obsidian/plugins/`, preserving `data.json`. Requires desktop Obsidian 1.8.7+.
 
-[完整版本差异 / Full comparison](https://github.com/OrlandoHsu29/obsidian-blo-editor/compare/v0.1.38...v0.2.0)
+[完整版本差异 / Full comparison](https://github.com/OrlandoHsu29/obsidian-blo-editor/compare/v0.2.1...v0.2.2)

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.2 — 2026-11-17
+
+### 中文
+
+- 父任务完成样式延伸到子项，保留子任务勾选状态。
+- 统一媒体 Shift 连续选择、Ctrl/Cmd 多选及边缘拖选；修复表格上下边缘的选区跳动和原生文字高亮闪烁。
+- 跨块选中表格时仅保留高亮，隐藏对齐及行列控件；修复演示控制栏空白处光标消失。
+- 设置页新增 GitHub 入口并居中操作控件；刷新中英文 README 和演示、任务截图。
+
+### English
+
+- Inherit completed parent-task styling without changing child checkbox states.
+- Unify media Shift ranges, Ctrl/Cmd multiselection and edge dragging; fix table-gutter selection jumps and native text-selection flashes.
+- Hide table action controls for cross-block ranges while retaining highlights, and restore the cursor over presentation toolbar gaps.
+- Add a GitHub settings link, center action controls and refresh both READMEs and presentation/task screenshots.
+
+Validation: type checking, 821 automated tests, production packaging and targeted live Obsidian checks passed.
+
 ## 0.1.33 — 2026-11-13
 
 ### 中文

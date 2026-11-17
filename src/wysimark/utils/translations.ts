@@ -129,6 +129,8 @@ export const translations = {
   }
 } as const
 export const uiMessages = {
+  '项目主页': { zh: '项目主页', en: 'Project home' },
+  '查看源码、版本更新与反馈问题。': { zh: '查看源码、版本更新与反馈问题。', en: 'Browse the source, releases and issue tracker.' },
   '恢复100%缩放': { zh: '恢复100%缩放', en: 'Reset zoom to 100%' },
   '缩放比例': { zh: '缩放比例', en: 'Zoom level' },
   '输入缩放百分比': { zh: '输入缩放百分比', en: 'Enter zoom percentage' },

@@ -872,6 +872,7 @@
 .wysimark-image-toolbar > span > span.--selected { color:var(--text-accent); background:var(--background-modifier-hover); }
 .wysimark-image-toolbar > span > span.--disabled { color:var(--text-faint); background:transparent; cursor:default; }
 .wysimark-image-toolbar svg { position:static; top:auto; display:block; width:17px; height:17px; }
+.blo-settings .blo-settings-centered-control .setting-item-control { align-self:center; }
 .blo-settings .blo-ai-skill-setting {
   align-items: center;
   flex-wrap: wrap;

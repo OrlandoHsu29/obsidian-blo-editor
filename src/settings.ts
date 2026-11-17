@@ -54,6 +54,14 @@ export class BloSettingsTab extends PluginSettingTab {
     const plugin = this.editorPlugin
     this.containerEl.empty()
     this.containerEl.addClass('blo-settings')
+    const project = new Setting(this.containerEl)
+      .setClass('blo-settings-centered-control')
+      .setName(ui('项目主页'))
+      .setDesc(ui('查看源码、版本更新与反馈问题。'))
+    project.controlEl.createEl('a', {
+      text: 'GitHub', href: 'https://github.com/OrlandoHsu29/obsidian-blo-editor', cls: 'external-link',
+      attr: { target: '_blank', rel: 'noopener noreferrer' },
+    })
     // A dependency enabled during this session should show up as already on.
     void plugin.enableDetectedIntegrations().then(changed => {
       if (changed && this.containerEl.isConnected) this.display()
@@ -123,6 +131,7 @@ export class BloSettingsTab extends PluginSettingTab {
       }))
     new Setting(editorGroup)
       .setName(ui('编辑器快捷键'))
+      .setClass('blo-settings-centered-control')
       .setDesc(ui('在 Obsidian 快捷键设置中搜索 Blo Editor，可单独修改本编辑器的格式、列表、缩进等快捷键；与原生编辑器命令分开，修改后立即生效。'))
       .addButton(button => button.setButtonText(ui('配置快捷键')).onClick(() => {
         const setting = (this.app as any).setting

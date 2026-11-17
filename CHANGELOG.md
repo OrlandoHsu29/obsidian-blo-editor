@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.5 — 2026-11-17
+
+### 中文
+
+- 进入和退出演示模式时保持当前阅读位置；打开独立的 Glimmer Memo 窗口不再退出演示。
+- 分块淡入仅用于离屏内容恢复，转换列表样式不再重复播放加载动画。
+- 查找定位会展开折叠内容并唤醒离屏分块；改进查找替换图标，默认收起替换栏，Ctrl+F 支持打开和关闭，提示跟随自定义快捷键。
+- 二级菜单正常定位并显示在查找替换面板上层，不再为其预留整段空白。
+- 调整窗口尺寸时暂停表格内部布局并取消测量，尺寸稳定后才恢复适配，减少遮罩期间的计算。
+- 可展开工具在鼠标按下时打开菜单；重复按下保持同一菜单，颜色与高亮样式切换仍正常生效。
+
+### English
+
+- Preserve the current reading position when entering or leaving presentation mode, and keep presentations active when an independent Glimmer Memo window opens.
+- Fade chunks in only when returning from offscreen; list conversions no longer replay loading animations.
+- Reveal folded and offscreen search results. Improve find/replace icons, collapse replacement by default, toggle Find with Ctrl+F, and display customized shortcuts.
+- Position transient menus normally above the find panel without reserving a full-width gap.
+- Suspend table subtree layout and cancel fitting during window resizing; resume after dimensions settle to reduce work behind placeholders.
+- Open expandable tools on mouse-down and retain the same menu on repeated presses, while preserving color and highlight toggles.
+
+Validation: type checking, 885 automated tests and production packaging passed. Targeted Obsidian checks verified table resize suspension and menu identity across repeated presses.
+
 ## 0.2.4 — 2026-11-17
 
 ### 中文

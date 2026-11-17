@@ -1,5 +1,7 @@
-import { Editor, Element, Transforms } from "slate"
+import { Editor, Element } from "slate"
 import { deleteHeadingListPrefix, headingListControlDisabled } from '../../blocks/heading-numbering'
+import { setListBlock } from '../../blocks/list-container'
+import { withHistoryBatch } from '../utils/with-history-batch'
 
 import {
   createHotkeyHandler,
@@ -15,7 +17,6 @@ import { createListMethods } from "./methods"
 import { normalizeNode } from "./normalize-node"
 import { renderElement } from "./render-element"
 import { ListItemElement, ListPluginCustomTypes } from "./types"
-import { setListDepth } from './methods/depth'
 
 export * from "./types"
 
@@ -53,22 +54,13 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
         normalizeNode: (entry) => normalizeNode(editor, entry),
         insertBreak: list.insertBreak,
         deleteBackward: (unit) => {
-          if (unit !== "character") return false
+          if (editor.wysimark.readOnly || unit !== "character") return false
           if (deleteHeadingListPrefix(editor)) return true
           if (!isStartOfElement(editor, isListItem)) return false
           const listItem = findElementUp<ListItemElement>(editor, isListItem)
           if (!listItem) return false
           const [element, path] = listItem
-          const depth=list.getListDepth()
-          if (depth > 0 && !Editor.isEmpty(editor, element)) {
-            setListDepth(editor,path,depth-1)
-            return true
-          }
-          if (element.blockChildren) {
-            Transforms.unwrapNodes(editor, { at: path })
-            return true
-          }
-          editor.collapsibleParagraph.convertParagraph({ preserveOrderedLists: false })
+          withHistoryBatch(editor,()=>setListBlock(editor,element,path))
           return true
         },
       },

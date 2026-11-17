@@ -1,5 +1,5 @@
 import { Editor, Element, Point, Range, Transforms } from 'slate'
-import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
+import { blockDepth, canIndentBlock, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, rangeToMediaBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
@@ -118,11 +118,15 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
     return true
    }
   }
-  // At the text start, outdent the subtree before Backspace can merge it.
+  // Empty prose outdents only itself. Shift+Tab keeps the subtree operation.
+  // Lists first remove their marker; populated prose keeps native deletion.
   if(Element.isElement(node)&&!isEditorSpacer(node)&&!isStructuredBlock(node)&&
-   !(isListBlock(node)&&Editor.isEmpty(editor,node))&&
-   blockDepth(node)>0&&point.offset===0&&
-   (Point.equals(point,Editor.start(editor,[index]))||Editor.before(editor,point,{unit:'character'})?.path[0]!==index))return changeBlockIndent(editor,index,-1)
+   !isListBlock(node)&&node.type!=='block-quote'&&Editor.isEmpty(editor,node)&&
+   canIndentBlock(node)&&blockDepth(node)>0&&point.offset===0&&
+   (Point.equals(point,Editor.start(editor,[index]))||Editor.before(editor,point,{unit:'character'})?.path[0]!==index)) {
+   withHistoryBatch(editor,()=>Transforms.setNodes(editor,{__blockDepth:blockDepth(node)-1},{at:[index]}))
+   return true
+  }
  }
  const index=boundaryBlockIndex(editor)
  return index===undefined?false:selectBlockContents(editor,index)

@@ -102,7 +102,7 @@ test('prefix removal ignores expanded selections, mid-title edits and read-only 
  const {editor,backspace}=fixture([{type:'ordered-list-item',depth:0,blockChildren:true,children:[heading(2)]}]);
  Transforms.select(editor,{anchor:{path:[0,0,0],offset:1},focus:{path:[0,0,0],offset:1}});assert.equal(backspace(),false);
  Transforms.select(editor,{anchor:{path:[0,0,0],offset:0},focus:{path:[0,0,0],offset:2}});assert.equal(backspace(),false);
- Transforms.select(editor,Editor.start(editor,[0]));editor.wysimark.readOnly=true;const before=structuredClone(editor.children);toolbar.action(editor);backspace();assert.deepEqual(editor.children,before);
+ Transforms.select(editor,Editor.start(editor,[0]));editor.wysimark.readOnly=true;const before=structuredClone(editor.children);toolbar.action(editor);assert.deepEqual(editor.children,before);backspace();assert.deepEqual(editor.children,before);
 });
 
 test('a cross-block selection starting inside attached prose does not change its unselected owner heading',()=>{

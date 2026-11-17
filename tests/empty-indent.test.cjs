@@ -19,7 +19,8 @@ loaded._compile(buildSync({stdin:{contents:`
  import {AtomicDeletePlugin} from './src/wysimark/atomic-delete-plugin';
  import {NormalizeAfterDeletePlugin} from './src/wysimark/normalize-after-delete-plugin';
  import {CollapsibleParagraphPlugin} from './src/wysimark/collapsible-paragraph-plugin';
- export const withBlocks=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,InlineCodePlugin.fn,HeadingPlugin.fn,CodeBlockPlugin.fn,TablePlugin.fn,TrailingBlockPlugin.fn,ListPlugin.fn,AtomicDeletePlugin.fn,NormalizeAfterDeletePlugin.fn,CollapsibleParagraphPlugin.fn]);
+ import {BlockQuotePlugin} from './src/wysimark/block-quote-plugin';
+ export const withBlocks=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,InlineCodePlugin.fn,HeadingPlugin.fn,CodeBlockPlugin.fn,TablePlugin.fn,TrailingBlockPlugin.fn,BlockQuotePlugin.fn,ListPlugin.fn,AtomicDeletePlugin.fn,NormalizeAfterDeletePlugin.fn,CollapsibleParagraphPlugin.fn]);
  export {blockDepth} from './src/blocks/model';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
 const {withBlocks,blockDepth}=loaded.exports;
@@ -67,4 +68,47 @@ for(const type of ['ordered-list-item','unordered-list-item','task-list-item']){
 }
 test('Enter inside an indented code block retains its code-frame behavior',()=>{
  const e=fixture([{type:'code-block',language:'text',__blockDepth:2,children:[{type:'code-block-line',children:[{text:'code'}]}]}]);e.insertBreak();assert.equal(e.children[0].type,'code-block');assert.equal(blockDepth(e.children[0]),2);assert.equal(e.children[0].children.length,2);
+});
+
+for(const type of ['ordered-list-item','unordered-list-item','task-list-item'])for(const text of ['content','']){
+ test(`Backspace removes ${type} before indentation (${text?'populated':'empty'})`,()=>{
+  const e=fixture([{type,depth:2,children:[{text,bold:true}]},p('child',3),p('following')]);
+  Transforms.select(e,Editor.start(e,[0]));const before=structuredClone(e.children),selection=structuredClone(e.selection);
+  e.deleteBackward('character');
+  assert.equal(e.children[0].type,'paragraph');assert.equal(blockDepth(e.children[0]),2);
+  assert.equal(Node.string(e.children[0]),text);assert.equal(e.children[0].children[0].bold,true);assert.equal(blockDepth(e.children[1]),3);
+  const after=structuredClone(e.children);e.undo();assert.deepEqual(e.children,before);assert.deepEqual(e.selection,selection);e.redo();assert.deepEqual(e.children,after);
+  if(!text){e.deleteBackward('character');assert.equal(blockDepth(e.children[0]),1);assert.equal(blockDepth(e.children[1]),3)}
+ });
+}
+
+test('populated prose at the start does not outdent before its native merge',()=>{
+ const e=fixture([p('Previous'),p('Content',2)]);Transforms.select(e,Editor.start(e,[1]));
+ e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'PreviousContent');
+});
+
+test('empty Backspace keeps descendant depths while Shift+Tab outdents the subtree',()=>{
+ const nodes=()=>[p('',2),p('child',3),{type:'unordered-list-item',depth:4,children:[{text:'grandchild'}]},p('following',1)];
+ const e=fixture(nodes());Transforms.select(e,Editor.start(e,[0]));const before=structuredClone(e.children),selection=structuredClone(e.selection),children=e.children.slice(1);
+ e.deleteBackward('character');assert.deepEqual(e.children.map(blockDepth),[1,3,4,1]);assert(children.every((node,i)=>node===e.children[i+1]));assert.deepEqual(e.selection,selection);
+ const after=structuredClone(e.children);e.undo();assert.deepEqual(e.children,before);assert.deepEqual(e.selection,selection);e.redo();assert.deepEqual(e.children,after);
+ const tabbed=fixture(nodes());Transforms.select(tabbed,Editor.start(tabbed,[0]));let prevented=false;
+ assert.equal(tabbed.sink.plugins[0].editableProps.onKeyDown({key:'Tab',shiftKey:true,nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}}),true);
+ assert.equal(prevented,true);assert.deepEqual(tabbed.children.map(blockDepth),[1,2,3,1]);
+});
+
+test('removing a structured list retains its child blocks and their indentation',()=>{
+ const e=fixture([{type:'unordered-list-item',depth:2,blockChildren:true,children:[p('content'),p('attached',3)]},p('following')]);
+ Transforms.select(e,Editor.start(e,[0]));e.deleteBackward('character');
+ assert.equal(e.children[0].type,'paragraph');assert.equal(Node.string(e.children[0]),'content');assert.equal(blockDepth(e.children[0]),2);
+ assert.equal(Node.string(e.children[1]),'attached');assert.equal(blockDepth(e.children[1]),3);
+});
+
+for(const type of ['ordered-list-item','unordered-list-item','task-list-item'])for(const text of ['content',''])test(`Backspace removes ${type}, then quote, then empty indentation (${text?'populated':'empty'})`,()=>{
+ const e=fixture([{type:'block-quote',__blockDepth:2,children:[{type,depth:2,children:[{text,bold:true}]}]},p('following')]);
+ Transforms.select(e,Editor.start(e,[0]));const before=structuredClone(e.children);
+ e.deleteBackward('character');assert.equal(e.children[0].type,'block-quote');assert.equal(e.children[0].children[0].type,'paragraph');assert.equal(blockDepth(e.children[0].children[0]),2);
+ e.deleteBackward('character');assert.equal(e.children[0].type,'paragraph');assert.equal(blockDepth(e.children[0]),2);assert.equal(Node.string(e.children[0]),text);
+ if(!text){e.deleteBackward('character');assert.equal(blockDepth(e.children[0]),1);e.undo()}
+ e.undo();assert.equal(e.children[0].type,'block-quote');e.undo();assert.deepEqual(e.children,before);
 });

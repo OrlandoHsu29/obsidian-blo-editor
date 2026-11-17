@@ -11,6 +11,7 @@ import {
 } from ".."
 
 export function convertOrderedList(editor: Editor, allowToggle: boolean) {
+  if(editor.wysimark.readOnly)return false
   if(headingListControlDisabled(editor,'number'))return false
   if(convertSelectedHeadingList(editor,'number',allowToggle))return true
   if(convertContainingList(editor,'ordered-list-item',allowToggle))return true
@@ -28,6 +29,7 @@ export function convertOrderedList(editor: Editor, allowToggle: boolean) {
 }
 
 export function convertTaskList(editor: Editor, allowToggle: boolean) {
+  if(editor.wysimark.readOnly)return false
   if(selectionHasHeading(editor))return false
   if(convertContainingList(editor,'task-list-item',allowToggle))return true
   return editor.convertElement.convertElements<TaskListItemElement>(
@@ -44,6 +46,7 @@ export function convertTaskList(editor: Editor, allowToggle: boolean) {
 }
 
 export function convertUnorderedList(editor: Editor, allowToggle: boolean) {
+  if(editor.wysimark.readOnly)return false
   if(headingListControlDisabled(editor,'hash'))return false
   if(convertSelectedHeadingList(editor,'hash',allowToggle))return true
   if(selectionHasHeading(editor))return false

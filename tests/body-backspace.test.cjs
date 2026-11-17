@@ -21,22 +21,20 @@ const {withBlocks,withFoldedLists,deleteAtBlockBoundary,blockDepth}=loaded.expor
 const paragraph=(text,depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes,withEditor=withBlocks){const base=withHistory(createEditor());base.wysimark={readOnly:false};base.normalizeAfterDelete={};base.isInline=node=>node.type==='anchor';const editor=withEditor(base,{});editor.children=nodes;return editor}
 
-test('first Backspace outdents populated prose, second merges into the previous block',async()=>{
+test('Backspace at populated prose merges immediately rather than outdenting',()=>{
  const e=fixture([paragraph('Before'),paragraph('Body',1)]);Transforms.select(e,Editor.start(e,[1]));const original=structuredClone(e.children);
- e.deleteBackward('character');assert.equal(e.children.length,2);assert.equal(blockDepth(e.children[1]),0);assert.equal(Node.string(e.children[1]),'Body');assert.deepEqual(e.selection.anchor,{path:[1,0],offset:0});
- const outdented=structuredClone(e.children);await Promise.resolve();e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'BeforeBody');assert.equal(e.selection.anchor.offset,6);
- e.undo();assert.deepEqual(e.children,outdented);e.undo();assert.deepEqual(e.children,original);
+ e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'BeforeBody');assert.equal(e.selection.anchor.offset,6);
+ const merged=structuredClone(e.children);e.undo();assert.deepEqual(e.children,original);e.redo();assert.deepEqual(e.children,merged);
 });
 
-test('multiple indentation levels require one Backspace each before merging',()=>{
+test('populated prose merges without stepping through its indentation levels',()=>{
  const e=fixture([paragraph('Before'),paragraph('Body',2)]);Transforms.select(e,Editor.start(e,[1]));
- for(const depth of [1,0]){e.deleteBackward('character');assert.equal(e.children.length,2);assert.equal(blockDepth(e.children[1]),depth)}
- e.deleteBackward('character');assert.equal(Node.string(e.children[0]),'BeforeBody');
+ e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'BeforeBody');
 });
 
-test('outdenting prose moves its descendants exactly like Shift+Tab',()=>{
+test('merging populated prose does not outdent its descendants',()=>{
  const e=fixture([paragraph('Before'),paragraph('Body',1),{type:'unordered-list-item',depth:2,__blockDepth:2,children:[{text:'child'}]},paragraph('attached',3),paragraph('Next')]);
- Transforms.select(e,Editor.start(e,[1]));const before=structuredClone(e.children);e.deleteBackward('character');assert.deepEqual(e.children.map(blockDepth),[0,0,1,2,0]);assert.deepEqual(e.children.map(Node.string),['Before','Body','child','attached','Next']);e.undo();assert.deepEqual(e.children,before);
+ Transforms.select(e,Editor.start(e,[1]));const before=structuredClone(e.children);e.deleteBackward('character');assert.deepEqual(e.children.map(blockDepth),[0,2,3,0]);assert.deepEqual(e.children.map(Node.string),['BeforeBody','child','attached','Next']);e.undo();assert.deepEqual(e.children,before);
 });
 
 test('deleting inside a populated block removes text without changing indentation',()=>{
@@ -47,8 +45,8 @@ test('a later marked leaf is not mistaken for the start of its block',()=>{
  const e=fixture([paragraph('Before'),{type:'paragraph',__blockDepth:1,children:[{text:'First'},{text:'Second',bold:true}]}]);Transforms.select(e,{path:[1,1],offset:0});e.deleteBackward('character');assert.equal(blockDepth(e.children[1]),1);assert.equal(Node.string(e.children[1]),'FirsSecond');
 });
 
-test('the first block can outdent without any previous block',()=>{
- const e=fixture([paragraph('Body',1)]);Transforms.select(e,Editor.start(e,[0]));e.deleteBackward('character');assert.equal(blockDepth(e.children[0]),0);assert.equal(Node.string(e.children[0]),'Body');
+test('the first populated block retains indentation when there is nothing to delete',()=>{
+ const e=fixture([paragraph('Body',1)]);Transforms.select(e,Editor.start(e,[0]));e.deleteBackward('character');assert.equal(blockDepth(e.children[0]),1);assert.equal(Node.string(e.children[0]),'Body');
 });
 
 test('empty indented prose retains its one-level Backspace behavior',()=>{
@@ -86,7 +84,7 @@ test('structured block contents keep their own Backspace rules',()=>{
  const e=fixture([paragraph('Before'),{type:'code-block',__blockDepth:1,language:'text',children:[{text:'code'}]}]);Transforms.select(e,Editor.start(e,[1]));assert.equal(deleteAtBlockBoundary(e),false);assert.equal(blockDepth(e.children[1]),1);
 });
 
-test('a leading inline link after an empty boundary is still at the text start',()=>{
+test('a leading inline link merges natively without an indentation-only deletion',()=>{
  const e=fixture([paragraph('Before'),{type:'paragraph',__blockDepth:1,children:[{text:''},{type:'anchor',href:'https://example.com',children:[{text:'Link'}]},{text:''}]}]);
- Transforms.select(e,{path:[1,1,0],offset:0});e.deleteBackward('character');assert.equal(e.children.length,2);assert.equal(blockDepth(e.children[1]),0);assert.equal(Node.string(e.children[1]),'Link');
+ Transforms.select(e,{path:[1,1,0],offset:0});e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'BeforeLink');assert.equal(e.children[0].children.find(n=>n.type==='anchor').href,'https://example.com');
 });

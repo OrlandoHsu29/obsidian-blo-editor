@@ -12,6 +12,7 @@ import { PdfRenderOwner } from './pdf-render-owner'
 import { PdfScrollbar } from './PdfScrollbar'
 import { observeMediaResize } from './media-resize'
 import { observePdfToolbarOverflow } from './pdf-toolbar-overflow'
+import { observeViewportWork } from './viewport-work'
 import { openOutsidePresentation } from './presentation/navigation'
 
 /** A bounded viewport keeps the native PDF toolbar independent of page size. */
@@ -89,11 +90,10 @@ export function PdfEmbed({ app, file, spec, sourcePath }: { app: App; file: TFil
     const owner = new PdfRenderOwner(); owner.load(); ownerRef.current = owner
     owner.onUserZoom = setZoomed
     let cancelled = false
-    void MarkdownRenderer.render(app, `![[${previewSpec}]]`, target, sourcePath, owner).then(() => {
-      if (cancelled) target.empty()
-      else { setReady(true); setScrollContainer(target.querySelector<HTMLElement>('.pdf-viewer-container')) }
-    })
-    return () => { cancelled = true; ownerRef.current = null; owner.unload(); target.empty() }
+    const stop = observeViewportWork(host, { load: () => MarkdownRenderer.render(app, `![[${previewSpec}]]`, target, sourcePath, owner).then(() => {
+      if (!cancelled) { setReady(true); setScrollContainer(target.querySelector<HTMLElement>('.pdf-viewer-container')) }
+    }), suspend: () => owner.setScrollPaused(true), resume: () => owner.setScrollPaused(false) })
+    return () => { cancelled = true; stop(); ownerRef.current = null; owner.unload(); target.empty() }
   }, [app, file, previewSpec, sourcePath])
   return <div ref={frame} className={`blo-pdf${selected && !readOnly ? ' is-selected' : ''}`} data-blo-pdf data-pdf-file={file.path} data-pdf-zoomed={zoomed || undefined} data-pdf-resizing={loading || isDragging || undefined} contentEditable={false}
     style={{ width: display.width, aspectRatio: `1 / ${pageRatio}`, paddingTop: heightOffset, boxSizing: 'content-box' }}

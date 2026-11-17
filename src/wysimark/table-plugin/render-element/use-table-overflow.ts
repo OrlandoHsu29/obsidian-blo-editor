@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { TableElement } from '../types'
 import { createTableMeasure, fitTableWidth, runTableFit } from './table-fit'
+import { VIEWPORT_IDLE_MS } from '../../../viewport-work'
 
 /** Keep Slate's table mounted; only the temporary measurement copy is resized. */
 export function useTableOverflow(element: TableElement) {
@@ -13,7 +14,7 @@ export function useTableOverflow(element: TableElement) {
     let near = false, dirty = true, ready = false, disposed = false
     let lastWidth = 0, lastHeight = 0, lastTableWidth = 0, lastFrameHeight = 0, observedWidth = 0
     let timer = 0, settling = 0, cancelFit: (() => void) | undefined
-    let scrollUntil = 0
+    let scrollUntil = 0, priority = 0
     let fittedWidth: number | undefined
     let measurement: ReturnType<typeof createTableMeasure> | undefined
     const pending = () => host.dataset.tableLayout === 'pending'
@@ -70,23 +71,14 @@ export function useTableOverflow(element: TableElement) {
     const start = () => {
       timer = 0
       if (disposed || !near || !host.isConnected || host.clientWidth < 1) return
-      if (ready && !pending() && win.performance.now() < scrollUntil) { schedule(scrollUntil - win.performance.now()); return }
+      const idle = scrollUntil + (priority > 0 ? 80 : 0)
+      if (win.performance.now() < idle) { schedule(idle - win.performance.now()); return }
       if (!dirty && !resized()) { if (pending()) publish(fittedWidth); return }
       stopFit()
       const width = host.clientWidth
       measurement = createTableMeasure(host, width)
       const iterator = fitTableWidth(measurement.host)
-      function* whenIdle() {
-        for (;;) {
-          // Keep the current geometry while scrolling; resume the same search
-          // after the gesture instead of throwing away and cloning it again.
-          if (ready && !pending() && win.performance.now() < scrollUntil) { yield; continue }
-          const result = iterator.next()
-          if (result.done) return result.value
-          yield
-        }
-      }
-      cancelFit = runTableFit(win, whenIdle(), result => {
+      cancelFit = runTableFit(win, iterator, result => {
         stopFit()
         if (disposed) return
         if (host.clientWidth !== width) { dirty = true; mask(); schedule(120); return }
@@ -94,7 +86,7 @@ export function useTableOverflow(element: TableElement) {
       }, error => {
         stopFit(); finish(); dirty = true
         console.error('Blo Editor: table layout failed', error)
-      })
+      }, () => priority, () => scrollUntil)
     }
     const schedule = (delay: number) => {
       win.clearTimeout(timer); timer = 0
@@ -105,6 +97,8 @@ export function useTableOverflow(element: TableElement) {
     mask()
     const resize = new win.ResizeObserver(() => {
       const width = host.clientWidth
+      // A skipped ancestor can report zero while the cached table is unchanged.
+      if (width <= 0) return
       if (width !== observedWidth) {
         const initial = observedWidth === 0 && !ready
         observedWidth = width
@@ -127,7 +121,14 @@ export function useTableOverflow(element: TableElement) {
     })
     resize.observe(host); resize.observe(table)
     const intersection = new win.IntersectionObserver(entries => {
-      near = entries[0].isIntersecting
+      const entry = entries[0]
+      near = entry.isIntersecting
+      if (entry.rootBounds) {
+        // rootBounds includes our 1000px prefetch margin; rank against the
+        // actual viewport so a jump cannot queue the upper buffer first.
+        const top = entry.rootBounds.top + 1000, bottom = entry.rootBounds.bottom - 1000
+        priority = Math.max(top - entry.boundingClientRect.bottom, entry.boundingClientRect.top - bottom, 0)
+      }
       if (near) schedule(0)
       else { win.clearTimeout(timer); timer = 0; stopFit() }
     }, { root: host.closest('.wysimark-editor-container'), rootMargin: '1000px' })
@@ -136,8 +137,8 @@ export function useTableOverflow(element: TableElement) {
     const scrolling = (event: Event) => {
       const target = event.target as globalThis.Node | null
       if (target !== scroll && !target?.contains?.(host)) return
-      scrollUntil = win.performance.now() + 160
-      if (timer && ready && !pending()) { win.clearTimeout(timer); timer = win.setTimeout(start, 160) }
+      scrollUntil = win.performance.now() + VIEWPORT_IDLE_MS
+      if (timer && ready && !pending()) { win.clearTimeout(timer); timer = win.setTimeout(start, VIEWPORT_IDLE_MS) }
     }
     scroll.addEventListener('scroll', hint, { passive: true })
     scroll.addEventListener('pointermove', hoverScrollbar, { passive: true })

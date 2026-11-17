@@ -41,6 +41,19 @@ test('cancelling queued work prevents stale completion',()=>{
  const cancel=runTableFit(e.win,task(),()=>{done=true},assert.fail);e.frame();cancel();e.settle();assert.equal(steps,1);assert.equal(done,false);assert.equal(e.frames.size,0);
 });
 
+test('paused fits sleep on a timer instead of requesting frames and visible work can preempt them',()=>{
+ const e=clock(),calls=[];let deadline=300;function* task(name){calls.push(name);yield;calls.push(name);return {}}
+ const cancel=runTableFit(e.win,task('paused'),()=>{},assert.fail,()=>0,()=>deadline);assert.equal(e.frames.size,0);assert.equal(e.timers.size,1);
+ runTableFit(e.win,task('visible'),()=>{},assert.fail);e.frame();assert.deepEqual(calls,['visible']);e.frame();assert.deepEqual(calls,['visible','visible']);assert.equal(e.frames.size,0);
+ deadline=600;e.advance(300);assert.equal(e.frames.size,0);assert.equal(e.timers.size,1);cancel();assert.equal(e.timers.size,0);e.advance(1000);assert.equal(e.frames.size,0);
+});
+
+test('visible table probes preempt buffered tables, and priorities update after another jump',()=>{
+ const e=clock(),calls=[];let a=500,b=0;function* task(name){calls.push(name);yield;calls.push(name);return {}}
+ runTableFit(e.win,task('buffer'),()=>{},assert.fail,()=>a);runTableFit(e.win,task('visible'),()=>{},assert.fail,()=>b);
+ e.frame();assert.deepEqual(calls,['visible']);a=0;b=600;e.frame();assert.deepEqual(calls,['visible','buffer']);e.settle();
+});
+
 let active;
 const hooks={
  useRef(value){const i=active.refIndex++;return active.refs[i]??(active.refs[i]={current:i===0?active.host:value})},
@@ -67,6 +80,11 @@ test('first layout reserves a rectangle and publishes the fitted result once',()
 });
 test('unchanged viewport re-entry reuses the completed fit',()=>{
  const e=fixture();e.enter(true);for(let i=0;i<20;i++){e.enter(false);e.enter(true)}assert.equal(e.fits,1);e.cleanup();
+});
+
+test('a zero-width offscreen observation does not mask or invalidate a cached table',()=>{
+ const e=fixture();e.enter(true);e.enter(false);e.width=0;e.resize();assert.equal(e.host.dataset.tableLayout,undefined);
+ e.width=320;e.resize();e.enter(true);assert.equal(e.fits,1);assert.equal(e.host.dataset.tableLayout,undefined);e.cleanup();
 });
 test('continuous resize holds the rectangle and delays computation until settling',()=>{
  const e=fixture();e.enter(true);for(let i=0;i<15;i++){e.width=400+i*10;e.resize();e.advance(16);e.frame();assert.equal(e.host.dataset.tableLayout,'pending');assert.equal(e.fits,1)}e.settle();assert.equal(e.fits,2);assert.equal(e.copies,0);assert.equal(e.table.offsetWidth,e.width*2);e.cleanup();
@@ -109,4 +127,16 @@ test('scrolling pauses an existing search and resumes it without another clone',
  const e=fixture();e.enter(true);e.render({...e.element,children:[{}]});e.advance(120);e.frame();assert.equal(e.copies,1);
  for(let i=0;i<20;i++){e.listeners.get('scroll')({target:e.scroll});e.advance(20);e.frame();assert.equal(e.copies,1);assert.equal(e.fits,2)}
  e.settle();assert.equal(e.fits,2);assert.equal(e.copies,0);e.cleanup();
+});
+
+test('jumping to an unfitted table keeps its placeholder and waits for scrolling to stop',()=>{
+ const e=fixture();e.intersection([{isIntersecting:true}]);
+ for(let i=0;i<20;i++){e.listeners.get('scroll')({target:e.scroll});e.advance(20);e.frame();assert.equal(e.fits,0);assert.equal(e.host.dataset.tableLayout,'pending')}
+ e.settle();assert.equal(e.fits,1);assert.equal(e.copies,0);assert.equal(e.host.dataset.tableLayout,undefined);e.cleanup();
+});
+
+test('a first fit already in progress pauses its probes while the note scrolls',()=>{
+ const e=fixture();e.intersection([{isIntersecting:true}]);e.advance(1);e.frame();assert.equal(e.copies,1);
+ for(let i=0;i<15;i++){e.listeners.get('scroll')({target:e.scroll});e.advance(20);e.frame();assert.equal(e.copies,1);assert.equal(e.host.dataset.tableLayout,'pending')}
+ e.settle();assert.equal(e.fits,1);assert.equal(e.copies,0);assert.equal(e.host.dataset.tableLayout,undefined);e.cleanup();
 });

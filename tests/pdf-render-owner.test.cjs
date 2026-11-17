@@ -56,3 +56,11 @@ test('pause stops native resize observation and the rendering queue until the fi
  owner.fit(()=>{});await new Promise(r=>setImmediate(r));assert.equal(renders,1);
  owner.unload();assert.equal(queue.renderHighestPriority,original);
 });
+
+test('viewport suspension resumes rendering without resetting the page or user zoom',()=>{
+ const owner=new PdfRenderOwner();owner.load();let renders=0;const queue={highestPriorityPage:'page8',renderHighestPriority(){renders++}};
+ const viewer={currentPageNumber:8,currentScaleValue:'150%',renderingQueue:queue};owner.addChild({viewer:{opts:{},then:fn=>fn({pdfViewer:{pdfViewer:viewer}})}});
+ owner.setScrollPaused(true);queue.renderHighestPriority();assert.equal(renders,0);assert.equal(queue.highestPriorityPage,null);
+ owner.setScrollPaused(false);assert.equal(renders,1);assert.equal(viewer.currentPageNumber,8);assert.equal(viewer.currentScaleValue,'150%');
+ owner.suspend();owner.setScrollPaused(false);assert.equal(renders,1);owner.unload();
+});

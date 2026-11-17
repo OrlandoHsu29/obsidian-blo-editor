@@ -26,6 +26,7 @@ export class PdfRenderOwner extends Component {
   private cancelRender?: () => void
   private fitting = false
   private paused = false
+  private scrollPaused = false
   private revision = 0
   private queue?: PdfQueue
   private userZoomed = false
@@ -52,7 +53,7 @@ export class PdfRenderOwner extends Component {
           this.queue = queue
           const original = queue.renderHighestPriority, owner = this
           const guarded = function(this: PdfQueue, ...args: unknown[]) {
-            if (!owner.paused) original.apply(this, args)
+            if (!owner.paused && !owner.scrollPaused) original.apply(this, args)
           }
           queue.renderHighestPriority = guarded
           this.register(() => { if (queue.renderHighestPriority === guarded) queue.renderHighestPriority = original })
@@ -74,6 +75,11 @@ export class PdfRenderOwner extends Component {
       })
     }
     return super.addChild(child)
+  }
+  setScrollPaused(paused: boolean) {
+    this.scrollPaused = paused
+    if (paused) { if (this.queue) this.queue.highestPriorityPage = null }
+    else this.queue?.renderHighestPriority()
   }
   suspend() {
     ++this.revision

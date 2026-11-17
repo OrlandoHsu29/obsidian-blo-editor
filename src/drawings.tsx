@@ -15,6 +15,7 @@ import { DrawingSaveAsModal, DRAWING_SAVE_AS_ICON, DrawingReference, trackDrawin
 import { attachmentPath, DEFAULT_ATTACHMENT_FOLDER } from './attachments'
 import { useLayer } from './wysimark/use-layer'
 import { observeDrawingResize } from './drawing-resize'
+import { observeViewportWork } from './viewport-work'
 import { openOutsidePresentation } from './presentation/navigation'
 
 const PLUGIN_ID = 'obsidian-excalidraw-plugin'
@@ -125,7 +126,7 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
   useEffect(() => {
     setSize(element.width && element.height ? { width: element.width, height: element.height } : null)
   }, [element.width, element.height])
-  const width = size?.width ?? element.width ?? (naturalSize ? Math.min(640, naturalSize.width) : undefined)
+  const width = size?.width ?? element.width ?? (naturalSize ? Math.min(640, naturalSize.width) : 640)
   const displaySize = naturalSize && width ? { width, height: width * naturalSize.height / naturalSize.width } : null
   const available = !!drawingPlugin(app)
   const { target: previewTarget, display } = splitWikiSpec(spec)
@@ -158,19 +159,18 @@ export function DrawingEmbed({ app, file, spec, sourcePath }: {
     target.addEventListener('load', measure, true)
     const observer = new MutationObserver(measure)
     observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'viewBox'] })
-    void MarkdownRenderer.render(app, `![[${previewSpec}]]`, target, sourcePath, owner).catch(() => {
+    const stop = observeViewportWork(frame.current!, { load: () => MarkdownRenderer.render(app, `![[${previewSpec}]]`, target, sourcePath, owner).then(measure).catch(() => {
       if (!cancelled) setFailed(true)
-    })
-    measure()
-    return () => { cancelled = true; observer.disconnect(); target.removeEventListener('load', measure, true); owner.unload(); target.remove() }
+    }) })
+    return () => { cancelled = true; stop(); observer.disconnect(); target.removeEventListener('load', measure, true); owner.unload(); target.remove() }
   }, [app, available, revision, sourcePath, previewSpec])
   const open = () => {
     dialog.close()
     const reference = trackDrawingReference(app, sourcePath, editor, element)
     void openDrawing(app, file, { sourcePath, editor, reference }).catch(() => new Notice(ui('无法打开画板'))).finally(() => reference?.path.unref())
   }
-  return <div ref={frame} className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing contentEditable={false}
-    style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : undefined }}>
+  return <div ref={frame} className={`blo-drawing${selected && !readOnly ? ' is-selected' : ''}`} data-blo-drawing data-drawing-loading={!previewReady && !failed || undefined} contentEditable={false}
+    style={{ width, aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : element.width && element.height ? `${element.width} / ${element.height}` : '16 / 9' }}>
     {enabled && !readOnly && <button className="blo-drawing-open blo-drawing-save-as" type="button" aria-label={ui('画板另存为')}
       onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}
       onClick={event => {

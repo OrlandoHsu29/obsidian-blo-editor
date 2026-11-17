@@ -64,26 +64,37 @@ export function createTableMeasure(host: HTMLElement, width: number) {
 }
 
 // One costly layout probe per window/frame, even when several tables enter view.
-const queues = new WeakMap<Window, { jobs: Set<() => void>; frame: number }>()
-export function runTableFit(win: Window, iterator: Generator<void, Fit>, done: (fit: Fit) => void, failed: (error: unknown) => void): () => void {
+const queues = new WeakMap<Window, { jobs: Map<() => void, { priority: () => number; readyAt: () => number }>; frame: number; timer: number }>()
+export function runTableFit(win: Window, iterator: Generator<void, Fit>, done: (fit: Fit) => void, failed: (error: unknown) => void, priority: () => number = () => 0, readyAt: () => number = () => 0): () => void {
   let queue = queues.get(win)
-  if (!queue) { queue = { jobs: new Set(), frame: 0 }; queues.set(win, queue) }
+  if (!queue) { queue = { jobs: new Map(), frame: 0, timer: 0 }; queues.set(win, queue) }
   let cancelled = false
-  const request = () => { if (queue!.jobs.size && !queue!.frame) queue!.frame = win.requestAnimationFrame(pump) }
+  const request = () => {
+    if (!queue!.jobs.size || queue!.frame) return
+    win.clearTimeout(queue!.timer); queue!.timer = 0
+    let earliest = Infinity
+    for (const job of queue!.jobs.values()) earliest = Math.min(earliest, job.readyAt())
+    const wait = earliest - win.performance.now()
+    if (wait > 0) queue!.timer = win.setTimeout(() => { queue!.timer = 0; request() }, wait)
+    else queue!.frame = win.requestAnimationFrame(pump)
+  }
   const pump = () => {
     queue!.frame = 0
-    const next = queue!.jobs.values().next().value as (() => void) | undefined
+    let next: (() => void) | undefined, rank = Infinity
+    const now = win.performance.now()
+    for (const [job, state] of queue!.jobs) { if (state.readyAt() > now) continue; const value = state.priority(); if (value < rank) { rank = value; next = job } }
     if (next) { queue!.jobs.delete(next); next() }
     request()
   }
   const advance = () => {
     if (cancelled) return
-    try { const result = iterator.next(); if (result.done) done(result.value); else { queue!.jobs.add(advance); request() } }
+    try { const result = iterator.next(); if (result.done) done(result.value); else { queue!.jobs.set(advance, { priority, readyAt }); request() } }
     catch (error) { failed(error) }
   }
-  queue.jobs.add(advance); request()
+  queue.jobs.set(advance, { priority, readyAt }); request()
   return () => {
     cancelled = true; queue!.jobs.delete(advance)
     if (!queue!.jobs.size && queue!.frame) { win.cancelAnimationFrame(queue!.frame); queue!.frame = 0 }
+    if (!queue!.jobs.size && queue!.timer) { win.clearTimeout(queue!.timer); queue!.timer = 0 }
   }
 }

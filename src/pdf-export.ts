@@ -1,6 +1,7 @@
 import { Component, Modal, Notice, Platform, Setting, TFile, loadPdfJs } from 'obsidian';
 import type { BloView } from './BloView';
 import { ui } from './wysimark/utils/translations';
+import { flushViewportDrawings } from './viewport-work';
 
 type PdfOptions = { paper: 'A4' | 'Letter' | 'A3'; landscape: boolean; margin: number; title: boolean; pages: boolean };
 function pdfErrorMessage(error: unknown): string {
@@ -12,7 +13,7 @@ html,body{display:block!important;position:static!important;inset:auto!important
 body{padding:0!important;margin:0!important;font-family:var(--font-text);font-size:16px}
 .wysimark-container,.wysimark-editor{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;width:auto!important;max-width:none!important;display:block!important}
 .wysimark-editor{padding-left:24px!important;box-sizing:border-box!important}
-.ks-editor-chunk{display:block!important;content-visibility:visible!important;contain:none!important;height:auto!important;min-height:0!important;contain-intrinsic-size:none!important}
+.ks-editor-chunk{display:block!important;content-visibility:visible!important;contain:none!important;height:auto!important;min-height:0!important;contain-intrinsic-size:none!important;opacity:1!important}
 .ks-editor-chunk-leaf{margin:0!important;padding:0!important}
 *,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .wysimark-block{outline:none!important;box-shadow:none!important}
@@ -85,9 +86,11 @@ async function dataUrl(src: string): Promise<string> {
 export async function createPdfHtml(view: BloView, options: PdfOptions, format: 'pdf' | 'html' = 'pdf'): Promise<string> {
   const source = view.contentEl.querySelector<HTMLElement>('[data-slate-editor="true"]');
   if (!source || !view.currentFile) throw new Error(ui('请先打开一篇笔记'));
+  await flushViewportDrawings(source);
   await waitForPreviews(source);
   const doc = source.ownerDocument;
   const clone = source.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('[data-blo-render-paused]').forEach(el => el.removeAttribute('data-blo-render-paused'));
   // Render PDF covers independently: offscreen native readers may never paint,
   // and exporting must not scroll the note or disturb their zoom/render queue.
   for (const frame of Array.from(clone.querySelectorAll<HTMLElement>('[data-blo-pdf]'))) {

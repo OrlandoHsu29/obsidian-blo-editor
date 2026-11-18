@@ -17,11 +17,13 @@ export function useTableOverflow(element: TableElement) {
     let lastWidth = 0, lastHeight = 0, lastTableWidth = 0, lastFrameHeight = 0, observedWidth = 0
     let timer = 0, settling = 0, cancelFit: (() => void) | undefined
     let scrollUntil = 0, resizeUntil = 0, priority = 0
+    let windowWidth = win.innerWidth
     let fittedWidth: number | undefined
     let measurement: ReturnType<typeof createTableMeasure> | undefined
     const pending = () => host.dataset.tableLayout === 'pending'
     const resized = () => host.clientWidth !== lastWidth || !pending() && (table.offsetHeight !== lastHeight || table.offsetWidth !== lastTableWidth)
     const hint = () => {
+      if (pending()) return
       const left = String(scroll.scrollLeft > 2), right = String(scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 2)
       if (host.dataset.moreLeft !== left) host.dataset.moreLeft = left
       if (host.dataset.moreRight !== right) host.dataset.moreRight = right
@@ -72,9 +74,11 @@ export function useTableOverflow(element: TableElement) {
     }
     const start = () => {
       timer = 0
-      if (disposed || !near || !host.isConnected || host.clientWidth < 1) return
-      const idle = Math.max(resizeUntil, scrollUntil + (priority > 0 ? 80 : 0))
-      if (win.performance.now() < idle) { schedule(idle - win.performance.now()); return }
+      if (disposed || !near || !host.isConnected) return
+      const idle = Math.max(resizeUntil, scrollUntil + (priority > 0 ? VIEWPORT_IDLE_MS : 0))
+      const wait = idle - win.performance.now()
+      if (wait > 0) { schedule(wait); return }
+      if (host.clientWidth < 1) return
       if (!dirty && !resized()) { if (pending()) publish(fittedWidth); return }
       stopFit()
       const width = host.clientWidth
@@ -138,6 +142,10 @@ export function useTableOverflow(element: TableElement) {
     }, { root: host.closest('.wysimark-editor-container'), rootMargin: '1000px' })
     intersection.observe(host)
     const windowResized = () => {
+      // Height-only changes do not invalidate column widths. The host observer
+      // still catches width changes caused by sidebars or scrollbars.
+      if (windowWidth === win.innerWidth) return
+      windowWidth = win.innerWidth
       // Also gate viewport re-entry and content/font refreshes while resizing.
       // They must not bypass the observer's trailing debounce.
       resizeUntil = win.performance.now() + RESIZE_IDLE_MS

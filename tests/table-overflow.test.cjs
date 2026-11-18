@@ -104,10 +104,17 @@ test('window resize cancels an active measurement and suppresses all probes unti
  const e=fixture();e.enter(true);e.render({...e.element,children:[{}]});e.advance(120);e.frame();assert.equal(e.copies,1);
  const probes=e.probes;
  for(let i=0;i<15;i++){
-  e.windowListeners.get('resize')();e.intersection([{isIntersecting:true}]);e.advance(16);e.frame();
+  e.win.innerWidth=800+i;e.windowListeners.get('resize')();e.intersection([{isIntersecting:true}]);e.advance(16);e.frame();
   assert.equal(e.probes,probes);assert.equal(e.copies,0);assert.equal(e.host.dataset.tableLayout,'pending');
  }
  e.settle();assert.equal(e.fits,3);assert.equal(e.copies,0);e.cleanup();assert.equal(e.windowListeners.size,0);
+});
+
+test('height-only window resize leaves the fitted table visible',()=>{
+ const e=fixture();e.enter(true);
+ e.windowListeners.get('resize')();
+ assert.equal(e.host.dataset.tableLayout,undefined);
+ e.settle();assert.equal(e.fits,1);e.cleanup();
 });
 test('pointer release starts the final fit without waiting for resize debounce',()=>{
  const e=fixture();e.enter(true);e.width=500;e.resize();assert.equal(e.fits,1);e.listeners.get('pointerup')();e.frame();assert.equal(e.fits,2);e.settle();e.cleanup();

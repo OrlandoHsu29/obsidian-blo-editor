@@ -16,6 +16,7 @@ export function TaskListItem({
   children,
 }: ConstrainedRenderElementProps<TaskListItemElement>) {
   const editor = useSlateStatic()
+  const interactive = !editor.wysimark.linkPreview
   const toggle = useCallback(() => {
     // Leave plugin-owned cell selection; ordinary text keeps its native caret.
     if (tableCellSelection(editor)) Transforms.deselect(editor)
@@ -29,15 +30,12 @@ export function TaskListItem({
   },[attributes.ref])
   const align=useFirstLineAlignment(ref,'--wysimark-list-marker-center')
   const marginLeft = `calc(${element.depth * 2}em - var(--blo-quote-content-indent, 0em))`
+  const TaskIcon = element.checked ? CheckedIcon : UncheckedIcon
   return (
     <$TaskListItem {...attributes} ref={attachList} data-task-checked={element.checked} style={{ marginLeft }} onMouseEnter={align}>
       <div className="--list-item-icon" data-list-marker contentEditable={false}
-        onMouseDown={event => { event.preventDefault(); event.stopPropagation() }}>
-        {element.checked ? (
-          <CheckedIcon onClick={toggle} style={{ cursor: "pointer" }} />
-        ) : (
-          <UncheckedIcon onClick={toggle} style={{ cursor: "pointer" }} />
-        )}
+        onMouseDown={interactive ? event => { event.preventDefault(); event.stopPropagation() } : undefined}>
+        <TaskIcon onClick={interactive ? toggle : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
       </div>
       <div className="wysimark-list-content">{children}</div>
     </$TaskListItem>

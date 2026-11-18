@@ -38,6 +38,7 @@ import { PresentationMode } from './presentation/presentation-mode';
 import { capturePresentationScroll, restorePresentationScroll } from './presentation/restore-scroll';
 import { WikiImageWithControls } from './wysimark/image-plugin/render-element/image-with-controls';
 import { copyImageFragment } from './image-clipboard';
+import { isDomElement } from './dom-guards';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -127,7 +128,13 @@ function InternalLinkPreview({ plugin, sourcePath, target }: { plugin: BloEditor
   if (!content) return null;
   if (content.kind === 'image') return <img src={content.src} alt={content.alt} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />;
   if (content.kind === 'message') return <div>{content.text}</div>;
-  return <div className="blo-link-preview wysimark-container wysimark-reading">
+  return <div className="blo-link-preview wysimark-container wysimark-reading" onClickCapture={event => {
+    // Native note embeds can render their own interactive task checkboxes.
+    if (isDomElement(event.target) && event.target.matches('input.task-list-item-checkbox')) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }}>
     <KnowledgeSpaceEditorComponent key={content.file.path + target} initialValue={content.markdown} onChange={ignorePreviewChange}
       plugin={plugin} file={content.file} connectEditor={connectPreviewEditor} readOnly memoPanel={false} preview />
   </div>;
@@ -285,6 +292,7 @@ function KnowledgeSpaceEditorComponent({
     renderMermaidPreview,
   });
   editor.wysimark.readOnly = readOnly;
+  editor.wysimark.linkPreview = preview;
   editor.wysimark.linkTitlePreferences = plugin.linkTitlePreferences;
   editor.wysimark.setAutoLinkTitle = enabled => {
     plugin.settings.autoLinkTitle = enabled;

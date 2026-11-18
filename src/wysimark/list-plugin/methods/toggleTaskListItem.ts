@@ -8,6 +8,7 @@ export function toggleTaskListItem(
   editor: Editor,
   { at = editor.selection }: { at?: BetterAt } = {}
 ) {
+  if (editor.wysimark.linkPreview) return false
   const taskListItem = findElementUp<TaskListItemElement>(
     editor,
     "task-list-item",

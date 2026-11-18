@@ -42,6 +42,7 @@ export type WysimarkEditor = {
     copyBlockLink?: (element: Element) => Promise<void>
     toggleReading?: () => Promise<void>
     readOnly?: boolean
+    linkPreview?: boolean
     /** Captured by asynchronous imports so switching the view's file invalidates them. */
     isCurrentDocument?: () => boolean
     openTextColor?: () => void

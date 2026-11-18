@@ -1010,6 +1010,7 @@
 @media(max-width:600px) { .blo-presentation { --blo-document-gutter:24px; } }
 
 .blo-link-preview.wysimark-container { --blo-document-gutter:0px; --blo-left-edge-clearance:0px; height:auto; overflow:visible; font-size:12px; background:var(--background-primary); }
+.blo-link-preview input.task-list-item-checkbox { cursor:default; }
 .blo-link-preview .wysimark-editor-wrapper { height:auto; overflow:visible; margin:0; }
 .blo-link-preview .wysimark-editor-container { overflow:visible; flex:none; }
 .blo-link-preview .wysimark-editor { min-height:0; padding:0; font-size:12px; }

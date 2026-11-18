@@ -1,11 +1,26 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),{buildSync}=require('esbuild'),Module=require('node:module');
 const {createEditor,Transforms}=require('slate'),{withHistory}=require('slate-history');
 const m=new Module('task-completion.cjs');m.require=id=>id==='obsidian'?{getLanguage:()=> 'en'}:require(id);
-m._compile(buildSync({entryPoints:['src/blocks/model.ts'],bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'task-completion.cjs');
-const {rootCache}=m.exports;
+m._compile(buildSync({stdin:{contents:`
+ export {rootCache} from './src/blocks/model';
+ export {toggleTaskListItem} from './src/wysimark/list-plugin/methods/toggleTaskListItem';
+`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'task-completion.cjs');
+const {rootCache,toggleTaskListItem}=m.exports;
 const task=(depth,checked=false)=>({type:'task-list-item',depth,checked,children:[{text:'Task'}]});
 const body=(type,depth)=>({type,__blockDepth:depth,children:[{text:'Body'}]});
 const completed=e=>e.children.map(n=>rootCache(e).completedTasks.has(n));
+
+test('link preview tasks cannot change checked state or create undo entries',()=>{
+ const e=withHistory(createEditor());e.children=[task(0),task(0,true)];
+ e.wysimark={readOnly:true,linkPreview:true};
+ assert.equal(toggleTaskListItem(e,{at:[0]}),false);
+ assert.equal(toggleTaskListItem(e,{at:[1]}),false);
+ assert.deepEqual(e.children.map(node=>node.checked),[false,true]);
+ assert.equal(e.history.undos.length,0);
+ e.wysimark.linkPreview=false;
+ assert.equal(toggleTaskListItem(e,{at:[0]}),true);
+ assert.equal(e.children[0].checked,true);
+});
 
 test('completed tasks style all descendant blocks and stop before siblings',()=>{
  const e=createEditor();e.children=[task(0,true),task(1),body('paragraph',2),body('unordered-list-item',1),body('block-quote',2),task(0),task(1)];

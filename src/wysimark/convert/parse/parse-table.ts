@@ -21,29 +21,34 @@ export function parseTable(
       columns: table.align.map((align) => ({
         align: align || "left",
       })),
-      children: table.children.map((row) => parseTableRow(row, { ...options, inTable: true })),
+      children: table.children.map((row, y) => parseTableRow(row, y, { ...options, inTable: true })),
     },
   ]
 }
 
 function parseTableRow(
   row: TableRow,
+  y: number,
   options: InternalLinkOptions
 ): TableRowElement {
   if (row.type !== "tableRow") throw new Error(`Expected a tableRow`)
   return {
     type: "table-row",
-    children: row.children.map((cell) => parseTableCell(cell, options)),
+    children: row.children.map((cell, x) => parseTableCell(cell, x, y, options)),
   }
 }
 
 function parseTableCell(
   cell: TableCell,
+  x: number,
+  y: number,
   options: InternalLinkOptions
 ): TableCellElement {
   if (cell.type !== "tableCell") throw new Error(`Expected a tableCell`)
   return {
     type: "table-cell",
+    x,
+    y,
     children: [
       {
         type: "table-content",

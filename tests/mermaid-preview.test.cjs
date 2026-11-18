@@ -102,7 +102,7 @@ test('renderer errors replace loading with a visible error and cancel safely aft
 test('Mermaid source switching keeps the clicked block stationary until keyboard editing takes over',()=>{
  const editor=createEditor();editor.children=[{type:'paragraph',children:[{text:'before'}]}];editor.wysimark={};editor.getMarkdown=()=> 'source';
  let scrollCalls=0;
- const {Editable}=compile('src/wysimark/entry/index.tsx',['./*','../*','react','react/*','slate','slate-react'],id=>{
+ const {Editable}=compile('src/wysimark/entry/index.tsx',['./*','../*','react','react/*','slate','slate-history','slate-react'],id=>{
   if(id==='react')return {useRef:value=>({current:value}),useCallback:fn=>fn,useEffect:()=>{}};
   if(id==='slate-react')return {Slate:'slate',defaultScrollSelectionIntoView:()=>scrollCalls++};
   if(id==='../convert')return {parse:()=>editor.children,serialize:()=> 'source'};

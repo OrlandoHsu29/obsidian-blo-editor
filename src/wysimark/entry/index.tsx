@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react"
 import { Descendant, Editor } from "slate"
+import { HistoryEditor } from "slate-history"
 import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
 import { isPointerSelecting } from '../../blocks/pointer-selection'
 import { takeBoundaryInputScroll } from '../../blocks/boundary'
@@ -176,7 +177,7 @@ export function Editable({
   if (editor.wysimark.prevValue == null || initialValueRef.current == null) {
     const children = parse(value)
     editor.children = children
-    Editor.normalize(editor, { force: true })
+    HistoryEditor.withoutSaving(editor, () => Editor.normalize(editor, { force: true }))
     prevValueRef.current = initialValueRef.current = editor.children
     changeTrackerRef.current = new MarkdownChangeTracker(value, editor.getMarkdown())
     editor.wysimark.prevValue = {

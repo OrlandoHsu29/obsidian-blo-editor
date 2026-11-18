@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.6 — 2026-11-18
+
+### 中文
+
+- 修复拖动文字后撤销可能导致表格标题行和标题列失去样式的问题。载入 Markdown 时直接生成单元格坐标，初始化不进入撤销历史。
+- 窗口仅改变高度时保留已显示的表格。宽度变化时，仍在尺寸稳定后恢复表格测量。
+- 链接预览小窗中的任务列表只显示勾选状态，嵌入笔记中的原生任务复选框也不可切换。
+
+### English
+
+- Preserve table header styling when undoing a text drag. Compute cell coordinates while parsing Markdown and keep initialization out of undo history.
+- Keep fitted tables visible during height-only window resizes. Resume table measurement after width changes settle.
+- Show task completion status without allowing changes in link previews, including native task checkboxes in embedded notes.
+
 ## 0.2.5 — 2026-11-17
 
 ### 中文

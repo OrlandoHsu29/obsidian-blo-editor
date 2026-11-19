@@ -1,5 +1,6 @@
 import { Editor, Element, Node, Path, PathRef, Point, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
+import { ReactEditor } from 'slate-react'
 import { clearBlockSelection, isWholeBlockSelected } from '../../blocks/selection'
 import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../blocks/model'
 import { selectStructuredBoundary } from '../../blocks/boundary'
@@ -266,6 +267,25 @@ function cellTextSelection(editor: Editor) {
 const cellTextDragType = 'application/x-blo-cell-text-drag'
 let nextCellTextDrag = 0
 const cellTextDrags = new WeakMap<Editor, { id: string; range: Range }>()
+
+export function clearTableCellTextDrag(editor: Editor) {
+  cellTextDrags.delete(editor)
+}
+
+/** Leave block sorting alone and accept a text drag only over its source cell. */
+export function tableTextDropAllowed(editor: Editor, data: DataTransfer, target: globalThis.Element): boolean | undefined {
+  if (!data.types.includes(cellTextDragType)) {
+    if (data.types.includes('application/x-wysimark-block') || data.types.includes('application/x-blo-image-move')) return
+    return target.closest('table,[data-block-type="table"]') ? false : undefined
+  }
+  const drag = cellTextDrags.get(editor)
+  if (!drag) return false
+  const source = cellTextSelection(editor)
+  const cell = target.closest('td,th')
+  if (!source || !cell || !Range.equals(source.range, drag.range)) return false
+  try { return ReactEditor.toDOMNode(editor, source.cell) === cell }
+  catch { return false }
+}
 
 /** An edited cell's text can only move to a different point within that cell. */
 export function dropTableCellText(editor: Editor, data: DataTransfer, dropPoint: () => Point | undefined): boolean {

@@ -42,6 +42,7 @@ import { isDomElement } from './dom-guards';
 import { imageRowTargetFromEvent } from './blocks/image-row';
 import { isRowImage } from './wysimark/image-plugin/row-model';
 import { startImageDrag } from './blocks/RootBlock';
+import { clearTableCellTextDrag, tableTextDropAllowed } from './wysimark/table-plugin/cell-selection';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -648,7 +649,18 @@ export class BloView extends FileView {
     contentEl.empty();
     contentEl.addClass('wysimark-container');
     contentEl.toggleClass('blo-hide-list-guides', this.plugin.settings.showListGuides === false);
+    const routeTableDrag = (event: DragEvent): boolean => {
+      const editor = this.editor, target = event.target, data = event.dataTransfer;
+      if (!editor || this.readOnly || !data || !isDomElement(target) || !target.closest('[data-slate-editor="true"]')) return false;
+      const allowed = tableTextDropAllowed(editor, data, target);
+      if (allowed === undefined) return false;
+      if (!allowed || event.type === 'dragover') event.preventDefault();
+      data.dropEffect = allowed ? 'move' : 'none';
+      if (!allowed) event.stopPropagation();
+      return true;
+    };
     const transfer = (event: ClipboardEvent | DragEvent) => {
+      if ('dataTransfer' in event && routeTableDrag(event)) return;
       const editor = this.editor, file = this.currentFile;
       if (!editor || !file || this.readOnly || !(event.target as HTMLElement).closest('[data-slate-editor="true"]')) return;
       if ('dataTransfer' in event && event.dataTransfer?.types.includes('application/x-blo-image-move')) return;
@@ -661,6 +673,7 @@ export class BloView extends FileView {
     this.registerDomEvent(contentEl, 'paste', transfer, true);
     this.registerDomEvent(contentEl, 'drop', transfer, true);
     this.registerDomEvent(contentEl, 'dragover', event => {
+      if (routeTableDrag(event)) return;
       if (!this.readOnly && event.dataTransfer && (event.dataTransfer.types.includes('Files') ||
         this.currentFile && vaultTransferReferences(this.app, this.currentFile.path, event.dataTransfer, true).length > 0) &&
         (event.target as HTMLElement).closest('[data-slate-editor="true"]')) {
@@ -668,6 +681,7 @@ export class BloView extends FileView {
         event.dataTransfer.dropEffect = 'copy';
       }
     }, true);
+    this.registerDomEvent(contentEl, 'dragend', () => { if (this.editor) clearTableCellTextDrag(this.editor); }, true);
     let bottomClick = false;
     this.registerDomEvent(contentEl, 'mousedown', event => {
       bottomClick = !!this.editor && !this.readOnly && selectDocumentEndFromPointer(this.editor, event, contentEl);

@@ -4,6 +4,8 @@ import { assertUnreachable } from "../utils"
 import { serializeElements } from "./serialize-elements"
 import { serializeCodeBlock } from "./serialize-code-block"
 import { serializeImageBlock } from "./serialize-image-block"
+import { serializeImageShared } from './serialize-image-shared'
+import { rowImages } from '../../image-plugin/row-model'
 import { serializeLine } from "./serialize-line"
 import { serializeTable } from "./serialize-table"
 import { ListItemElement } from "../../list-plugin/types"
@@ -114,6 +116,17 @@ export function serializeElement(
     }
     case "image-block":
       return serializeImageBlock(element, options)
+    case 'image-row': {
+      const images = rowImages(element).map(image => ({ image, markdown:serializeImageShared(image, options) })).filter(item => item.markdown)
+      if (images.length === 1) return `${images[0].markdown}\n\n`
+      const sizes = images.map(({image}) => [image.width ?? null,image.height ?? null])
+      // Save the aligned height even when an incoming image has not loaded yet.
+      const metadata = sizes.some(([width,height]) => width || height)
+        ? `<!-- wysimark-image-row:v1 ${encodeURIComponent(JSON.stringify(sizes))} -->\n\n` : ''
+      return `${metadata}${images.map(item => item.markdown).join(' ')}\n\n`
+    }
+    case 'image-row-caret':
+      return ''
     case "image-inline":
       return `![${element.alt || ""}](${element.url})`
     case "code-block":

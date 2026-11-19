@@ -66,6 +66,7 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
       })
       return table
     }
+    if (node.type === 'image-row-caret') return document.createDocumentFragment()
     if (node.type === 'image-inline' || node.type === 'image-block') {
       const image = document.createElement('img'); image.setAttribute('src', resolveImageUrl?.(node.url) ?? node.url)
       if (node.alt) image.alt = node.alt

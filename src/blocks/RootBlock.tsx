@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import type { Menu } from 'obsidian'
-import type { Editor, Element, Node } from 'slate'
+import { Element, Node } from 'slate'
+import type { Editor } from 'slate'
 import { ReactEditor, useReadOnly, useSlateSelector, useSlateStatic } from 'slate-react'
 import { ui } from '../wysimark/utils/translations'
-import { blockDepth, blockDragGroup, blockDropTarget, isEditorSpacer, isListBlock, moveBlockGroup, quoteContentIndent, rootCache, selectedBlockDragGroup } from './model'
+import { blockDepth, blockDragGroup, blockDropTarget, groupEnd, isEditorSpacer, isListBlock, moveBlockGroup, quoteContentIndent, rootCache, selectedBlockDragGroup } from './model'
 import type { BlockDragGroup } from './model'
 import { useFirstLineAlignment } from './first-line-alignment'
 import { blockGap } from './typography'
@@ -14,13 +16,46 @@ import { startBlockDragAutoScroll } from './drag-auto-scroll'
 import { BlockHighlight, highlightBlockDrag } from './block-highlight'
 import { toggleBlockFold } from './folding'
 import { mediaContentSelector } from './structured-block'
+import { canDropImage, imageRowDropTarget, insertImageRow, moveImageToBlock } from './image-row'
+import { isRowImage } from '../wysimark/image-plugin/row-model'
 
 type DropPosition = 'before' | 'after'
-type DropPreview={position:DropPosition;depth:number;maxDepth:number;origin:number;step:number;left:number;top:number}
+type DropPreview={position:DropPosition;depth:number;maxDepth?:number;origin:number;step:number;left:number;top:number}
 type BlockDragEvent={currentTarget:HTMLDivElement;clientX:number;clientY:number;dataTransfer?:DataTransfer|null;preventDefault:()=>void;stopPropagation:()=>void}
 type DragHandlers={over:(event:BlockDragEvent)=>void;drop:(event:BlockDragEvent)=>void}
 const dragHandlers=new WeakMap<HTMLElement,{current:DragHandlers|null}>()
-const dragging = new WeakMap<Editor, {node:Node;lastNode:Node;group:BlockDragGroup;previewNode?:Element;clearPreview?:()=>void;cleanup?:()=>void}>()
+const dragging = new WeakMap<Editor, {node:Node;lastNode:Node;group:BlockDragGroup;image?:Element;previewNode?:Element;clearPreview?:()=>void;cleanup?:()=>void}>()
+
+function endBlockDrag(editor:Editor) {
+  const state=dragging.get(editor)
+  dragging.delete(editor)
+  state?.clearPreview?.();state?.cleanup?.()
+}
+
+function imageDragGroup(editor:Editor,image:Element):BlockDragGroup|undefined {
+  try {
+    const path=ReactEditor.findPath(editor,image)
+    if(Node.getIf(editor,path)!==image)return
+    const root=editor.children[path[0]]
+    if(path.length!==1 && (path.length!==2 || !Element.isElement(root) || root.type!=='image-row'))return
+    const group=blockDragGroup(editor.children,path[0])
+    // Moving a child leaves the enclosing image row in the document.
+    return group&&path.length===2?{...group,end:group.from,maxDepth:32}:group
+  } catch { return }
+}
+
+export function startImageDrag(editor:Editor,image:Element):boolean {
+  const group=imageDragGroup(editor,image)
+  if(!group)return false
+  endBlockDrag(editor)
+  const doc=ReactEditor.toDOMNode(editor,editor).ownerDocument
+  const stopGutter=listenToDragGutter(editor)
+  const end=()=>endBlockDrag(editor)
+  doc.addEventListener('dragend',end,true)
+  dragging.set(editor,{image,node:editor.children[group.from],lastNode:editor.children[Math.max(group.from,group.end-1)],group,
+    cleanup:()=>{stopGutter();doc.removeEventListener('dragend',end,true)}})
+  return true
+}
 
 /** Route drops in the indentation gutter to the block at the same height. */
 function listenToDragGutter(editor:Editor) {
@@ -79,6 +114,35 @@ function dropPosition(event: BlockDragEvent): DropPosition {
   return fraction < .5 ? 'before' : 'after'
 }
 
+function renderedBlock(editor:Editor,node:Node) {
+  try { return ReactEditor.toDOMNode(editor,node).closest<HTMLElement>('[data-wysimark-block]') }
+  catch { return null }
+}
+
+function imageDropLineY(editor:Editor,destination:number,currentTarget:HTMLDivElement,index:number,fallback:number,edgeInset:number) {
+  const {children}=editor,{foldedBy}=rootCache(editor)
+  const adjacentBlock=(start:number,step:number)=>{
+    for(let i=start;i>=0&&i<children.length;i+=step) {
+      const node=children[i]
+      if(isEditorSpacer(node)||foldedBy.has(node))continue
+      if(i===index)return currentTarget
+      // A neighbor outside the render window may have no DOM yet.
+      return renderedBlock(editor,node)
+    }
+    return null
+  }
+  const previous=adjacentBlock(destination-1,-1),next=adjacentBlock(destination,1)
+  const bottom=previous?.getBoundingClientRect().bottom
+  const nextBounds=next?.getBoundingClientRect()
+  let top=nextBounds?.top
+  if(next&&nextBounds&&next.dataset.blockType==='table') {
+    const gutter=parseFloat(getComputedStyle(next).getPropertyValue('--blo-table-top-gutter'))||0
+    top=nextBounds.top+gutter*(next.offsetHeight?nextBounds.height/next.offsetHeight:1)
+  }
+  if(bottom!==undefined&&top!==undefined)return (bottom+top)/2
+  return bottom!==undefined?bottom+edgeInset:top!==undefined?top-edgeInset:fallback
+}
+
 export function RootBlock({ element, children }: { element: Element; children: ReactNode }) {
   const editor = useSlateStatic()
   const readOnly = useReadOnly()
@@ -135,28 +199,30 @@ export function RootBlock({ element, children }: { element: Element; children: R
     if(!state)return
     if(state.group.children!==editor.children) {
       const indices=rootCache(editor).indices,from=indices.get(state.node),last=indices.get(state.lastNode)
-      const group=from===undefined||last===undefined?undefined:blockDragGroup(editor.children,from,last+1)
+      const group=state.image?imageDragGroup(editor,state.image):from===undefined||last===undefined?undefined:blockDragGroup(editor.children,from,last+1)
       if(!group)return
       state.group=group
     }
     const rect=event.currentTarget.getBoundingClientRect(),style=getComputedStyle(event.currentTarget)
+    if(state.image && index===state.group.from && event.clientY>=rect.top+8 && event.clientY<=rect.bottom-8)return
     const scale=event.currentTarget.offsetWidth?rect.width/event.currentTarget.offsetWidth:1
     const unit=2*parseFloat(style.fontSize)*(scale||1)
     const origin=rect.left-(isListBlock(element)?0:depth*unit)
     const position=dropPosition(event)
-    const target=blockDropTarget(state.group,index,position,(event.clientX-origin)/unit)
+    const target=blockDropTarget(state.group,index,position,state.image?0:(event.clientX-origin)/unit)
     if(!target)return
     const cache=rootCache(editor)
     let anchor=target.previous,before=anchor<0
     if(before){anchor=target.destination;while(anchor<editor.children.length&&(isEditorSpacer(editor.children[anchor])||anchor>=state.group.from&&anchor<state.group.end))anchor++;if(anchor>=editor.children.length)anchor=state.group.from}
     const owner=cache.foldedBy.get(editor.children[anchor])
     if(owner)anchor=cache.indices.get(owner)!
-    const anchorDOM=anchor===index?event.currentTarget:ReactEditor.toDOMNode(editor,editor.children[anchor]).closest<HTMLElement>('[data-wysimark-block]')
-    if(!anchorDOM)return
-    const bounds=anchorDOM.getBoundingClientRect()
-    return {position:before?'before' as const:'after' as const,depth:target.depth,maxDepth:target.maxDepth,
+    const anchorDOM=anchor===index?event.currentTarget:renderedBlock(editor,editor.children[anchor])
+    const bounds=anchorDOM?.getBoundingClientRect()??rect
+    const edge=(anchorDOM?before:position==='before')?bounds.top:bounds.bottom
+    const lineY=state.image?imageDropLineY(editor,target.destination,event.currentTarget,index,edge,unit*.2):edge
+    return {position:before?'before' as const:'after' as const,destination:target.destination,depth:target.depth,maxDepth:state.image?undefined:target.maxDepth,
       origin:(origin-rect.left)/(scale||1),step:unit/(scale||1),
-      left:(origin+target.depth*unit-rect.left)/(scale||1),top:((before?bounds.top:bounds.bottom)-rect.top)/(scale||1)}
+      left:(origin+target.depth*unit-rect.left)/(scale||1),top:(lineY-rect.top)/(scale||1)}
   }
 
   const onDrop = (event: BlockDragEvent) => {
@@ -164,25 +230,57 @@ export function RootBlock({ element, children }: { element: Element; children: R
     if (!state) return
     event.preventDefault()
     event.stopPropagation()
-    const target=dropTarget(event)
-    if(event.dataTransfer)event.dataTransfer.dropEffect=target?'move':'none'
-    const from = rootCache(editor).indices.get(state.node)
-    if (target&&from !== undefined && moveBlockGroup(editor, from, index, dropPosition(event),target.depth,state.group.end)) {
-      ReactEditor.focus(editor)
+    try {
+      const from = rootCache(editor).indices.get(state.node)
+      const side = sideTarget(event)
+      const target=side?undefined:dropTarget(event)
+      if(event.dataTransfer)event.dataTransfer.dropEffect=target||side?'move':'none'
+      const source = state.image ? imageDragGroup(editor,state.image) && ReactEditor.findPath(editor,state.image) : from === undefined ? undefined : [from]
+      if(!source)return
+      const image = state.image ?? state.node
+      const moved = side ? isRowImage(image) && insertImageRow(editor,side,[image],source) :
+        target && (source.length===2 ? moveImageToBlock(editor,source,target.destination,target.depth) :
+          moveBlockGroup(editor,source[0],index,dropPosition(event),target.depth,state.group.end))
+      if(moved)ReactEditor.focus(editor)
+    }finally{
+      endBlockDrag(editor)
     }
-    state.clearPreview?.()
-    state.cleanup?.()
-    dragging.delete(editor)
-    setDrop(null)
+  }
+  const [imageDrop,setImageDrop]=useState<ReturnType<typeof imageRowDropTarget>|null>(null)
+  const sideTarget=(event:BlockDragEvent)=>{
+    const state=dragging.get(editor)
+    if(state?.image) {
+      const rect=event.currentTarget.getBoundingClientRect()
+      if(event.clientY<rect.top+8||event.clientY>rect.bottom-8)return
+      if(state.node===state.image && state.group.children.slice(state.group.from+1,state.group.end).some(node=>!isEditorSpacer(node)))return
+      const side=imageRowDropTarget(editor,event.currentTarget,event.clientX,event.clientY)
+      return side&&canDropImage(editor,state.image,side)?side:undefined
+    }
+    if(!state || state.node===element || !isRowImage(state.node))return
+    const from=rootCache(editor).indices.get(state.node)
+    if(from===undefined || editor.children.slice(from+1,groupEnd(editor.children,from)).some(node=>!isEditorSpacer(node)) ||
+      (state.lastNode!==state.node && !isEditorSpacer(state.lastNode)))return
+    return imageRowDropTarget(editor,event.currentTarget,event.clientX,event.clientY)
   }
   const onDragOver=(event:BlockDragEvent)=>{
     const state=dragging.get(editor)
     if(!state)return
     event.preventDefault();event.stopPropagation()
-    if(state.previewNode!==element){state.clearPreview?.();state.previewNode=element;state.clearPreview=()=>setDrop(null)}
-    const target=dropTarget(event)
-    if(event.dataTransfer)event.dataTransfer.dropEffect=target?'move':'none'
-    setDrop(previous=>previous?.position===target?.position&&previous?.depth===target?.depth&&previous?.maxDepth===target?.maxDepth&&previous?.origin===target?.origin&&previous?.step===target?.step&&previous?.left===target?.left&&previous?.top===target?.top?previous:target??null)
+    const side=sideTarget(event)
+    const target=side?undefined:dropTarget(event)
+    if(event.dataTransfer)event.dataTransfer.dropEffect=target||side?'move':'none'
+    const ownerChanged=state.previewNode!==element
+    const sideChanged=imageDrop?.slot!==side?.slot||imageDrop?.left!==side?.left||imageDrop?.top!==side?.top||imageDrop?.height!==side?.height
+    const lineChanged=drop?.position!==target?.position||drop?.depth!==target?.depth||drop?.maxDepth!==target?.maxDepth||drop?.origin!==target?.origin||drop?.step!==target?.step||drop?.left!==target?.left||drop?.top!==target?.top
+    if(!ownerChanged&&!sideChanged&&!lineChanged)return
+    const update=()=>{
+      if(ownerChanged){state.clearPreview?.();state.previewNode=element;state.clearPreview=()=>{setDrop(null);setImageDrop(null)}}
+      if(sideChanged)setImageDrop(side??null)
+      if(lineChanged)setDrop(target??null)
+    }
+    // Native drag events have a low cadence. Paint a changed guide on the event that finds it.
+    if(event.dataTransfer&&(lineChanged||sideChanged))flushSync(update)
+    else update()
   }
   handlers.current={over:onDragOver,drop:onDrop}
 
@@ -191,7 +289,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
     data-block-id={element.__blockId}
     data-block-foldable={foldable||undefined} data-block-collapsed={foldable&&element.__collapsed||undefined} data-block-fold-hidden={foldHidden||undefined}
     data-block-depth={depth} data-subtitle={element.__subtitle || undefined} data-block-fold-animated={animateFold||undefined}
-    className={drop ? `wysimark-block drop-${drop.position}` : 'wysimark-block'}
+    className={drop?.maxDepth!==undefined ? `wysimark-block drop-${drop.position}` : 'wysimark-block'}
     style={{ position: 'relative', marginLeft: isListBlock(element) ? undefined : `${depth * 2}em`,
       marginTop: element.type==='table'&&gap!=='0px'?`max(4px, calc(${gap} - var(--blo-table-top-gutter,0px)))`:gap,
       '--blo-block-anchor': `--blo-${ReactEditor.findKey(editor, element).id}`,
@@ -263,7 +361,11 @@ export function RootBlock({ element, children }: { element: Element; children: R
       <span id={foldLabelId} hidden>{ui(element.__collapsed?'展开子块':'折叠子块')}</span>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5 8 7-8 7z" /></svg>
     </button>}
-    {drop&&<span className="wysimark-drop-levels" contentEditable={false} aria-hidden="true"
+    {imageDrop&&<span className="blo-image-drop-line" contentEditable={false} aria-hidden="true"
+      style={{left:imageDrop.left,top:imageDrop.top,height:imageDrop.height}} />}
+    {drop&&drop.maxDepth===undefined&&<span className="blo-image-drop-line blo-image-drop-line-horizontal" contentEditable={false} aria-hidden="true"
+      style={{left:drop.left,top:drop.top}} />}
+    {drop?.maxDepth!==undefined&&<span className="wysimark-drop-levels" contentEditable={false} aria-hidden="true"
       style={{left:drop.origin,top:drop.top-14,width:(drop.maxDepth+1)*drop.step}}>
       <svg width="100%" height="28" fill="none">
         <path d={`M1 14H${drop.depth*drop.step+1}`} className="wysimark-drop-level-track" strokeDasharray="2 3" />

@@ -6,6 +6,7 @@ import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
 import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
 import { isEditableStructure } from './structured-block'
+import { activeImageRow } from './image-row'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 type BlockSelection={index:number;range:Range;end?:number;images?:Set<Element>;imageAnchor?:number}
@@ -98,8 +99,28 @@ export function deleteWholeBlockSelection(editor:Editor):boolean {
  clearBlockSelection(editor)
  return deleteBlockGroup(editor,index,selected?.end)
 }
+/** A gap selects the adjacent image first, then deletion returns to the gap. */
+export function deleteImageRowAtCaret(editor:Editor,direction:-1|1):boolean {
+ const active=activeImageRow(editor)
+ if(!active||editor.wysimark.readOnly)return false
+ const {row,index,child}=active
+ if(row.children[child].type==='image-row-caret') {
+  const adjacent=child+direction
+  if(row.children[adjacent]?.type==='image-block')Transforms.select(editor,Editor.start(editor,[index,adjacent]))
+  return true
+ }
+ const hasFollowingImage=child<row.children.length-1
+ withHistoryBatch(editor,()=>{
+  Transforms.removeNodes(editor,{at:[index,child]})
+  Transforms.removeNodes(editor,{at:[index,child-1]})
+  if(hasFollowingImage&&row.children.length===4)Transforms.setNodes(editor,{retainLeadingCaret:true},{at:[index]})
+  Transforms.select(editor,Editor.start(editor,hasFollowingImage?[index,child-1]:[index+1]))
+ })
+ return true
+}
+
 export function deleteAtBlockBoundary(editor:Editor):boolean {
- if(deleteWholeBlockSelection(editor))return true
+ if(deleteWholeBlockSelection(editor)||deleteImageRowAtCaret(editor,-1))return true
  if(editor.wysimark.readOnly)return false
  if(editor.selection&&Range.isCollapsed(editor.selection)) {
   const point=editor.selection.anchor,index=point.path[0],node=editor.children[index]
@@ -126,6 +147,13 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
    (Point.equals(point,Editor.start(editor,[index]))||Editor.before(editor,point,{unit:'character'})?.path[0]!==index))return changeBlockIndent(editor,index,-1,false)
  }
  const index=boundaryBlockIndex(editor)
+ if(index!==undefined) {
+  const node=editor.children[index]
+  if(Element.isElement(node)&&node.type==='image-row'&&node.children.length) {
+   Transforms.select(editor,Editor.start(editor,[index,node.children.length-1]))
+   return true
+  }
+ }
  return index===undefined?false:selectBlockContents(editor,index)
 }
 function atVerticalEdge(editor:Editor,index:number,backwards:boolean):boolean {
@@ -189,6 +217,12 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  const boundary=boundaryBlockIndex(editor)
  if(boundary!==undefined) {
   if(event.key==='ArrowLeft') {
+   const node=editor.children[boundary]
+   if(Element.isElement(node)&&node.type==='image-row') {
+    clearBlockSelection(editor)
+    Transforms.select(editor,Editor.end(editor,[boundary]))
+    return true
+   }
    if(!isEditableStructure(editor.children[boundary]))return selectBlockContents(editor,boundary)
    clearBlockSelection(editor);enterStructure(editor,boundary,true);return true
   }
@@ -227,6 +261,20 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  clearBlockSelection(editor)
  if(!Range.isCollapsed(editor.selection))return false
  const point=editor.selection.anchor,index=point.path[0],current=editor.children[index]
+ if(Element.isElement(current)&&current.type==='image-row'&&(event.key==='ArrowLeft'||event.key==='ArrowRight')) {
+  const child=point.path[1]+(event.key==='ArrowLeft'?-1:1)
+  if(child>=0&&child<current.children.length)Transforms.select(editor,Editor.start(editor,[index,child]))
+  else if(child>=current.children.length)selectStructuredBoundary(editor,index)
+  else {
+   let previous=index-1
+   while(previous>=0&&isEditorSpacer(editor.children[previous]))previous--
+   if(previous>=0) {
+    if(structured(editor.children[previous]))selectStructuredBoundary(editor,previous)
+    else Transforms.select(editor,Editor.end(editor,[previous]))
+   }
+  }
+  return true
+ }
  if(structured(current)) {
   if(event.key==='ArrowRight'&&Point.equals(point,Editor.end(editor,[index])))return selectStructuredBoundary(editor,index)
   return false
@@ -237,6 +285,10 @@ export function navigateBlockBoundary(editor:Editor,event:ArrowEvent):boolean {
  const target=editor.children[adjacent]
  if(!structured(target))return false
  if(event.key==='ArrowLeft')return selectStructuredBoundary(editor,adjacent)
+ if(event.key==='ArrowRight'&&target.type==='image-row') {
+  Transforms.select(editor,Editor.start(editor,[adjacent]))
+  return true
+ }
  if(isEditableStructure(target)) {
   // Native vertical movement retains the caret's visual column, including
   // proportional text, code indentation, wrapping and horizontal scrolling.

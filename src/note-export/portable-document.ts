@@ -30,6 +30,12 @@ export function portableDocument(nodes: Descendant[], link: ExportLink = target 
     }
     for (const key of Object.keys(copy)) if (key.startsWith('__')) delete (copy as unknown as Record<string, unknown>)[key]
     if (copy.type === 'table') { delete copy.headerRow; delete copy.headerColumn }
+    if (copy.type === 'image-row' && copy.children.some(child => child.type !== 'image-block' && child.type !== 'image-row-caret')) {
+      return { type:'paragraph', children: (copy.children as Descendant[]).flatMap(child =>
+        Element.isElement(child) && child.type === 'paragraph' ? child.children :
+          Element.isElement(child) && child.type === 'image-block' ? [{ ...child, type:'image-inline' as const }] :
+            Element.isElement(child) && child.type === 'image-row-caret' ? [] : [child]) }
+    }
     if (copy.type === 'anchor') {
       const target = isWikiLinkHref(copy.href) ? wikiLinkTarget(wikiLinkSpecFromHref(copy.href)) : copy.href
       copy.href = safeLink(link(target, false))

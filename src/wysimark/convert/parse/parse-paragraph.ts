@@ -8,6 +8,7 @@ import { Element, Segment } from "../types"
 import { parsePhrasingContents } from "./parse-phrasing-content/parse-phrasing-content"
 import { splitSegmentLines } from "./parse-phrasing-content/split-segment-lines"
 import { parseExportedListSource } from "./parse-code-block"
+import { imageRowChildren, isRowImage } from '../../image-plugin/row-model'
 
 function isImageBlock(segments: Segment[]): boolean {
   if (segments.length !== 3) return false
@@ -42,6 +43,11 @@ export function parseParagraph(
         type: "image-block",
       }
       return imageBlockElement
+    }
+    const images = segments.filter(segment => !('text' in segment) || segment.text.trim() !== '')
+    if (images.length > 1 && images.every(segment => 'type' in segment && segment.type === 'image-inline')) {
+      const children = (images as ImageInlineElement[]).map(image => ({ ...image, type: 'image-block' as const }))
+      if (children.every(isRowImage)) return { type: 'image-row', ...metadata, children: imageRowChildren(children) }
     }
     return {
       type: "paragraph",

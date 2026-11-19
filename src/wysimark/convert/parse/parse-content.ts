@@ -13,6 +13,7 @@ import { parseParagraph } from "./parse-paragraph"
 import { parseTable } from "./parse-table"
 import { parseThematicBreak } from "./parse-thematic-break"
 import { serializeLinkDestination, serializeLinkTitle } from "../serialize/serialize-link-destination"
+import { rowImages } from '../../image-plugin/row-model'
 
 export function parseContents(
   contents: TopLevelContent[],
@@ -51,6 +52,23 @@ export function parseContents(
     }
     const content=contents[i],next=contents[i+1]
     previousBlockStart = elements.length
+    if (content.type === 'html' && next?.type === 'paragraph') {
+      const match = content.value.match(/^<!-- wysimark-image-row:v1 (\S+) -->$/)
+      if (match) try {
+        const sizes: unknown = JSON.parse(decodeURIComponent(match[1]))
+        const [row, extra] = parseParagraph(next, options)
+        const images = row?.type === 'image-row' && rowImages(row)
+        if (images && !extra && Array.isArray(sizes) && sizes.length === images.length) {
+          sizes.forEach((size, index) => {
+            if (!Array.isArray(size)) return
+            const [width, height] = size
+            if (typeof width === 'number' && Number.isFinite(width) && width > 0) images[index].width = width
+            if (typeof height === 'number' && Number.isFinite(height) && height > 0) images[index].height = height
+          })
+          elements.push(row); i++; continue
+        }
+      } catch { /* Invalid metadata remains ordinary source content. */ }
+    }
     if(content.type==='html'&&next?.type==='table') {
       const metadata=content.value.match(/^<!-- wysimark-table:v1 (\S+) -->$/)
       if(metadata)try {

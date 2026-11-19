@@ -1,4 +1,5 @@
 import { useSlateStatic } from "slate-react"
+import type { CSSProperties } from 'react'
 
 import { ConstrainedRenderElementProps } from "../../sink"
 
@@ -15,9 +16,11 @@ export function ImageBlock({
   children,
 }: ConstrainedRenderElementProps<ImageBlockElement>) {
   const editor = useSlateStatic()
+  const style = { '--blo-image-width': element.width ? `${element.width}px` :
+    element.height ? `calc(${element.height}px * var(--blo-image-ratio,1))` : undefined } as CSSProperties
   if (isWikiEmbedUrl(element.url) && editor.wysimark.renderInternalEmbed) {
     return (
-      <div {...attributes}>
+      <div {...attributes} data-blo-image-item style={style}>
         <WikiEmbedView element={element} />
         <MediaReferenceDialog element={element} />
         {children}
@@ -25,7 +28,7 @@ export function ImageBlock({
     )
   }
   return (
-    <div {...attributes}>
+    <div {...attributes} data-blo-image-item style={style}>
       <$ImageBlock contentEditable={false}>
         <ImageWithControls
           element={element}

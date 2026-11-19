@@ -52,10 +52,10 @@ export function boundaryBlockIndex(editor: Editor, point?: Point): number | unde
 /** Include the complete media block while retaining a real text/void anchor. */
 export function rangeToMediaBlock(editor: Editor, index: number, anchor: Point): Range | undefined {
   const node=editor.children[index]
-  if(!Element.isElement(node)||node.type!=='image-block')return
+  if(!Element.isElement(node)||(node.type!=='image-block'&&node.type!=='image-row'))return
   const origin=boundaryBlockIndex(editor,anchor)??anchor.path[0],original=editor.children[origin]
   const after=(at:number)=>Editor.after(editor,[at],{voids:true})??Editor.end(editor,[at])
-  if(Element.isElement(original)&&original.type==='image-block')anchor=origin>index?after(origin):Editor.start(editor,[origin])
+  if(Element.isElement(original)&&(original.type==='image-block'||original.type==='image-row'))anchor=origin>index?after(origin):Editor.start(editor,[origin])
   const start=Editor.start(editor,[index])
   return {anchor,focus:Point.compare(anchor,start)>0?start:after(index)}
 }

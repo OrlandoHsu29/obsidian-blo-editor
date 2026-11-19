@@ -2,10 +2,9 @@ import { ui } from "../utils/translations"
 import { Editor, Transforms } from "slate"
 import { ReactEditor } from "slate-react"
 
-import { createPlugin, curryOne, TypedPlugin } from "../sink"
+import { createPlugin, TypedPlugin } from "../sink"
 
 import { createImageMethods } from "./methods"
-import { normalizeNode } from "./normalize-node"
 import { renderElement } from "./render-element"
 import { ImagePluginConfig, ImagePluginCustomTypes } from "./types"
 
@@ -148,7 +147,6 @@ export const ImagePlugin = //({
           isInline: (element) => {
             if (element.type === "image-inline") return true
           },
-          normalizeNode: curryOne(normalizeNode, editor),
         },
         editableProps: {
           renderElement,

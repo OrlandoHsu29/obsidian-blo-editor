@@ -7,10 +7,12 @@ import { wikiLinkHref } from './wysimark/convert/obsidian-links'
 import { ui } from './wysimark/utils/translations'
 import { vaultMediaUrl, vaultTransferReferences } from './vault-media'
 import { attachmentPreviewUrl } from './attachment-preview'
+import { imagesForRow, insertImageRow } from './blocks/image-row'
+import type { ImageRowTarget } from './blocks/image-row'
 
 /** Reference existing vault files directly; never copy them into attachments. */
 export function handleVaultMediaTransfer(app: App, sourcePath: string, editor: Editor,
-  event: ClipboardEvent | DragEvent, current: () => boolean): boolean {
+  event: ClipboardEvent | DragEvent, current: () => boolean, side?: ImageRowTarget): boolean {
   if (!current() || editor.wysimark.readOnly) return false
   const data = 'clipboardData' in event ? event.clipboardData : event.dataTransfer
   if (!data) return false
@@ -32,6 +34,8 @@ export function handleVaultMediaTransfer(app: App, sourcePath: string, editor: E
     return url ? { type: 'image-block', url, alt: label, children: [{ text: '' }] } :
       { type: 'paragraph', children: [{ type: 'anchor', href: wikiLinkHref(reference.target), children: [{ text: label }] }] }
   })
+  const images = side && imagesForRow(fragment)
+  if (side && images && insertImageRow(editor, side, images)) { ReactEditor.focus(editor); return true }
   const insert = () => Editor.withoutNormalizing(editor, () => {
     if (!editor.selection) Transforms.select(editor, Editor.end(editor, []))
     editor.insertFragment(fragment)
@@ -45,7 +49,7 @@ export function handleVaultMediaTransfer(app: App, sourcePath: string, editor: E
 
 /** File transfers take precedence over HTML/text fallbacks; internal Slate copies keep their metadata. */
 export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | DragEvent,
-  save: OnImageSaveHandler, current: () => boolean): boolean {
+  save: OnImageSaveHandler, current: () => boolean, side?: ImageRowTarget): boolean {
   if (editor.wysimark.readOnly) return false
   const data = 'clipboardData' in event ? event.clipboardData : event.dataTransfer
   if (!data || data.getData('application/x-slate-fragment') || /\bdata-slate-fragment\s*=/i.test(data.getData('text/html'))) return false
@@ -60,6 +64,7 @@ export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | Drag
     catch { Transforms.select(editor, Editor.end(editor, [])) }
   }
   const location = Editor.rangeRef(editor, editor.selection ?? Editor.range(editor, Editor.end(editor, [])), { affinity: 'forward' })
+  const row = side && Editor.pathRef(editor, [side.index])
   const insert = async () => {
     const fragment: Descendant[] = []
     for (const file of files) {
@@ -79,6 +84,8 @@ export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | Drag
     }
     if (!fragment.length) return
     if (!current() || !location.current) { new Notice(ui('附件已保存，原插入位置已失效')); return }
+    const images = row?.current && imagesForRow(fragment)
+    if (side && row?.current && images && insertImageRow(editor, { ...side, index: row.current[0] }, images)) return
     const apply = () => Editor.withoutNormalizing(editor, () => {
       Transforms.select(editor, location.current!)
       editor.insertFragment(fragment)
@@ -87,6 +94,6 @@ export function handleMediaTransfer(editor: Editor, event: ClipboardEvent | Drag
     if (HistoryEditor.isHistoryEditor(editor)) HistoryEditor.withNewBatch(editor, apply)
     else apply()
   }
-  void insert().catch(error => console.error('Blo Editor: attachment insertion failed', error)).finally(() => location.unref())
+  void insert().catch(error => console.error('Blo Editor: attachment insertion failed', error)).finally(() => { location.unref(); row?.unref() })
   return true
 }

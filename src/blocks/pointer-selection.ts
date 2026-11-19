@@ -38,7 +38,7 @@ export function mediaRangeFromPointer(editor: Editor, host: HTMLElement, x: numb
   if(!media||!host.contains(media))return
   try {
     const node=ReactEditor.toSlateNode(editor,media.closest('[data-slate-node="element"]')??media),path=ReactEditor.findPath(editor,node)
-    return path.length===1?rangeToMediaBlock(editor,path[0],anchor):undefined
+    return rangeToMediaBlock(editor,path[0],anchor)
   } catch { return }
 }
 

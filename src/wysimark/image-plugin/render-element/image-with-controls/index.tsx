@@ -112,9 +112,10 @@ export function ImageWithControls({
     <$ImageContainer className={className} data-blo-image>
       <$Image key={`${url}:${revision}`} src={url} alt={displayAlt ?? element.alt} width={size?.width ?? element.width} height={size?.height} decoding="async" onLoad={event => {
         const image = event.currentTarget
-        if (image.naturalWidth && image.naturalHeight) setNaturalSize(current =>
-          current?.width === image.naturalWidth && current.height === image.naturalHeight
+        if (image.naturalWidth && image.naturalHeight) {
+          setNaturalSize(current => current?.width === image.naturalWidth && current.height === image.naturalHeight
             ? current : {width: image.naturalWidth, height: image.naturalHeight})
+        }
       }} />
       {/**
        * Show the size status bar only when the user is dragging to resize the

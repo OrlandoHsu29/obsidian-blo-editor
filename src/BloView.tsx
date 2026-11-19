@@ -39,6 +39,9 @@ import { capturePresentationScroll, restorePresentationScroll } from './presenta
 import { WikiImageWithControls } from './wysimark/image-plugin/render-element/image-with-controls';
 import { copyImageFragment } from './image-clipboard';
 import { isDomElement } from './dom-guards';
+import { imageRowTargetFromEvent } from './blocks/image-row';
+import { isRowImage } from './wysimark/image-plugin/row-model';
+import { startImageDrag } from './blocks/RootBlock';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -343,9 +346,51 @@ function KnowledgeSpaceEditorComponent({
   const handleChange = React.useCallback((markdown: string) => {
     onChange(markdown);
   }, [onChange]);
+  const dropLine = React.useRef<HTMLSpanElement | undefined>(undefined);
+  const clearDropLine = React.useCallback(() => {
+    const line = dropLine.current;
+    if (!line) return;
+    line.ownerDocument.removeEventListener('drop', clearDropLine, true);
+    line.remove();
+    dropLine.current = undefined;
+  }, []);
+  React.useEffect(() => clearDropLine, [clearDropLine]);
 
   return (
     <div className="wysimark-editor-wrapper"
+      onDragStartCapture={event => {
+        if (readOnly || !isDomElement(event.target) || !event.target.matches('[data-blo-image] > img')) return;
+        const item = event.target.closest('[data-blo-image-item]');
+        if (!item) return;
+        const node = ReactEditor.toSlateNode(editor, item);
+        if (!isRowImage(node) || !startImageDrag(editor,node)) return;
+        event.stopPropagation();
+        event.dataTransfer.setData('application/x-blo-image-move', '1');
+        event.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOverCapture={event => {
+        if (readOnly || !event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('application/x-blo-image-move')) return;
+        const files = Array.from(event.dataTransfer.items).filter(item => item.kind === 'file');
+        if (files.some(item => item.type && !item.type.startsWith('image/'))) { clearDropLine(); return; }
+        const hit = imageRowTargetFromEvent(editor, event.nativeEvent);
+        if (!hit) { clearDropLine(); return; }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        const {root, placement} = hit;
+        const rect = root.getBoundingClientRect(), scale = rect.width / root.offsetWidth || 1;
+        if (!dropLine.current) {
+          const line = root.ownerDocument.createElement('span');
+          line.className = 'blo-image-drop-line blo-image-drop-line-fixed';
+          line.setAttribute('aria-hidden', 'true');
+          root.ownerDocument.body.append(line);
+          dropLine.current = line;
+          root.ownerDocument.addEventListener('drop', clearDropLine, true);
+        }
+        Object.assign(dropLine.current.style, {left:`${rect.left + placement.left * scale}px`, top:`${rect.top + placement.top * scale}px`, height:`${placement.height * scale}px`});
+      }}
+      onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)) clearDropLine(); }}
+      onDragEnd={clearDropLine}
+      onDropCapture={clearDropLine}
       onMouseDownCapture={event => {
         resetPointerSelection(editor);
         if (!readOnly) selectBoundaryFromPointer(editor, event);
@@ -606,10 +651,12 @@ export class BloView extends FileView {
     const transfer = (event: ClipboardEvent | DragEvent) => {
       const editor = this.editor, file = this.currentFile;
       if (!editor || !file || this.readOnly || !(event.target as HTMLElement).closest('[data-slate-editor="true"]')) return;
+      if ('dataTransfer' in event && event.dataTransfer?.types.includes('application/x-blo-image-move')) return;
+      const side = 'dataTransfer' in event ? imageRowTargetFromEvent(editor, event)?.placement : undefined;
       if (handleVaultMediaTransfer(this.app, file.path, editor, event,
-        () => this.editor === editor && this.currentFile === file && !this.readOnly)) return;
+        () => this.editor === editor && this.currentFile === file && !this.readOnly, side)) return;
       handleMediaTransfer(editor, event, this.handleImageSave,
-        () => this.editor === editor && this.currentFile === file && !this.readOnly);
+        () => this.editor === editor && this.currentFile === file && !this.readOnly, side);
     };
     this.registerDomEvent(contentEl, 'paste', transfer, true);
     this.registerDomEvent(contentEl, 'drop', transfer, true);

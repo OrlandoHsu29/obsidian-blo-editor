@@ -6,6 +6,7 @@ const kinds = {
   table: { editable: true, content: 'table' },
   'code-block': { editable: true, content: '[data-wysimark-code-block]' },
   'image-block': { editable: false, content: '[data-blo-drawing],[data-blo-image],[data-blo-pdf]' },
+  'image-row': { editable: false, content: '[data-blo-image-row-track]' },
   'math-block': { editable: false, content: '[data-blo-math="block"]' },
 } as const
 
@@ -36,6 +37,10 @@ export function structuredBlockContent(root: HTMLElement): HTMLElement | null {
 /** A wide table owns a caret beside its visible viewport, not its hidden columns. */
 export function structuredBlockBounds(content:HTMLElement) {
   const bounds=content.getBoundingClientRect()
+  if (content.hasAttribute('data-blo-image-row-track') && content.lastElementChild) {
+    const right = content.lastElementChild.getBoundingClientRect().right
+    return {left:bounds.left,right,top:bounds.top,bottom:bounds.bottom,width:right-bounds.left,height:bounds.height}
+  }
   const clip=content.closest('.blo-table-frame')?.getBoundingClientRect()
   if(!clip)return bounds
   const left=Math.max(bounds.left,clip.left),right=Math.min(bounds.right,clip.right)

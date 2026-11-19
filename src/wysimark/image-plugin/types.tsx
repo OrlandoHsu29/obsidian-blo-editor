@@ -96,6 +96,9 @@ export type ImageBlockElement = {
   type: "image-block"
 } & ImageSharedElement
 
+export type ImageRowCaretElement = { type: 'image-row-caret'; children: [{ text: '' }] }
+export type ImageRowElement = { type: 'image-row'; children: (ImageBlockElement | ImageRowCaretElement)[]; retainLeadingCaret?: true }
+
 /**
  * Default for smaller images, 48px and less
  *
@@ -108,7 +111,7 @@ export type ImageInlineElement = {
 export type ImagePluginCustomTypes = {
   Name: "image"
   Editor: ImageEditor
-  Element: ImageBlockElement | ImageInlineElement
+  Element: ImageBlockElement | ImageInlineElement | ImageRowElement | ImageRowCaretElement
   Options: ImagePluginOptions
 }
 

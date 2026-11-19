@@ -1,4 +1,4 @@
-import { Editor, Element, Node, NodeEntry, Transforms } from "slate"
+import { Editor, Element, Node, NodeEntry, Path, Transforms } from "slate"
 
 import { normalizeSiblings } from "../../sink"
 
@@ -23,6 +23,8 @@ export function normalizeSiblingWalls(
   entry: NodeEntry<Element>
 ): boolean {
   if (!isWall(editor, entry[0])) return false
+  const parent = Node.get(editor, Path.parent(entry[1]))
+  if (Element.isElement(parent) && parent.type === 'image-row') return false
   return normalizeSiblings(editor, entry, (a, b) => {
     if (!isWall(editor, a[0]) || !isWall(editor, b[0])) return false
     Transforms.insertNodes(

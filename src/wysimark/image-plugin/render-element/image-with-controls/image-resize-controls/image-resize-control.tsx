@@ -18,6 +18,7 @@ import {
 } from "../../../types"
 import { getEditorWidth, minMax, resizeToWidth } from "../../../utils"
 import { createResizePreview } from './resize-preview'
+import { freezeImageRow } from './resize-image-row'
 
 /**
  * Helper function finds the `img` inside the current Slate `Element`.
@@ -56,9 +57,10 @@ export function ImageResizeControl({
   heightOffset?: number
 }) {
   const editor = useSlateStatic()
-  const resize = useRef<{ startX: number; startWidth: number; maxWidth: number; source: ImageSize; heightOffset: number; initial: ImageSize; next: ImageSize } | null>(null)
+  const resize = useRef<{ startX: number; startWidth: number; scale: number; maxWidth: number; source: ImageSize; heightOffset: number; initial: ImageSize; next: ImageSize } | null>(null)
   const preview = useRef<ReturnType<typeof createResizePreview> | null>(null)
-  useEffect(() => () => preview.current?.cancel(), [])
+  const row = useRef<ReturnType<typeof freezeImageRow>>(undefined)
+  useEffect(() => () => { preview.current?.cancel(); row.current?.clear() }, [])
   useResizeBrowser()
   const width = size.width
   // Reading the editable's width after each preview write forces layout of
@@ -68,31 +70,44 @@ export function ImageResizeControl({
   const finish = (commit: boolean) => {
     const pending = resize.current
     preview.current?.cancel(); preview.current = null
+    const group = row.current
+    group?.clear(); row.current = undefined
     resize.current = null
     setIsDragging(false)
     if (!pending) return
-    if (!commit || editor.wysimark.readOnly || editor.wysimark.isCurrentDocument?.() === false) {
+    if (!commit || pending.next === pending.initial || editor.wysimark.readOnly || editor.wysimark.isCurrentDocument?.() === false) {
       setSize(pending.initial)
       return
     }
     // The last pointer move may still be waiting for its animation frame.
     setSize(pending.next)
     const path = ReactEditor.findPath(editor, element)
-    withHistoryBatch(editor, () => Transforms.setNodes(editor,
-      { ...pending.next, srcWidth: pending.source.width, srcHeight: pending.source.height }, { at: path }))
+    withHistoryBatch(editor, () => {
+      group?.commit()
+      Transforms.setNodes(editor, { ...pending.next, srcWidth: pending.source.width, srcHeight: pending.source.height }, { at: path })
+    })
   }
   const drag = usePointerDrag<HTMLSpanElement>({
     onStart: event => {
       if (editor.wysimark.readOnly) return false
-      resize.current = { startX: event.clientX, startWidth: getImageBoundsFromSlateElement(editor, element).width,
-        maxWidth: Math.min(srcSize.width, getEditorWidth(editor)), source: srcSize, heightOffset, initial: size, next: size }
-      preview.current = createResizePreview(event.currentTarget.ownerDocument.defaultView!, setSize)
+      row.current = freezeImageRow(editor, element)
+      const bounds = getImageBoundsFromSlateElement(editor, element)
+      const startWidth = row.current ? ReactEditor.toDOMNode(editor, element).offsetWidth : bounds.width
+      const initial = row.current ? resizeToWidth(startWidth, srcSize) : size
+      const maxWidth = row.current ? Math.max(startWidth, row.current.maxWidth) : Math.min(srcSize.width, getEditorWidth(editor))
+      const scale = row.current ? bounds.width / startWidth || 1 : 1
+      resize.current = { startX: event.clientX, startWidth, scale, maxWidth, source: srcSize, heightOffset, initial, next: initial }
+      preview.current = createResizePreview(event.currentTarget.ownerDocument.defaultView!, next => { row.current?.preview(next.width); setSize(next) })
       setIsDragging(true)
     },
     onMove: event => {
       const pending = resize.current!
-      const nextWidth = minMax({ value: pending.startWidth + event.clientX - pending.startX, min: Math.min(12, pending.source.width), max: pending.maxWidth })
-      pending.next = resizeToWidth(nextWidth, pending.source)
+      const min = Math.min(12, pending.source.width, pending.maxWidth)
+      const value = pending.startWidth + (event.clientX - pending.startX) / pending.scale
+      const nextWidth = minMax({ value, min, max: pending.maxWidth })
+      const aspect = pending.source.width / pending.source.height
+      const width = row.current?.snapWidth(nextWidth, aspect, min, pending.maxWidth) ?? nextWidth
+      pending.next = resizeToWidth(width, pending.source)
       pending.next.height += pending.heightOffset
       preview.current?.queue(pending.next)
     },

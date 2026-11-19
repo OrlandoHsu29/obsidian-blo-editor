@@ -1,10 +1,11 @@
-import { Editor, Element, Node, Path, PathRef, Range, Text, Transforms } from 'slate'
+import { Editor, Element, Node, Path, PathRef, Point, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { clearBlockSelection, isWholeBlockSelected } from '../../blocks/selection'
 import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../blocks/model'
 import { selectStructuredBoundary } from '../../blocks/boundary'
 import type { TableElement } from './types'
 import { clipboardFragmentHtml, prepareImageClipboard } from '../paste-markdown-plugin/clipboard-html'
+import { withHistoryBatch } from '../utils/with-history-batch'
 
 export type TableCellSelection = {
   table: TableElement; path: Path; left: number; right: number; top: number; bottom: number
@@ -255,6 +256,45 @@ function selectedFragment(selected: TableCellSelection): TableElement {
     })) }
 }
 
+function cellTextSelection(editor: Editor) {
+  const range = editor.selection
+  if (!range || Range.isCollapsed(range)) return
+  const cell = Editor.above(editor, { at: range.anchor, match: node => Element.isElement(node) && node.type === 'table-cell' })
+  if (cell && Path.isAncestor(cell[1], range.focus.path)) return { range, cell: cell[0], path: cell[1] }
+}
+
+const cellTextDragType = 'application/x-blo-cell-text-drag'
+let nextCellTextDrag = 0
+const cellTextDrags = new WeakMap<Editor, { id: string; range: Range }>()
+
+/** An edited cell's text can only move to a different point within that cell. */
+export function dropTableCellText(editor: Editor, data: DataTransfer, dropPoint: () => Point | undefined): boolean {
+  const id = data.getData(cellTextDragType)
+  if (!id) return false
+  const drag = cellTextDrags.get(editor)
+  if (drag?.id !== id) return true
+  cellTextDrags.delete(editor)
+  const source = cellTextSelection(editor)
+  if (editor.wysimark.readOnly || !source || !Range.equals(source.range, drag.range)) return true
+  const point = dropPoint()
+  if (!point || !Path.isAncestor(source.path, point.path) || Range.includes(source.range, point)) return true
+  const relative = (point: Point) => ({ ...point, path: point.path.slice(source.path.length) })
+  const contents = Node.fragment(source.cell, { anchor: relative(source.range.anchor), focus: relative(source.range.focus) })
+    .flatMap(node => Element.isElement(node) && node.type === 'table-content' ? node.children : [])
+  if (!contents.length) return true
+  const destination = Editor.pointRef(editor, point)
+  try {
+    withHistoryBatch(editor, () => {
+      Transforms.delete(editor, { at: source.range })
+      if (destination.current) {
+        Transforms.select(editor, destination.current)
+        editor.insertFragment(contents)
+      }
+    })
+  } finally { destination.unref() }
+  return true
+}
+
 /** Keep rich, HTML and plain-text clipboard formats confined to the same cells. */
 export function installTableCellClipboard(editor: Editor): void {
   const {insertText,deleteFragment}=editor
@@ -299,10 +339,24 @@ export function installTableCellClipboard(editor: Editor): void {
   const { getFragment, setFragmentData } = editor
   editor.getFragment = () => {
     const selected = tableCellSelection(editor)
-    return selected ? [selectedFragment(selected)] : getFragment()
+    if (selected) return [selectedFragment(selected)]
+    const source = cellTextSelection(editor)
+    if (source) return [{ type: 'paragraph', children: [{ text: Editor.string(editor, source.range) }] }]
+    return getFragment()
   }
   editor.setFragmentData = (data, origin) => {
     const selected = tableCellSelection(editor)
+    if (origin === 'drag') {
+      const source = !selected && cellTextSelection(editor)
+      if (selected || source) {
+        const id = source ? String(++nextCellTextDrag) : 'blocked'
+        if (source) cellTextDrags.set(editor, { id, range: source.range })
+        data.clearData()
+        data.setData(cellTextDragType, id)
+        data.effectAllowed = source ? 'move' : 'none'
+        return
+      }
+    }
     if (!selected) return setFragmentData(data, origin)
     const fragment = selectedFragment(selected)
     const encoded = window.btoa(encodeURIComponent(JSON.stringify([fragment])))

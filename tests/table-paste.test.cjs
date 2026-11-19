@@ -16,7 +16,7 @@ loaded._compile(buildSync({stdin:{contents:`
  export * from './src/wysimark/table-plugin/paste-table';
  export {parse,serialize} from './src/wysimark/convert';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'table-paste.cjs');
-const {withTables,selectTableCell,selectTableCellRange,tableCellSelection,beginTableCellEdit,pasteTableFragment,clipboardTextTable,parse,serialize}=loaded.exports;
+const {withTables,selectTableCell,selectTableCellRange,tableCellSelection,beginTableCellEdit,dropTableCellText,pasteTableFragment,clipboardTextTable,parse,serialize}=loaded.exports;
 const paragraph=text=>({type:'paragraph',children:[{text}]});
 const table=(grid,extra={})=>({type:'table',columns:grid[0].map(()=>({align:'left'})),headerRow:true,headerColumn:false,...extra,children:grid.map(row=>({type:'table-row',children:row.map(value=>({type:'table-cell',children:[{type:'table-content',children:typeof value==='string'?[{text:value}]:value}]}))}))});
 function fixture(grid){
@@ -38,6 +38,38 @@ test('entering the same edited cell again preserves a word selection instead of 
  Transforms.select(editor,selection);
  assert.equal(beginTableCellEdit(editor,[...path(editor),0,0]),true);assert.deepEqual(editor.selection,selection);
  select(editor,1,0);assert.equal(beginTableCellEdit(editor),true);assert.deepEqual(editor.selection.anchor,Editor.end(editor,[...path(editor),0,1]));
+});
+
+test('dragging edited cell text only reorders content within that cell and can be undone',()=>{
+ const editor=fixture([['Feature',[{text:'Analog '},{text:'voltage',bold:true}],'Digital'],['Untouched','Left','Right']]);
+ select(editor,1,0);beginTableCellEdit(editor);
+ const at=[...path(editor),0,1,0,1];
+ const source={anchor:{path:at,offset:0},focus:{path:at,offset:7}};
+ Transforms.select(editor,source);
+ assert.deepEqual(editor.getFragment(),[paragraph('voltage')]);
+ const before=structuredClone(editor.children);
+ const drag=()=>{
+  const items=new Map([['text/plain','voltage']]);
+  const data={clearData:()=>items.clear(),setData:(key,value)=>items.set(key,value),getData:key=>items.get(key)??''};
+  editor.setFragmentData(data,'drag');
+  assert.equal(items.size,1);assert.equal(data.getData('text/plain'),'');
+  return data;
+ };
+ for(const point of [Editor.start(editor,[...path(editor),0,2]),Editor.start(editor,[0]),source.anchor]){
+  assert(dropTableCellText(editor,drag(),()=>point));
+  assert.deepEqual(editor.children,before);
+ }
+ assert(dropTableCellText(editor,drag(),()=>Editor.start(editor,[...path(editor),0,1])));
+ assert.deepEqual(values(editor),[['Feature','voltageAnalog ','Digital'],['Untouched','Left','Right']]);
+ assert.deepEqual(target(editor).children[0].children[1].children[0].children,[{text:'voltage',bold:true},{text:'Analog '}]);
+ assert.equal(editor.history.undos.length,1);
+ editor.undo();assert.deepEqual(editor.children,before);
+ selectTableCellRange(editor,path(editor),{x:0,y:0},{x:1,y:0});
+ assert.equal(editor.getFragment()[0].type,'table');
+ const gridDrag=drag();
+ assert.equal(gridDrag.effectAllowed,'none');
+ assert(dropTableCellText(editor,gridDrag,()=>assert.fail('Grid drag must be cancelled before finding a drop point')));
+ assert.deepEqual(editor.children,before);
 });
 
 test('leaving the table for a task checkbox clears its selection without entering cell editing',()=>{

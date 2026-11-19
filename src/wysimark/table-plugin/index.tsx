@@ -1,4 +1,5 @@
 import { Element, NodeEntry } from "slate"
+import { ReactEditor } from 'slate-react'
 
 import {
   createHotkeyHandler,
@@ -10,7 +11,7 @@ import {
 } from "../sink"
 
 import { deleteFragmentWithProtectedTypes } from "./delete-fragment"
-import { beginTableCellEdit, deleteSelectedTableAxis, installTableCellClipboard, replaceSelectedCells } from './cell-selection'
+import { beginTableCellEdit, deleteSelectedTableAxis, dropTableCellText, installTableCellClipboard, replaceSelectedCells } from './cell-selection'
 import { createTableMethods } from "./methods"
 import { normalizeTableIndexes } from "./normalize/normalize-table"
 import { normalizeTableCell } from "./normalize/normalize-table-cell"
@@ -101,6 +102,15 @@ export const TablePlugin = createPlugin<TablePluginCustomTypes>(
       },
       editableProps: {
         renderElement,
+        onDrop: event => {
+          const handled = dropTableCellText(editor, event.dataTransfer, () => {
+            if (!(event.target as HTMLElement).closest?.('td,th')) return
+            try { return ReactEditor.findEventRange(editor, event).anchor }
+            catch { return undefined }
+          })
+          if (handled) event.preventDefault()
+          return handled
+        },
         onKeyDown: createHotkeyHandler({
           /**
            * navigation

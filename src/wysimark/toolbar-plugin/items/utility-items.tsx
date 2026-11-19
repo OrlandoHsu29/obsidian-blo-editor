@@ -17,7 +17,7 @@ function indentMenu(delta:1|-1):MenuItemData {
     {title:ui(delta===1?'缩进（包含子项）':'回退（包含子项）'),icon,hotkey,
       disabled:editor=>{const depths=selectedDepths(editor);return editor.wysimark.readOnly||!depths.length||(delta===1?depths.some(depth=>depth>=32):!depths.some(depth=>depth>0))},
       action:editor=>{indentSelectedBlocks(editor,delta)}},
-    {title:ui(delta===1?'仅缩进当前块':'仅回退当前块'),icon,hotkey:delta===1?'mod+]':'mod+[',
+    {title:ui(delta===1?'仅缩进当前块':'仅回退当前块'),icon:delta===1?Icon.IncreaseBlockDepth:Icon.DecreaseBlockDepth,hotkey:delta===1?'mod+]':'mod+[',
       disabled:editor=>{const current=currentRootBlock(editor);return editor.wysimark.readOnly||!current||!canIndentBlock(current.node)||(delta===1?blockDepth(current.node)>=32:blockDepth(current.node)===0)},
       action:editor=>{indentCurrentBlock(editor,delta)}},
   ]

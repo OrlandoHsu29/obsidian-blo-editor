@@ -292,6 +292,20 @@ export const DecreaseDepth = () => (
   </TablerIcon>
 )
 
+export const IncreaseBlockDepth = () => (
+  <TablerIcon>
+    <path d="M3 12h7m-3-3 3 3-3 3" />
+    <rect x="13" y="8" width="8" height="8" rx="1.5" />
+  </TablerIcon>
+)
+
+export const DecreaseBlockDepth = () => (
+  <TablerIcon>
+    <path d="M10 12H3m3-3-3 3 3 3" />
+    <rect x="13" y="8" width="8" height="8" rx="1.5" />
+  </TablerIcon>
+)
+
 /**
  * Markdown
  */

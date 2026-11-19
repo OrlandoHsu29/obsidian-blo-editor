@@ -44,13 +44,19 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     let enteringEdit = false
     let hoverTimer: number | undefined, leaveTimer: number | undefined
     let pending: Insertion[] | undefined
-    let repairing = false
+    let repairing = false, showingInsertions = false, watchingScroll = false
     const cancelHover = () => { win.clearTimeout(hoverTimer); hoverTimer = undefined; pending = undefined }
+    const stopWatchingScroll = () => {
+      if (!watchingScroll) return
+      watchingScroll = false
+      doc.removeEventListener('scroll', hideInsertions, true)
+    }
     const hideInsertions = () => {
       cancelHover(); win.clearTimeout(leaveTimer); leaveTimer = undefined
-      setInsertions(previous => previous.length ? [] : previous)
+      stopWatchingScroll()
+      if (showingInsertions) { showingInsertions = false; setInsertions([]) }
     }
-    hideInsertions()
+    setInsertions(previous => previous.length ? [] : previous)
     const cellAt = (target: EventTarget | null) => {
       if (!isDomElement(target)) return
       const cell = (target as HTMLElement).closest('td')
@@ -141,8 +147,12 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         button.axis === next[i].axis && button.index === next[i].index && button.left === next[i].left && button.top === next[i].top)) return
       cancelHover()
       pending = next
-      setInsertions(previous => previous.length ? [] : previous)
-      hoverTimer = win.setTimeout(() => { hoverTimer = undefined; setInsertions(next) }, 220)
+      if (showingInsertions) { showingInsertions = false; setInsertions([]) }
+      if (!watchingScroll) {
+        watchingScroll = true
+        doc.addEventListener('scroll', hideInsertions, { capture: true, passive: true })
+      }
+      hoverTimer = win.setTimeout(() => { hoverTimer = undefined; showingInsertions = true; setInsertions(next) }, 220)
     }
     const move = (event: MouseEvent) => {
       if (!origin || !(event.buttons & 1)) {
@@ -183,7 +193,6 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     doc.addEventListener('mouseup', up)
     doc.addEventListener('selectionchange', synchronize)
     doc.addEventListener('keydown', key, true)
-    doc.addEventListener('scroll', dismiss, true)
     win.addEventListener('resize', dismiss)
     return () => {
       win.clearTimeout(hoverTimer); win.clearTimeout(leaveTimer)
@@ -195,7 +204,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       doc.removeEventListener('mouseup', up)
       doc.removeEventListener('selectionchange', synchronize)
       doc.removeEventListener('keydown', key, true)
-      doc.removeEventListener('scroll', dismiss, true)
+      stopWatchingScroll()
       win.removeEventListener('resize', dismiss)
     }
   }, [editor, element, readOnly])

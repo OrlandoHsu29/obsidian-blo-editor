@@ -67,10 +67,13 @@ const {useTableOverflow}=compile('src/wysimark/table-plugin/render-element/use-t
 function fixture(){
  const e=Object.assign(clock(),{refs:[],effects:[],width:320,height:160,fits:0,copies:0,probes:0,overflow:true,styles:new Map(),listeners:new Map(),windowListeners:new Map(),disconnected:0});
  const events={addEventListener:(name,fn)=>e.listeners.set(name,fn),removeEventListener:name=>e.listeners.delete(name)};
+ const viewportEvents=new Map();
+ e.viewportEvents=viewportEvents;
+ const scroller={ownerDocument:{defaultView:e.win},addEventListener:(name,fn)=>viewportEvents.set(name,fn),removeEventListener:name=>viewportEvents.delete(name)};
  Object.assign(e.win,{addEventListener:(name,fn)=>e.windowListeners.set(name,fn),removeEventListener:name=>e.windowListeners.delete(name),getComputedStyle:()=>({fontSize:'16px'}),matchMedia:()=>({matches:false}),ResizeObserver:class{constructor(fn){e.resize=fn}observe(){}disconnect(){e.disconnected++}},IntersectionObserver:class{constructor(fn){e.intersection=fn}observe(){}disconnect(){e.disconnected++}}});
  const table={rows:Array(10),get offsetWidth(){return parseFloat(e.styles.get('--blo-table-width'))||e.width},get offsetHeight(){return e.height}};
  const scroll={scrollLeft:127,dataset:{},get offsetHeight(){return e.height+(e.host.dataset.overflow==='true'?31:0)},get clientWidth(){return e.width},get scrollWidth(){return table.offsetWidth},querySelector:()=>table,...events};
- e.host={env:e,isConnected:true,dataset:{},get clientWidth(){return e.width},get offsetHeight(){return parseFloat(e.styles.get('--blo-table-hold-height'))||scroll.offsetHeight},closest:()=>null,ownerDocument:{defaultView:e.win,...events},querySelector:()=>scroll,setAttribute:()=>{},removeAttribute:()=>{},style:{setProperty:(k,v)=>e.styles.set(k,v),removeProperty:k=>e.styles.delete(k),getPropertyValue:k=>e.styles.get(k)||''}};
+ e.host={env:e,isConnected:true,dataset:{},get clientWidth(){return e.width},get offsetHeight(){return parseFloat(e.styles.get('--blo-table-hold-height'))||scroll.offsetHeight},closest:()=>scroller,ownerDocument:{defaultView:e.win,...events},querySelector:()=>scroll,setAttribute:()=>{},removeAttribute:()=>{},style:{setProperty:(k,v)=>e.styles.set(k,v),removeProperty:k=>e.styles.delete(k),getPropertyValue:k=>e.styles.get(k)||''}};
  e.table=table;e.scroll=scroll;e.render=element=>{active=e;e.element=element;e.refIndex=0;e.effectIndex=0;useTableOverflow(element)};
  e.enter=value=>{e.intersection([{isIntersecting:value}]);e.settle()};e.cleanup=()=>e.effects.forEach(effect=>effect.cleanup?.());e.render({children:[],columns:[]});return e;
 }
@@ -129,7 +132,7 @@ test('offscreen content changes wait for viewport prefetch',()=>{
  const e=fixture();e.enter(true);e.enter(false);e.render({...e.element,children:[{}]});e.settle();assert.equal(e.fits,1);e.enter(true);assert.equal(e.fits,2);e.cleanup();
 });
 test('cleanup cancels measurements, timers and all observers',()=>{
- const e=fixture();e.intersection([{isIntersecting:true}]);e.advance(1);e.frame();assert.equal(e.copies,1);e.cleanup();e.settle();assert.equal(e.copies,0);assert.equal(e.frames.size,0);assert.equal(e.timers.size,0);assert.equal(e.listeners.size,0);assert.equal(e.disconnected,2);
+ const e=fixture();e.intersection([{isIntersecting:true}]);e.advance(1);e.frame();assert.equal(e.copies,1);e.cleanup();e.settle();assert.equal(e.copies,0);assert.equal(e.frames.size,0);assert.equal(e.timers.size,0);assert.equal(e.listeners.size,0);assert.equal(e.viewportEvents.size,0);assert.equal(e.disconnected,2);
 });
 
 test('images changing row height do not restart width fitting or show the mask again',()=>{
@@ -158,7 +161,7 @@ test('scrolling pauses an existing search and resumes it without another clone',
 
 test('jumping to an unfitted table keeps its placeholder and waits for scrolling to stop',()=>{
  const e=fixture();e.intersection([{isIntersecting:true}]);
- for(let i=0;i<20;i++){e.listeners.get('scroll')({target:e.scroll});e.advance(20);e.frame();assert.equal(e.fits,0);assert.equal(e.host.dataset.tableLayout,'pending')}
+ for(let i=0;i<20;i++){e.viewportEvents.get('scroll')();e.advance(20);e.frame();assert.equal(e.fits,0);assert.equal(e.host.dataset.tableLayout,'pending')}
  e.settle();assert.equal(e.fits,1);assert.equal(e.copies,0);assert.equal(e.host.dataset.tableLayout,undefined);e.cleanup();
 });
 

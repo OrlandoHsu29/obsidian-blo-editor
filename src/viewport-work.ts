@@ -3,13 +3,38 @@ type Entry = { host: HTMLElement; work: Work; near: boolean; priority: number; s
 const queues = new WeakMap<HTMLElement, ReturnType<typeof createViewportWorkQueue>>()
 export const VIEWPORT_IDLE_MS = 80
 
+const scrollActivity = new WeakMap<HTMLElement, { until: number; consumers: number; scroll: () => void }>()
+
+/** One passive listener per note, shared by table fitting and deferred media. */
+export function observeViewportScroll(scroller: HTMLElement) {
+  let activity = scrollActivity.get(scroller)
+  if (!activity) {
+    const win = scroller.ownerDocument.defaultView!
+    const state = { until: 0, consumers: 0, scroll: () => { state.until = win.performance.now() + VIEWPORT_IDLE_MS } }
+    scroller.addEventListener('scroll', state.scroll, { passive: true })
+    scrollActivity.set(scroller, state)
+    activity = state
+  }
+  const state = activity
+  state.consumers++
+  return {
+    deadline: () => state.until,
+    dispose: () => {
+      if (--state.consumers) return
+      scroller.removeEventListener('scroll', state.scroll)
+      scrollActivity.delete(scroller)
+    },
+  }
+}
+
 /** Shared by heavy embeds: no polling, one load/resume per idle frame. */
 export function createViewportWorkQueue(scroller: HTMLElement) {
   const win = scroller.ownerDocument.defaultView!, entries = new Map<HTMLElement, Entry>(), pending = new Set<Entry>()
-  let frame = 0, timer = 0, idleUntil = 0
+  const scroll = observeViewportScroll(scroller)
+  let frame = 0, timer = 0
   const request = () => {
     if (!pending.size || frame || timer) return
-    const wait = idleUntil - win.performance.now()
+    const wait = scroll.deadline() - win.performance.now()
     if (wait > 0) timer = win.setTimeout(() => { timer = 0; request() }, wait)
     else frame = win.requestAnimationFrame(pump)
   }
@@ -27,7 +52,7 @@ export function createViewportWorkQueue(scroller: HTMLElement) {
   }
   const pump = () => {
     frame = 0
-    if (win.performance.now() < idleUntil) { request(); return }
+    if (win.performance.now() < scroll.deadline()) { request(); return }
     let next: Entry | undefined
     for (const entry of pending) if (!next || entry.priority < next.priority) next = entry
     if (next) { pending.delete(next); run(next) }
@@ -49,12 +74,6 @@ export function createViewportWorkQueue(scroller: HTMLElement) {
     }
     request()
   }, { root: scroller, rootMargin: '1000px' })
-  const scroll = () => {
-    idleUntil = win.performance.now() + VIEWPORT_IDLE_MS
-    win.clearTimeout(timer); timer = 0
-    request()
-  }
-  scroller.addEventListener('scroll', scroll, { passive: true })
   return {
     add(host: HTMLElement, work: Work) {
       const entry: Entry = { host, work, near: false, priority: 0, started: false, paused: true, revision: 0 }
@@ -63,7 +82,7 @@ export function createViewportWorkQueue(scroller: HTMLElement) {
         ++entry.revision; entries.delete(host); pending.delete(entry); intersection.unobserve(host); delete host.dataset.bloRenderPaused
         if (!entries.size) {
           intersection.disconnect(); win.cancelAnimationFrame(frame); win.clearTimeout(timer)
-          frame = timer = 0; scroller.removeEventListener('scroll', scroll); queues.delete(scroller)
+          frame = timer = 0; scroll.dispose(); queues.delete(scroller)
         }
       }
     },

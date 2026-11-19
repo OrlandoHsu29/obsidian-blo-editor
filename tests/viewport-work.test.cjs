@@ -40,6 +40,15 @@ test('cleanup cancels idle timers, queued frames and shared observers',()=>{
  const f=fixture(),item=f.add({load:assert.fail});f.enter(item.host);f.events.get('scroll')();f.frame();assert.equal(f.timers.size,1);item.dispose();assert.equal(f.frames.size,0);assert.equal(f.timers.size,0);assert.equal(f.events.size,0);assert.equal(f.disconnected,1);
 });
 
+test('tables and media share one viewport scroll listener until the last consumer leaves',()=>{
+ const f=fixture(),listener=f.events.get('scroll'),table=loaded.exports.observeViewportScroll(f.scroller);
+ const media=f.add({load:assert.fail});
+ assert.equal(typeof listener,'function');assert.equal(f.events.get('scroll'),listener);
+ f.advance(20);listener();assert.equal(table.deadline(),100);
+ media.dispose();assert.equal(f.events.get('scroll'),listener);
+ table.dispose();assert.equal(f.events.size,0);
+});
+
 test('scrollbar jumps never remask cached controls inside the existing window',async()=>{
  const f=fixture();let loads=0,pauses=0,resumes=0;const item=f.add({load(){loads++},suspend(){pauses++},resume(){resumes++}});f.enter(item.host);f.frame();await Promise.resolve();
  f.scroller.scrollTop=1600;f.events.get('scroll')();assert.equal(pauses,0);assert.equal(item.host.dataset.bloRenderPaused,undefined);

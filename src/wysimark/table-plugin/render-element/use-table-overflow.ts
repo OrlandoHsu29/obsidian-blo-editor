@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { TableElement } from '../types'
 import { createTableMeasure, fitTableWidth, runTableFit } from './table-fit'
-import { VIEWPORT_IDLE_MS } from '../../../viewport-work'
+import { observeViewportScroll, VIEWPORT_IDLE_MS } from '../../../viewport-work'
 
 const RESIZE_IDLE_MS = 120
 
@@ -13,10 +13,13 @@ export function useTableOverflow(element: TableElement) {
   useLayoutEffect(() => {
     const host = frame.current!, scroll = host.querySelector<HTMLElement>('.blo-table-scroll')!
     const table = scroll.querySelector('table')!, doc = host.ownerDocument, win = doc.defaultView!
+    const scroller = host.closest<HTMLElement>('.wysimark-editor-container')
+    const viewportScroll = scroller && observeViewportScroll(scroller)
     let near = false, dirty = true, ready = false, disposed = false
     let lastWidth = 0, lastHeight = 0, lastTableWidth = 0, lastFrameHeight = 0, observedWidth = 0
     let timer = 0, settling = 0, cancelFit: (() => void) | undefined
-    let scrollUntil = 0, resizeUntil = 0, priority = 0
+    let horizontalUntil = 0, resizeUntil = 0, priority = 0
+    const scrollDeadline = () => Math.max(horizontalUntil, viewportScroll?.deadline() ?? 0)
     let windowWidth = win.innerWidth
     let fittedWidth: number | undefined
     let measurement: ReturnType<typeof createTableMeasure> | undefined
@@ -75,7 +78,7 @@ export function useTableOverflow(element: TableElement) {
     const start = () => {
       timer = 0
       if (disposed || !near || !host.isConnected) return
-      const idle = Math.max(resizeUntil, scrollUntil + (priority > 0 ? VIEWPORT_IDLE_MS : 0))
+      const idle = Math.max(resizeUntil, scrollDeadline() + (priority > 0 ? VIEWPORT_IDLE_MS : 0))
       const wait = idle - win.performance.now()
       if (wait > 0) { schedule(wait); return }
       if (host.clientWidth < 1) return
@@ -92,7 +95,7 @@ export function useTableOverflow(element: TableElement) {
       }, error => {
         stopFit(); finish(); dirty = true
         console.error('Blo Editor: table layout failed', error)
-      }, () => priority, () => Math.max(scrollUntil, resizeUntil))
+      }, () => priority, () => Math.max(scrollDeadline(), resizeUntil))
     }
     const schedule = (delay: number) => {
       win.clearTimeout(timer); timer = 0
@@ -139,7 +142,7 @@ export function useTableOverflow(element: TableElement) {
       }
       if (near) schedule(0)
       else { win.clearTimeout(timer); timer = 0; stopFit() }
-    }, { root: host.closest('.wysimark-editor-container'), rootMargin: '1000px' })
+    }, { root: scroller, rootMargin: '1000px' })
     intersection.observe(host)
     const windowResized = () => {
       // Height-only changes do not invalidate column widths. The host observer
@@ -154,27 +157,23 @@ export function useTableOverflow(element: TableElement) {
       schedule(RESIZE_IDLE_MS)
     }
     const release = () => { if (timer && pending()) { resizeUntil = 0; win.clearTimeout(timer); start() } }
-    const scrolling = (event: Event) => {
-      const target = event.target as globalThis.Node | null
-      if (target !== scroll && !target?.contains?.(host)) return
-      scrollUntil = win.performance.now() + VIEWPORT_IDLE_MS
-      if (timer && ready && !pending()) { win.clearTimeout(timer); timer = win.setTimeout(start, VIEWPORT_IDLE_MS) }
+    const horizontalScroll = () => {
+      horizontalUntil = win.performance.now() + VIEWPORT_IDLE_MS
+      hint()
     }
-    scroll.addEventListener('scroll', hint, { passive: true })
+    scroll.addEventListener('scroll', horizontalScroll, { passive: true })
     scroll.addEventListener('pointermove', hoverScrollbar, { passive: true })
     scroll.addEventListener('pointerleave', leaveScrollbar)
     doc.addEventListener('pointerup', release, true)
-    doc.addEventListener('scroll', scrolling, { capture: true, passive: true })
     win.addEventListener('resize', windowResized)
     doc.fonts?.addEventListener('loadingdone', refresh.current)
     const fontChanged = refresh.current
     return () => {
       disposed = true; refresh.current = () => {}
       win.clearTimeout(timer); win.clearTimeout(settling); stopFit()
-      resize.disconnect(); intersection.disconnect(); scroll.removeEventListener('scroll', hint)
+      resize.disconnect(); intersection.disconnect(); viewportScroll?.dispose(); scroll.removeEventListener('scroll', horizontalScroll)
       scroll.removeEventListener('pointermove', hoverScrollbar); scroll.removeEventListener('pointerleave', leaveScrollbar)
       doc.removeEventListener('pointerup', release, true); doc.fonts?.removeEventListener('loadingdone', fontChanged)
-      doc.removeEventListener('scroll', scrolling, true)
       win.removeEventListener('resize', windowResized)
       finish()
     }

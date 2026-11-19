@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.8 — 2026-11-19
+
+### 中文
+
+- 同格拖动文字时显示可放置，离开原单元格后显示禁止。表格外的内容也不能拖进单元格覆盖文字。
+- 表格与嵌入内容共用一个笔记级滚动监听。行列插入按钮仅在等待显示或已显示时监听滚动，减少长笔记的滚动开销。
+
+### English
+
+- Show a move cursor over the source cell and block drops elsewhere. Content dragged from outside the table cannot overwrite a cell.
+- Share one scroll listener between tables and embeds in each note. Listen for scrolling to dismiss table insertion controls only while they are pending or visible.
+
 ## 0.2.7 — 2026-11-19
 
 ### 中文

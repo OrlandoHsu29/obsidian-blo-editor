@@ -94,6 +94,18 @@ test('plain text and empty quote also leave the quote on first Backspace',()=>{
  }
 });
 
+test('Backspace lifts the empty line created by Enter at the end of a quote',()=>{
+ const first=paragraph('Still quoted'),following=paragraph('Following'),editor=fixture([{...quote(first),__blockDepth:2},following],{path:[0,0,0],offset:12});
+ editor.insertBreak();
+ const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
+ backspace(editor);
+ const after=[{...quote(first),__blockDepth:2},{...paragraph(''),__blockDepth:2},following];
+ assert.deepEqual(editor.children,after);
+ assert.deepEqual(editor.selection.anchor,{path:[1,0],offset:0});
+ editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
+ editor.redo();assert.deepEqual(editor.children,after);
+});
+
 test('normal deletion within a link keeps its quote and metadata',()=>{
  const editor=fixture([quote(linkedParagraph())],{path:[0,0,1,0],offset:3});
  backspace(editor);

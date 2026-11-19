@@ -17,7 +17,9 @@ export function deleteQuotePrefix(editor: Editor): boolean {
   const block = Editor.above(editor, {
     match: node => Element.isElement(node) && Editor.isBlock(editor, node),
   })
-  if (!block || !Path.equals(block[1], [...quote[1], 0])) return false
+  if (!block || !Path.equals(Path.parent(block[1]), quote[1])) return false
+  const firstChild = block[1][block[1].length - 1] === 0
+  if (!firstChild && (block[0].type !== 'paragraph' || !Editor.isEmpty(editor, block[0]))) return false
 
   // A link's first character and the empty text before it share a visual start.
   const prefix = { anchor: Editor.start(editor, block[1]), focus: point }
@@ -29,10 +31,7 @@ export function deleteQuotePrefix(editor: Editor): boolean {
   withHistoryBatch(editor, () => {
     const depth=blockDepth(quote[0])
     if(depth>blockDepth(block[0]))Transforms.setNodes(editor,{__blockDepth:depth},{at:block[1]})
-    Transforms.unwrapNodes(editor, {
-      match: node => Element.isElement(node) && node.type === 'block-quote',
-      mode: 'lowest', split: true,
-    })
+    Transforms.liftNodes(editor, { at: block[1] })
   })
   return true
 }

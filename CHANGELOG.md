@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.7 — 2026-11-19
+
+### 中文
+
+- 支持粘贴或拖动多张图片到同一行。图片可单独调整尺寸，拖出到块间时用居中的工字线标出零缩进的插入位置。
+- 支持在并排图片之间移动光标、按回车拆行和逐张删除。删除后保留其余图片的显示尺寸及下方块间距。
+- 在引用末尾新建的空行按 Backspace，可退出该行的引用样式。缩进子菜单为当前块和包含子项的操作使用不同图标。
+- 复制单元格内选中的文字时只携带纯文本。拖动文字可在原单元格内调整词序。
+
+### English
+
+- Paste or drag multiple images into one row and resize them individually. When dragging an image out of a row, a centered drop marker shows where it will become a standalone, unindented block.
+- Move the caret between images, split an image row with Enter, and delete images individually. Remaining images keep their displayed size and spacing below the block.
+- Backspace exits the quote style on an empty line created at the end of a quote. Indentation menus use distinct icons for single-block and subtree operations.
+- Copy text selected inside a cell as plain text. Drag it within the same cell to reorder the text.
+
 ## 0.2.6 — 2026-11-18
 
 ### 中文

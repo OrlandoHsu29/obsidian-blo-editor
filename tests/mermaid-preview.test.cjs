@@ -17,7 +17,7 @@ function codeFixture(readOnly=false){
  let focused=0;
  const {CodeBlock}=compile('src/wysimark/code-block-plugin/render-element/CodeBlock.tsx',
   ['./*','../*','react','react/*','slate','slate-react'],id=>{
-   if(id==='react')return {...require('react'),useRef:()=>({current:null}),useCallback:fn=>fn};
+   if(id==='react')return {...require('react'),useId:()=> 'code-language-label',useRef:()=>({current:null}),useCallback:fn=>fn};
    if(id==='slate-react')return {useSlateStatic:()=>editor,useSelected:()=>false,useReadOnly:()=>readOnly,ReactEditor:{findPath:()=>[1],focus:()=>focused++}};
    if(id.endsWith('/use-editor-focused'))return {useEditorFocused:()=>false};
    if(id.endsWith('/use-layer'))return {useLayer:()=>({})};

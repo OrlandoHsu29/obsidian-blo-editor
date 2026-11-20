@@ -1,5 +1,5 @@
 import { ui } from "../../utils/translations"
-import { useCallback, useRef } from "react"
+import { useCallback, useId, useRef } from "react"
 import { Editor, Node, Transforms } from "slate"
 import { ReactEditor, useSelected, useSlateStatic, useReadOnly } from "slate-react"
 import { useEditorFocused } from "../../entry/use-editor-focused"
@@ -19,6 +19,7 @@ export function CodeBlock({
   children,
 }: ConstrainedRenderElementProps<CodeBlockElement>) {
   const ref = useRef<HTMLButtonElement>(null)
+  const labelId = useId()
   const editor = useSlateStatic()
   const selected = useSelected()
   const blockSelected = useBlockSelection(element)
@@ -72,8 +73,9 @@ export function CodeBlock({
         <$CodeBlockLines data-wysimark-code-lines>{children}</$CodeBlockLines>
         <$CodeBlockControls contentEditable={false} data-wysimark-code-controls>
           {selected && focused && !readOnly ? <CodeBlockActions element={element} /> : null}
-          <$CodeBlockLanguage data-wysimark-code-language type="button" disabled={readOnly} aria-label={ui("代码语言")} onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={onClick} ref={ref}>
-            <span>{element.language || "text"}</span>
+          <$CodeBlockLanguage data-wysimark-code-language type="button" disabled={readOnly} aria-labelledby={`${labelId} ${labelId}-value`} aria-haspopup="listbox" onMouseDown={event => { event.preventDefault(); event.stopPropagation() }} onClick={onClick} ref={ref}>
+            <span id={labelId} hidden>{ui("代码语言")}</span>
+            <span id={`${labelId}-value`}>{element.language || "text"}</span>
             <ChevronDownIcon />
           </$CodeBlockLanguage>
         </$CodeBlockControls>

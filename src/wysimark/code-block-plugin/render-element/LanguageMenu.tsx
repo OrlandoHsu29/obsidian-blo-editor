@@ -12,16 +12,19 @@ const $Languages = styled($Menu)`
   position: fixed;
   display: flex;
   flex-direction: column;
-  width: 240px;
+  width: 192px;
   min-width: 0;
+  padding: 4px;
+  font-size: var(--blo-popup-font-size, var(--font-ui-small, 13px));
+  line-height: 1.35;
   overflow: hidden;
   transition: none;
-  .--search { flex: none; padding: 4px 4px 8px; }
-  input { width: 100%; box-sizing: border-box; }
+  .--search { flex: none; padding: 3px 3px 5px; }
+  input { width: 100%; height: 26px; padding-inline: 6px; box-sizing: border-box; font-size: inherit; }
   .--languages { overflow-y: auto; min-height: 0; }
-  [role="option"] { padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+  [role="option"] { padding: 3px 7px; border-radius: 4px; cursor: pointer; }
   [role="option"][aria-selected="true"] { background: var(--background-modifier-hover); color: var(--text-accent); }
-  .--empty { padding: 8px 10px; color: var(--text-muted); }
+  .--empty { padding: 6px 7px; color: var(--text-muted); }
 `
 
 export function LanguageMenu({ dest, element, close }: {
@@ -29,9 +32,9 @@ export function LanguageMenu({ dest, element, close }: {
 }) {
   const editor = useSlateStatic(), id = useId()
   const panel = useRef<HTMLDivElement>(null), input = useRef<HTMLInputElement>(null)
-  const list = useRef<HTMLDivElement>(null), search = useRef<HTMLDivElement>(null)
+  const list = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState(''), [selected, setSelected] = useState(0)
-  const position = useAnchoredPanelPosition(dest, panel, { close, alignment: 'end', maxHeight: 360 })
+  const position = useAnchoredPanelPosition(dest, panel, { close, alignment: 'end', maxHeight: 270 })
   const needle = query.trim().toLowerCase()
   const matches = LanguageList.filter(language => !needle || language.includes(needle) ||
     (language === 'text' && ui('Plain text').toLowerCase().includes(needle)) ||
@@ -57,13 +60,14 @@ export function LanguageMenu({ dest, element, close }: {
           if (matches.length) setSelected((active + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length)
         } else if (event.key === 'Enter') { event.preventDefault(); if (matches[active]) choose(matches[active]) }
       }}>
-      <div className="--search" ref={search}>
+      <div className="--search">
         <input ref={input} value={query} placeholder={ui('搜索代码语言')} aria-label={ui('搜索代码语言')}
           role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={id}
           aria-activedescendant={matches.length ? `${id}-${active}` : undefined}
           onChange={event => { setQuery(event.target.value); setSelected(0) }} />
       </div>
-      <div ref={list} id={id} className="--languages" role="listbox" aria-label={ui('代码语言')}>
+      <span id={`${id}-label`} hidden>{ui('代码语言')}</span>
+      <div ref={list} id={id} className="--languages" role="listbox" aria-labelledby={`${id}-label`}>
         {matches.map((language, index) => <div key={language} id={`${id}-${index}`} role="option" aria-selected={index === active}
           onMouseEnter={() => setSelected(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(language)}>
           {language === 'text' ? `text — ${ui('Plain text')}` : language}

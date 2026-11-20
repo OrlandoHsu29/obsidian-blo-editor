@@ -6,7 +6,7 @@ const {createEditor, Editor, Node, Transforms} = require('slate');
 const {withHistory} = require('slate-history');
 const loaded = new Module('heading-numbering.cjs');
 loaded.require = id => id === 'obsidian' ? {getLanguage: () => 'en'} : require(id);
-loaded._compile(buildSync({stdin:{contents:"export * from './src/blocks/heading-numbering'; export {resolveOrderedNumbers} from './src/blocks/model'; export {parse,serialize} from './src/wysimark/convert'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text, 'heading-numbering.cjs');
+loaded._compile(buildSync({stdin:{contents:"export * from './src/blocks/heading-numbering'; export {resolveOrderedNumbers,rootCache} from './src/blocks/model'; export {parse,serialize} from './src/wysimark/convert'; export {outlineHeadings} from './src/outline'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text, 'heading-numbering.cjs');
 const {resolveOrderedNumbers, headingListState, toggleHeadingListLevel, setHeadingListStyle, convertSelectedHeadingList, deleteHeadingListPrefix, parse, serialize} = loaded.exports;
 const heading = (level, extra={}) => ({type:'heading',level,children:[{text:`Title ${level}`,bold:true}],...extra});
 const paragraph = text => ({type:'paragraph',children:[{text}]});
@@ -20,6 +20,17 @@ const fixture = nodes => {
 const labels = editor => Array.from(resolveOrderedNumbers(editor.children).numberLabels.values());
 
 const headingListLevels=editor=>headingListState(editor).levels;
+
+test('formula-only and mixed numbered headings retain their formula and source position in the outline',()=>{
+ const {outlineHeadings,rootCache}=loaded.exports;
+ const editor=fixture(parse('# Root\n\n1. ## $x+y$\n\n2. ## Energy $E=mc^2$\n\n##### Hidden'));
+ const positions=[{start:{line:2}},{start:{line:4}}];
+ const {headings}=rootCache(editor);
+ const outline=outlineHeadings([{level:1,heading:'Root'},{level:5,heading:'Hidden'}],headings,positions.map(position=>({position})));
+ assert.deepEqual(outline.map(item=>item.heading),['Root','1. $x+y$','2. Energy $E=mc^2$']);
+ assert.equal(outline[1].position,positions[0]);
+ assert.deepEqual(outline.slice(1).map(item=>item.__bloHeadingIndex),[1,2]);
+});
 
 test('subtitle letter labels survive Markdown save and reload without becoming literal text',()=>{
  const nodes=[numbered(2),numbered(5,{start:26,__numbering:'explicit'}),numbered(5),numbered(5)];

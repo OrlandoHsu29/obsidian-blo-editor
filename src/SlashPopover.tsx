@@ -23,7 +23,7 @@ export function SlashPopover() {
   const [dismissed, setDismissed] = useState('')
   const [choice, setChoice] = useState({key: '', index: 0})
   const popup = useRef<HTMLDivElement>(null)
-  const matches = filterSlashCommands(context?.query || '', integrations.drawings)
+  const matches = context ? filterSlashCommands(context.query, integrations.drawings, editor) : []
   const visible = !!context && context.key !== dismissed && matches.length > 0
   const selected = choice.key === context?.key ? Math.min(choice.index, matches.length - 1) : 0
   const choose = (index: number) => {

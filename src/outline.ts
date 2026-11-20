@@ -1,9 +1,11 @@
 import type { ListItemCache, Plugin, TFile, View } from 'obsidian'
 import { debounce } from 'obsidian'
 import type { Editor } from 'slate'
-import { Node } from 'slate'
+import { Text } from 'slate'
+import type { Descendant } from 'slate'
 import { rootCache } from './blocks/model'
 import type { BlockHeading } from './blocks/model'
+import { serializeMath } from './wysimark/math-plugin/serialize'
 type Heading={level:number;heading?:string;__bloSourceHeading?:string;__bloHeadingIndex?:number}
 type HeadingDom={heading:Heading;el?:HTMLElement}
 type OutlineView=View & {
@@ -41,6 +43,12 @@ function applyOutlineIndent(nodes:HeadingDom[],headings:Heading[]) {
   })
 }
 
+function headingText(node: Descendant): string {
+  if (Text.isText(node)) return node.text
+  if (node.type === 'math-inline') return serializeMath(node.latex)
+  return node.children.map(headingText).join('')
+}
+
 /** Decorate native input while retaining original source positions and cache objects. */
 export function outlineHeadings(headings:Heading[],blocks?:BlockHeading[],listItems?:ListItemCache[]):Heading[] {
   const aligned=blocks?.length===headings.length&&headings.every((heading,index)=>{
@@ -56,11 +64,12 @@ export function outlineHeadings(headings:Heading[],blocks?:BlockHeading[],listIt
   return blocks.flatMap((block,index)=>{
     const node=block.node
     if(node.type!=='heading')return []
+    const text=headingText(node)
     const source=aligned?headings[index]:block.listIndex===undefined?headings[nativeIndex++]:
-      {heading:Node.string(node),level:node.level,position:listItems![block.listIndex].position}
+      {heading:text,level:node.level,position:listItems![block.listIndex].position}
     if(node.level>4)return []
     return [{...source,heading:block.numberLabel===undefined?source.heading:`${block.numberLabel} ${source.heading??''}`,
-      __bloSourceHeading:Node.string(node),__bloHeadingIndex:index}]
+      __bloSourceHeading:text,__bloHeadingIndex:index}]
   })
 }
 /** Reuse the editor's numbering projection, never scan or rewrite the virtual tree DOM. */

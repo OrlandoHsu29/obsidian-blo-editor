@@ -6,15 +6,21 @@ import { editMath } from "./editing"
 import type { MathElement, MathPluginCustomTypes } from "./types"
 import { materializeTextBoundary } from "../../blocks/boundary"
 import { mathSelectionSource } from './selection-source'
+import { restoreInlineMathText, selectedInlineMath } from './inline-text'
+import { withHistoryBatch } from '../utils/with-history-batch'
+import { selectionHasHeading } from '../../blocks/heading-policy'
+import { withHeadingMathPolicy } from './heading-math'
 
 const isMath = (node: unknown): node is MathElement => Element.isElement(node) && (node.type === "math-inline" || node.type === "math-block")
 export function canInsertMath(editor: Editor): boolean {
-  return !editor.wysimark.readOnly && !!editor.selection && !Editor.above(editor, {
+  return !editor.wysimark.readOnly && !!editor.selection && !selectionHasHeading(editor) && !Editor.above(editor, {
     match: node => Element.isElement(node) && ['inline-code', 'code-block', 'html-block', 'link-definition'].includes(node.type),
   })
 }
 function insertInline(editor: Editor): boolean {
   if (!canInsertMath(editor)) return false
+  const selected = selectedInlineMath(editor)
+  if (selected) { withHistoryBatch(editor, () => restoreInlineMathText(editor, selected)); return true }
   const existing = Editor.above<MathElement>(editor, { match: isMath })
   if (existing) { editMath(editor, existing[0]); return true }
   const latex = mathSelectionSource(editor)
@@ -28,6 +34,7 @@ function insertInline(editor: Editor): boolean {
 }
 export const MathPlugin = createPlugin<MathPluginCustomTypes>((editor, _options, { createPolicy }) => {
   editor.math = { insertInline: () => insertInline(editor) }
+  withHeadingMathPolicy(editor)
   return createPolicy({
     name: "math",
     editor: {

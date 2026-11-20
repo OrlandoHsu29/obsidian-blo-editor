@@ -75,9 +75,17 @@ test('empty formatted paragraphs and subsequent typing are fully plain',()=>{
 test('source soft breaks and footnote reference metadata survive clearing',()=>{
  const e=fixture([{type:'paragraph',children:[rich('before'),{text:'\n',softBreak:true,bold:true},{text:'ref',footnote:'id',bold:true},rich('after')]}]);clearFormatting(e);const texts=[...Node.texts(e.children[0])].map(([n])=>n);assert(texts.some(n=>n.softBreak));assert(texts.some(n=>n.footnote==='id'));plain(e.children[0]);
 });
-test('clear formatting preserves image and formula nodes instead of turning them into empty prose',()=>{
+test('clear formatting preserves image and display math nodes',()=>{
  const image={type:'image-block',url:'Attachments/image.png',alt:'keep',children:[{text:''}]},math={type:'math-block',value:'x^2',children:[{text:''}]};
  const e=fixture([p('text'),image,math]);Transforms.select(e,Editor.range(e,[]));clearFormatting(e);assert.deepEqual([...Editor.nodes(e,{at:[],match:n=>n.type==='image-block'})][0][0],image);assert.deepEqual([...Editor.nodes(e,{at:[],match:n=>n.type==='math-block'})][0][0],math);
+});
+for(const mode of ['clicked','range'])test(`clearing a ${mode} inline formula restores its LaTeX without changing neighboring marks`,()=>{
+ const math={type:'math-inline',latex:'\\frac{a}{b}',children:[{text:''}]};
+ const e=fixture([{type:'paragraph',children:[rich('before '),math,rich(' after')]}]);
+ Transforms.select(e,mode==='clicked'?Editor.start(e,[0,1]):{anchor:Editor.end(e,[0,0]),focus:Editor.start(e,[0,2])});
+ history(e,()=>clearFormatting(e));
+ assert.deepEqual(e.children[0].children,[rich('before '),{text:math.latex},rich(' after')]);
+ assert.equal(Node.string(parse(serialize(e.children))[0]),`before ${math.latex} after`);
 });
 test('read-only and absent selections do nothing',()=>{
  for(const mode of ['readonly','missing']){const e=fixture([{type:'heading',level:2,children:[rich('keep')]}]),before=structuredClone(e.children);if(mode==='readonly')e.wysimark.readOnly=true;else Transforms.deselect(e);clearFormatting(e);assert.deepEqual(e.children,before);assert.equal(e.history.undos.length,0)}

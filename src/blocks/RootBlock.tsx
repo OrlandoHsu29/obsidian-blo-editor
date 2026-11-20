@@ -158,6 +158,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
   const guideDepth=Math.max(depth,quoteContentIndent(element))
   const guideLevels=guideMask?Array.from({length:guideDepth},(_,level)=>level).filter(level=>Math.floor(guideMask/2**level)%2===1):[]
   const [drop, setDrop] = useState<DropPreview | null>(null)
+  const [imageDrop,setImageDrop]=useState<ReturnType<typeof imageRowDropTarget>|null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const imageModifierClick = useRef(false)
   const foldMotion = useRef({ hidden: foldHidden, enabled: false })
@@ -246,7 +247,6 @@ export function RootBlock({ element, children }: { element: Element; children: R
       endBlockDrag(editor)
     }
   }
-  const [imageDrop,setImageDrop]=useState<ReturnType<typeof imageRowDropTarget>|null>(null)
   const sideTarget=(event:BlockDragEvent)=>{
     const state=dragging.get(editor)
     if(state?.image) {

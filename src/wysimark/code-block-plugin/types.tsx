@@ -9,7 +9,7 @@ export type BuiltInLanguage = (typeof LanguageList)[number] | 'clike' | 'markup'
 type CodeBlockMethods = {
   toggleCodeBlock: () => void
   convertCodeBlockToParagraph: () => boolean
-  createCodeBlock: (options: { language: BuiltInLanguage }) => void
+  createCodeBlock: (options?: { language: BuiltInLanguage }) => void
   setCodeBlockLanguage: (
     language: BuiltInLanguage,
     options?: { at?: BetterAt }

@@ -9,6 +9,7 @@
 - 在分割线下方的空行按 Backspace，会先删除空行并选中分割线。再按一次才删除分割线。
 - 共同功能跟随 Obsidian 原生快捷键，任务列表等 Blo 专用快捷键继续独立配置。
 - 缩小代码语言菜单，去掉语言按钮的悬浮提示。
+- 新建代码块沿用当前笔记中上一次手动选择的语言。重新打开笔记时，默认语言恢复为 `text`。
 
 ### English
 
@@ -17,6 +18,7 @@
 - Backspace on an empty line below a divider removes the line and selects the divider. Press again to delete the divider.
 - Follow Obsidian's native hotkeys for shared commands. Blo-specific shortcuts such as task-list formatting remain configurable separately.
 - Make the code language menu more compact and remove the language button tooltip.
+- New code blocks use the last language manually selected in the current note. Reopening the note resets the default to `text`.
 
 ## 0.2.9 — 2026-11-20
 

@@ -2,7 +2,7 @@ import { Editor, Element, Transforms } from "slate"
 
 import { BetterAt, findElementUp } from "../../sink"
 
-import { BuiltInLanguage } from "../types"
+import type { BuiltInLanguage, CodeBlockElement } from "../types"
 
 /**
  * Set the current CodeBlock's language if the selection is currently in a
@@ -13,12 +13,13 @@ export function setCodeBlockLanguage(
   language: BuiltInLanguage,
   options: { at?: BetterAt } = {}
 ): boolean {
-  const entry = findElementUp(
+  if (editor.wysimark.readOnly) return false
+  const entry = findElementUp<CodeBlockElement>(
     editor,
     (el) => Element.isElement(el) && el.type === "code-block",
     { at: options.at }
   )
-  if (!entry) return false
+  if (!entry || entry[0].language === language) return false
   Transforms.setNodes(editor, { language }, { at: entry[1] })
   return true
 }

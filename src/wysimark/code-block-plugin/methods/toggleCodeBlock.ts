@@ -3,10 +3,11 @@ import { Editor, Node, Path, Range, Transforms } from "slate"
 import { findElementUp, insertRootElement } from "../../sink"
 import { isListItem } from "../../list-plugin"
 import type { ListItemElement } from "../../list-plugin"
+import type { BuiltInLanguage } from "../types"
 import { convertCodeBlockToParagraph } from "./convertCodeBlockToParagraph"
 import { createCodeBlock } from "./createCodeBlock"
 
-export function toggleCodeBlock(editor: Editor) {
+export function toggleCodeBlock(editor: Editor, language: BuiltInLanguage) {
   if (convertCodeBlockToParagraph(editor)) return
   const listEntry = findElementUp<ListItemElement>(editor, isListItem)
   if (listEntry && !listEntry[0].blockChildren && editor.selection &&
@@ -23,7 +24,7 @@ export function toggleCodeBlock(editor: Editor) {
     const after = expanded ? fragment({ anchor: end, focus: Editor.end(editor, path) }) : []
     const children = [
       ...(before.length ? [{ type: 'paragraph' as const, children: before }] : []),
-      { type: 'code-block' as const, language: 'text', children: selected.split('\n').map(text => ({ type: 'code-block-line' as const, children: [{ text }] })) },
+      { type: 'code-block' as const, language, children: selected.split('\n').map(text => ({ type: 'code-block-line' as const, children: [{ text }] })) },
       ...(after.length ? [{ type: 'paragraph' as const, children: after }] : []),
     ]
     const codeIndex = before.length ? 1 : 0
@@ -48,7 +49,7 @@ export function toggleCodeBlock(editor: Editor) {
       .join("\n")
     insertRootElement(editor, {
       type: "code-block",
-      language: "text",
+      language,
       children: text.split("\n").map((line) => ({
         type: "code-block-line",
         children: [{ text: line }],
@@ -56,5 +57,5 @@ export function toggleCodeBlock(editor: Editor) {
     }, { select: true })
     return
   }
-  createCodeBlock(editor, { language: "text" })
+  createCodeBlock(editor, { language })
 }

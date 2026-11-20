@@ -31,67 +31,33 @@ test('small pointer jitter is suppressed while real motion remains responsive',(
  assert.equal(trail.sample(2).strokes[0].points.length,1);
  trail.move(30,0,3);const end=trail.sample(3).strokes[0].points.at(-1);assert(end.x>29&&end.x<30);
 });
-test('release completes in a fixed duration regardless of gesture length',()=>{
- for(const length of [40,400,4000]){
-  const trail=new LaserTrail();trail.begin(0,0,0);trail.move(length,0,100);
-  const before=trail.sample(200);trail.end(200);assert.deepEqual(trail.sample(200),before);
-  trail.end(500);assert.equal(trail.sample(200+trail.releaseDelay+trail.releaseDuration*0.5).strokes[0].progress,0.5);
-  assert.equal(trail.sample(200+trail.releaseDelay+trail.releaseDuration-1).active,true);assert.equal(trail.sample(200+trail.releaseDelay+trail.releaseDuration).active,false);
- }
-});
-test('release sweeps forward and narrows the body with the same accelerating progress',()=>{
- const trail=new LaserTrail();trail.begin(0,0,0);trail.move(400,0,100);trail.end(200);
+test('release thins immediately and a new stroke can overlap it',()=>{
+ const trail=new LaserTrail();trail.begin(0,0,0);trail.move(400,0,100);
  const draw=at=>{const s=trail.sample(at).strokes[0];return laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime,s.progress)};
- const duration=trail.releaseDuration,start=200+trail.releaseDelay,initial=draw(200),middle=draw(start+duration*0.5),later=draw(start+duration*0.7);
- assert(Math.abs(middle[0].x-100)<1);assert(later[0].x>middle[0].x);
+ const initial=draw(200);
+ trail.end(200);assert.deepEqual(draw(200),initial);
  const width=outline=>Math.max(...outline.map(p=>Math.abs(p.y)));
- assert(Math.abs(width(middle)/width(initial)-0.75)<0.001);
- assert(Math.abs(width(later)/width(initial)-0.51)<0.001);
- const next=draw(start+duration*0.7+1);assert(next[0].x>later[0].x&&next[0].x-later[0].x<1);
- trail.begin(800,0,start+duration*0.71);const strokes=trail.sample(start+duration*0.75).strokes;
- assert.equal(strokes.length,2);assert.equal(strokes[1].progress,0);assert(strokes[0].progress>0.7);
+ assert(width(draw(201))<width(initial));
+ assert(Math.abs(width(draw(500))/width(initial)-0.5)<0.001);
+ assert.equal(draw(500)[0].x,initial[0].x);
+ trail.begin(800,0,550);
+ assert.equal(trail.sample(600).strokes.length,2);
+ assert.equal(trail.sample(800).strokes.length,1);
 });
-test('release holds the exact visible trail briefly before sweeping and thinning',()=>{
- const trail=new LaserTrail();trail.begin(0,0,0);trail.move(400,0,100);trail.end(200);
- const initial=trail.sample(200).strokes;
- assert.deepEqual(trail.sample(200+trail.releaseDelay-1).strokes,initial);
- assert.deepEqual(trail.sample(200+trail.releaseDelay).strokes,initial);
- assert(trail.sample(200+trail.releaseDelay+10).strokes[0].progress>0);
-});
-test('release inherits an already moving tail speed without pausing or slowing down',()=>{
+
+test('release keeps a moving tail in place while older ink gets thinner first',()=>{
  const trail=new LaserTrail();trail.begin(0,0,0);trail.move(1000,0,1);
- const heldX=at=>{const s=trail.sample(at).strokes[0];return laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime)[0].x};
- const before=heldX(1499),atRelease=heldX(1500),velocity=atRelease-before;
+ const draw=at=>{const s=trail.sample(at).strokes[0];return laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime,s.progress)};
+ const before=draw(1499),initial=draw(1500);
+ assert(initial[0].x>before[0].x);
  trail.end(1500);
- const releasedX=at=>{const s=trail.sample(at).strokes[0];return laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime,s.progress,s.initialRate)[0].x};
- assert(Math.abs(releasedX(1500)-atRelease)<1e-9);
- const first=releasedX(1501),second=releasedX(1502);
- assert(first-atRelease>=velocity);assert(first-atRelease<velocity*1.02);
- assert(second-first>first-atRelease);
- const later=releasedX(1600),next=releasedX(1601);assert(next-later>second-first);
-});
-test('a nearly consumed held trail finishes sooner instead of dropping below its current speed',()=>{
- const trail=new LaserTrail();trail.begin(0,0,0);trail.move(1000,0,1);trail.end(3190);
- const s=trail.sample(3191).strokes[0],outline=laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime,s.progress,s.initialRate);
- assert(outline[0].x>995.5);assert.equal(trail.sample(3200).active,false);
-});
-test('long and short trails sweep the same fraction in the release duration with increasing speed',()=>{
- for(const length of [40,400,4000]){
-  const points=[{x:0,y:0,time:0},{x:length,y:0,time:100}];
-  const at=p=>laserOutline(points,200,1200,p);
-  const a=at(0.25),b=at(0.5),c=at(0.75),late=at(0.95);
-  assert(Math.abs(a[0].x/length-0.0625)<1e-9);
-  assert(Math.abs(b[0].x/length-0.25)<1e-9);
-  assert(Math.abs(c[0].x/length-0.5625)<1e-9);
-  assert(c[0].x-b[0].x>b[0].x-a[0].x);
-  // Short and long strokes narrow by the same fraction, independently of arc length.
-  const width=outline=>Math.max(...outline.map(p=>Math.abs(p.y)));
-  assert(Math.abs(width(a)/1.8-0.9375)<1e-9);
-  assert(Math.abs(width(b)/1.8-0.75)<1e-9);
-  assert(Math.abs(width(c)/1.8-0.4375)<1e-9);
-  assert(Math.abs(width(late)/1.8-0.0975)<1e-9);
-  assert.deepEqual(at(1),[]);
- }
+ assert.deepEqual(draw(1500),initial);
+ const left=outline=>outline.slice(0,(outline.length-7)/2);
+ const middle=left(draw(1800)),late=left(draw(2040));
+ assert.deepEqual(middle.map(p=>p.x),left(initial).map(p=>p.x));
+ assert(middle.slice(1).every(p=>p.y>0));
+ assert(late.slice(1,4).every(p=>p.y===0));assert(late.at(-1).y>0);
+ assert.equal(trail.sample(2100).active,false);
 });
 test('a sparse straight trail erases continuously between input samples',()=>{
  const trail=new LaserTrail();trail.begin(0,0,0);trail.move(100,0,1);trail.move(200,0,2);trail.move(300,0,3);
@@ -117,5 +83,41 @@ test('separate strokes never acquire a connecting line',()=>{
 });
 test('long pointer bursts have bounded memory and per-frame drawing work',()=>{
  const trail=new LaserTrail();trail.begin(0,0,0);for(let i=0;i<10000;i++)trail.move(i,i,i/100);
- assert.equal(trail.sample(100).strokes[0].points.length,512);
+ const points=trail.sample(100).strokes[0].points;
+ assert(points.length<=512);assert.equal(points[0].x,0);
+ assert(points.at(-1).time<2200);
+});
+
+test('dense held trails ramp up through both configured rates',()=>{
+ const trail=new LaserTrail();trail.begin(0,0,0);
+ const cutoff=time=>trail.sample(time).strokes[0].cutoff;
+ for(let i=1;i<=319;i++)trail.move(i*3,0,i);
+ const first=cutoff(319);
+ assert.equal(cutoff(329)-first,12.5);
+ for(let i=330,count=320;count<=415;i++,count++)trail.move(count*3,0,i);
+ const second=cutoff(425);
+ assert(Math.abs(cutoff(435)-second-16)<1e-9);
+});
+
+test('a long held stroke still recedes while the pointer stays stationary',()=>{
+ const trail=new LaserTrail();trail.begin(0,0,0);
+ for(let time=1;time<=4000;time++)trail.move(time*1.5,0,time);
+ const tail=time=>{const s=trail.sample(time).strokes[0];return laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime)[0].x};
+ const before=tail(4000),after=tail(4016);
+ assert(after>before);assert(Math.abs(tail(4032)-after-(after-before))<0.5);
+});
+
+test('resuming preserves one ribbon and restores full tip width immediately after expiry',()=>{
+ const trail=new LaserTrail();trail.begin(0,0,0);trail.move(100,0,50);
+ const initialTip=trail.sample(50).strokes[0].points.at(-1);
+ assert.equal(trail.sample(1500).active,false);
+ trail.move(115,0,1510);
+ const draw=time=>{
+  const strokes=trail.sample(time).strokes;assert.equal(strokes.length,1);
+  const s=strokes[0],ribbon=laserOutline(s.points,s.cutoff+trail.lifetime,trail.lifetime);
+  assert(Math.max(...ribbon.map(point=>point.y))>1.79);
+  return s.points;
+ };
+ assert.equal(draw(1510)[0].x,initialTip.x);
+ trail.move(200,0,1910);assert.equal(draw(1910).length,3);
 });

@@ -205,8 +205,8 @@ export class PresentationMode {
     context.clearRect(0, 0, this.width, this.height)
     context.save(); context.translate(-this.scrollX, -this.scrollY)
     const now = this.win.performance.now(), sample = this.trail.sample(now)
-    for (const { points, progress, cutoff, initialRate } of sample.strokes) {
-      const outline = laserOutline(points, cutoff + this.trail.lifetime, this.trail.lifetime, progress, initialRate)
+    for (const { points, progress, cutoff } of sample.strokes) {
+      const outline = laserOutline(points, cutoff + this.trail.lifetime, this.trail.lifetime, progress)
       if (!outline.length) continue
       context.fillStyle = '#ff232d'; context.beginPath(); context.moveTo(outline[0].x, outline[0].y)
       for (let i = 1; i < outline.length; i++) context.lineTo(outline[i].x, outline[i].y)

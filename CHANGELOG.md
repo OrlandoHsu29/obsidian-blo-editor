@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.10 — 2026-11-20
+
+### 中文
+
+- 浏览器粘贴保留代码语言、缩进和换行，并去掉列表到正文之间多出的空行。
+- 现有标题中的行内公式保留并显示在大纲中。标题禁止新建行内公式，粘贴或转换时保留 LaTeX 原文。在正文中再次按行内公式快捷键，或对选中的公式清除格式，可恢复为普通文字。
+- 在分割线下方的空行按 Backspace，会先删除空行并选中分割线。再按一次才删除分割线。
+- 共同功能跟随 Obsidian 原生快捷键，任务列表等 Blo 专用快捷键继续独立配置。
+- 缩小代码语言菜单，去掉语言按钮的悬浮提示。
+
+### English
+
+- Preserve code language, indentation, and line breaks when pasting from a browser. Remove extra blank rows between lists and the following prose.
+- Existing inline formulas in headings remain visible in the outline. New formulas in headings are disabled, and pasted or converted headings preserve the LaTeX as text. Toggle a selected inline formula in the body or clear its formatting to restore its source as text.
+- Backspace on an empty line below a divider removes the line and selects the divider. Press again to delete the divider.
+- Follow Obsidian's native hotkeys for shared commands. Blo-specific shortcuts such as task-list formatting remain configurable separately.
+- Make the code language menu more compact and remove the language button tooltip.
+
 ## 0.2.9 — 2026-11-20
 
 ### 中文

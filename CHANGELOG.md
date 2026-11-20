@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.9 — 2026-11-20
+
+### 中文
+
+- 修复纯图标链接右侧的光标和正文输入。带标题的链接可以在图标和标题之间落下光标并从第一个字开始输入，左右方向键经过这个位置。Backspace 先选中整个链接，再按一次删除。
+- 标题清除自身标记后可以向上合并。标题和正文合并到空标题或列表项时，保留上一行的标题级别或列表符号。
+- 演示激光笔在持续绘制时限制轨迹点数，短暂停留后可接着画，松开时轨迹逐渐变细并消失。
+
+### English
+
+- Fix the caret and plain-text input after icon-only links. For titled links, click or use the arrow keys to reach the gap between the icon and title and type at the start of the title. Backspace selects the link first and deletes it on the next press.
+- Backspace can join a heading to the preceding line after clearing its own marker. Joining a heading or paragraph into an empty heading or a list item keeps the preceding heading level or list marker.
+- Bound the laser pointer trail during long presentation gestures, let drawing resume after a pause, and taper the trail smoothly on release.
+
 ## 0.2.8 — 2026-11-19
 
 ### 中文

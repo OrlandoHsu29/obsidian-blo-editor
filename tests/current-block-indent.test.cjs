@@ -29,14 +29,16 @@ test('a media boundary caret operates on its owning block',()=>{
  const e=fixture();e.children=[{type:'image-block',url:'manual.pdf',children:[{text:''}]},{type:'paragraph',__collapsible:true,children:[{text:''}]},p('Following',0)];Transforms.select(e,Editor.start(e,[1]));
  assert.equal(indentCurrentBlock(e,1),true);assert.equal(blockDepth(e.children[0]),1);assert.equal(blockDepth(e.children[1]),0);assert.equal(blockDepth(e.children[2]),0);
 });
-test('bracket command IDs and effective bindings use only the current block',()=>{
+test('native indentation bindings use only the current Blo block',()=>{
  const e=fixture(),defaults=new Map(),custom=new Map();
- const plugin={manifest:{id:'blo-editor'},app:{hotkeyManager:{getHotkeys:id=>custom.get(id),getDefaultHotkeys:id=>defaults.get(id),printHotkeyForCommand:()=>''}},addCommand:c=>defaults.set('blo-editor:'+c.id,c.hotkeys)};
+ custom.set('editor:indent-list',[{key:']',modifiers:['Mod']}]);custom.set('editor:unindent-list',[{key:'[',modifiers:['Mod']}]);
+ const plugin={manifest:{id:'blo-editor'},app:{commands:{commands:{'editor:indent-list':{},'editor:unindent-list':{}}},hotkeyManager:{getHotkeys:id=>custom.get(id),getDefaultHotkeys:id=>defaults.get(id),printHotkeyForCommand:()=>''}},addCommand:c=>defaults.set('blo-editor:'+c.id,c.hotkeys)};
  const commands=installEditorHotkeys(plugin,()=>e),event=key=>({key,code:'',ctrlKey:true,metaKey:false,altKey:false,shiftKey:false,isComposing:false,preventDefault(){this.prevented=true},stopPropagation(){}});
  const press=event(']');assert.equal(commands.handle(e,press),true);assert.equal(press.prevented,true);assert.deepEqual(e.children.map(blockDepth),[3,3,4,1]);
  commands.handle(e,event('['));assert.deepEqual(e.children.map(blockDepth),[2,3,4,1]);
  assert(editorCommands().find(c=>c.id==='indent-block').name.includes('current block'));
- custom.set('blo-editor:indent-block',[{key:'F8',modifiers:[]}]);commands.handle(e,event(']'));assert.deepEqual(e.children.map(blockDepth),[2,3,4,1]);
+ assert.equal(defaults.has('blo-editor:indent-block'),false);
+ custom.set('editor:indent-list',[{key:'F8',modifiers:[]}]);commands.handle(e,event(']'));assert.deepEqual(e.children.map(blockDepth),[2,3,4,1]);
  const reassigned={...event('F8'),ctrlKey:false};assert.equal(commands.handle(e,reassigned),true);assert.deepEqual(e.children.map(blockDepth),[3,3,4,1]);
 });
 test('indent and outdent buttons only open two independently enabled scope choices',()=>{

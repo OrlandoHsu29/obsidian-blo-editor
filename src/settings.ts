@@ -25,6 +25,7 @@ export type EditorSettings = {
   autoLinkTitle: boolean
   showListGuides: boolean
   blockSelectShortcut: boolean
+  nativeShortcutMigrationVersion?: number
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {

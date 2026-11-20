@@ -13,7 +13,6 @@ import type { Editor } from 'slate';
 import { ReactEditor } from 'slate-react';
 import { canOpenSlashMenu } from './slash-menu';
 import { applyTextColor, toggleCurrentTextColor } from './wysimark/marks-plugin/methods/text-color';
-import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting';
 import { isDrawingFile, openDrawing } from './drawings';
 import { installDrawingNavigation } from './drawing-navigation';
 import { mountPresentationOverlay } from './presentation/navigation';
@@ -24,7 +23,6 @@ import { IntegrationPreferences } from './integration-preferences';
 import { ensureOptionalPlugin, optionalPluginManager, OPTIONAL_PLUGINS } from './optional-integrations';
 import { isMemoPanelLeaf, isMemoPanelDocument, memoPanelEnabled, memoPanelStatus, popoutDocument, toggleMemoPanel } from './memo-panel';
 import { MemoPanelSetupModal, setupMemoPanel } from './memo-panel-setup';
-import { canInsertMath } from './wysimark/math-plugin';
 import { writeAiSkill } from './ai-skill';
 import { writeDirectoryRules } from './ai-directory-rules';
 
@@ -146,24 +144,6 @@ export default class BloEditorPlugin extends Plugin {
       if (!checking) new NoteExportModal(view).open();
       return true;
     }});
-    this.addCommand({id:'clear-formatting',name:ui("清除格式"),checkCallback:checking=>{
-      const view=this.app.workspace.getActiveViewOfType(BloView);if(!view?.editor||view.readOnly)return false;
-      if(!checking)clearFormatting(view.editor);return true;
-    }});
-    this.addCommand({ id: 'insert-inline-math', name: ui('插入行内公式'), hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'm' }], checkCallback: checking => {
-      const view = this.app.workspace.getActiveViewOfType(BloView);
-      if (!view?.editor || view.readOnly || !canInsertMath(view.editor)) return false;
-      if (!checking) view.editor.math.insertInline();
-      return true;
-    }});
-    for (const [id, name, key, replace] of [['find-text',ui("查找当前文档"),'f',false],['replace-text',ui("替换当前文档"),'h',true]] as const) {
-      this.addCommand({id, name, hotkeys:[{modifiers:['Mod'],key}], checkCallback:checking=>{
-        const view=this.app.workspace.getActiveViewOfType(BloView);
-        if (!view?.editor) return false;
-        if (!checking) view.showSearch(replace);
-        return true;
-      }});
-    }
     this.addCommand({id: 'slash-menu', name: ui("打开简洁命令菜单"), checkCallback: checking => {
       const view = this.app.workspace.getActiveViewOfType(BloView);
       if (!view?.editor || !canOpenSlashMenu(view.editor)) return false;
@@ -226,21 +206,17 @@ export default class BloEditorPlugin extends Plugin {
       const file = leaf.view.currentFile; await leaf.view.saveFile(); this.nativeLeaves.add(leaf);
       await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
     }});
-    this.addCommand({ id: 'toggle-reading', name: ui("切换富文本编辑与阅读"), hotkeys: [{modifiers:['Mod','Alt'],key:'p'}], callback: async () => {
-      const leaf = this.app.workspace.activeLeaf;
-      if (!leaf) return;
-      if (leaf.view instanceof BloView) { await leaf.view.editor?.wysimark.toggleReading?.(); return; }
-      if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
-      if (isDrawingFile(this.app, leaf.view.file)) return;
-      const file = leaf.view.file, mode = leaf.view.getMode(); await leaf.view.save();
-      if (this.settings.restrictExistingBloTabs && !this.isFileInEditingScope(file)) {
-        await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
-        return;
-      }
-      await leaf.setViewState({ type: VIEW_TYPE_BLO, state: { file: file.path, mode: mode === 'preview' ? 'source' : 'preview' }, active: true });
-    }});
-
     this.editorHotkeys = installEditorHotkeys(this, () => this.app.workspace.getActiveViewOfType(BloView)?.editor ?? undefined);
+    if (!this.settings.nativeShortcutMigrationVersion) {
+      try {
+        if (await this.editorHotkeys.migrateClearedNativeBindings()) {
+          this.settings.nativeShortcutMigrationVersion = 1;
+          await this.saveData(this.settings);
+        }
+      } catch (error) {
+        console.error('Blo Editor: could not migrate native shortcuts', error);
+      }
+    }
 
     // Listen for active file changes
     this.registerEvent(

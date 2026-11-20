@@ -114,6 +114,14 @@ test('normal deletion within a link keeps its quote and metadata',()=>{
  assert.equal(Node.string(editor.children[0]),'Exmple');
 });
 
+test('Backspace selects a link later in quoted text without changing the quote',()=>{
+ const editor=fixture([quote({...linkedParagraph(),children:[{text:'Before。'},link(),{text:''}]})],{path:[0,0,1,0],offset:0});
+ const before=structuredClone(editor.children);
+ backspace(editor);
+ assert.deepEqual(editor.children,before);
+ assert.deepEqual(editor.selection,{anchor:{path:[0,0,0],offset:7},focus:{path:[0,0,2],offset:0}});
+});
+
 test('later quoted paragraphs still merge within their quote',()=>{
  const editor=fixture([quote(paragraph('First!'),linkedParagraph())],{path:[0,1,0],offset:0});
  backspace(editor);

@@ -3,7 +3,8 @@ import { Editor, Element as SlateElement, Node, Path, Point, Range, Text } from 
 import { ReactEditor } from 'slate-react'
 import { isPointerSelecting, mediaRangeFromPointer, pointerRangeFromPoint, tableEdgeRangeFromPointer, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
 import { mediaContentSelector } from '../../blocks/structured-block'
-import { pointBeforeLink, selectLink } from './link-keyboard'
+import { prepareLinkBoundaryInput } from './link-input'
+import { isIconOnlyLink, pointAfterLink, pointBeforeLink, selectLink } from './link-keyboard'
 
 /** Shared geometry for starting a gesture and extending one across the icon. */
 export function linkIconHit(editor: Editor, link: HTMLAnchorElement, x: number, y: number) {
@@ -17,9 +18,16 @@ export function linkIconHit(editor: Editor, link: HTMLAnchorElement, x: number, 
   const pointedLine = doc.caretRangeFromPoint(x, y)?.getBoundingClientRect()
   if (pointedLine?.height && pointedLine.bottom <= line.top && y <= pointedLine.bottom) return
   if (pointedLine?.height && pointedLine.top >= line.bottom && y >= pointedLine.top) return
-  const label = link.querySelector('.wysimark-link-label')?.getClientRects()[0]
+  const anchor = ReactEditor.toSlateNode(editor, link)
+  const iconOnly = isIconOnlyLink(anchor)
+  const label = iconOnly ? undefined : link.querySelector('.wysimark-link-label')?.getClientRects()[0]
+  if (x > box.right && x <= (label?.left ?? line.right)) {
+    const path = ReactEditor.findPath(editor, anchor)
+    const gap = iconOnly ? pointAfterLink(editor, path) : Editor.start(editor, path)
+    return { path, gap, before: false, overLabel: false }
+  }
   if (x > Math.max(box.right, label?.right ?? box.right)) return
-  const path = ReactEditor.findPath(editor, ReactEditor.toSlateNode(editor, link))
+  const path = ReactEditor.findPath(editor, anchor)
   const before = pointBeforeLink(editor, path)
   // A preceding whitespace run is visually part of the gap, but Chromium can
   // map a press there to the label rather than the real leading text boundary.
@@ -30,7 +38,7 @@ export function linkIconHit(editor: Editor, link: HTMLAnchorElement, x: number, 
   const edge = caret.getBoundingClientRect()
   const left = edge.height && edge.top < box.bottom && edge.bottom > box.top ? Math.min(line.left, edge.left) : line.left
   if (x < left - 1) return
-  return { path, before: x <= box.left + box.width * 2 / 3,
+  return { path, gap: undefined, before: x <= box.left + box.width * 2 / 3,
     overLabel: x > Math.max(box.right, label?.left ?? box.right) }
 }
 
@@ -73,6 +81,12 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   }
   if (startLink && host.contains(startLink)) {
     const hit = linkIconHit(editor, startLink, x, y)
+    if (hit?.gap) {
+      event.stopPropagation()
+      const cleanup = startPointerSelection(editor, hit.gap, event)
+      prepareLinkBoundaryInput(editor, doc)
+      return cleanup
+    }
     if (hit && !hit.overLabel) {
       event.stopPropagation()
       const cleanup = startPointerSelection(editor, pointBeforeLink(editor, hit.path), event)
@@ -109,7 +123,7 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
     let current: Range | null | undefined
     // The icon's margins and leading edge still belong to its selection boundary.
     // Hit testing the painted glyph alone drops the icon when moving farther left.
-    let target: { path: number[]; before: boolean } | undefined
+    let target: ReturnType<typeof linkIconHit>
     for (const link of new Set([hit, focused, lastLink])) {
       if (!link || !host.contains(link)) continue
       const hit = linkIconHit(editor, link, event.clientX, event.clientY)
@@ -133,7 +147,9 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
     // Chromium can restart its native drag anchor at the label's first text
     // point after crossing contentEditable=false. Keep the original anchor
     // throughout the gesture, including after the pointer leaves the icon.
-    const range = tableEdgeRange ?? blockRange ?? (target ? linkIconSelectionRange(editor, target.path, anchor.current, target.before) :
+    const linkRange = target?.gap ? { anchor: anchor.current, focus: target.gap } :
+      target && linkIconSelectionRange(editor, target.path, anchor.current, target.before)
+    const range = tableEdgeRange ?? blockRange ?? linkRange ?? (
       managedDrag ? pointerRangeFromPoint(editor,host,event.clientX,event.clientY,anchor.current) :
       current ? { anchor: anchor.current, focus: current.focus } : undefined)
     if (!range) return

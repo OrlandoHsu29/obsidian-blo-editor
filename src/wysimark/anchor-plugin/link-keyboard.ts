@@ -1,4 +1,5 @@
 import { Editor, Element, Node, Path, Point, Range, Text, Transforms } from 'slate'
+import { quotePrefixBoundary } from '../block-quote-plugin/delete-backward'
 
 const isAnchor = (node: Node) => Element.isElement(node) && node.type === 'anchor'
 /** Blank AI citations still have a visible link icon, even with no Slate text. */
@@ -14,6 +15,7 @@ function outsideLink(editor: Editor, path: Path, before: boolean): Point {
 }
 
 export const pointBeforeLink = (editor: Editor, path: Path) => outsideLink(editor, path, true)
+export const pointAfterLink = (editor: Editor, path: Path) => outsideLink(editor, path, false)
 
 export type LinkSelection = { full: boolean; icon: boolean; text: Range | null; start: Point | null }
 export const noLinkSelection: LinkSelection = { full: false, icon: false, text: null, start: null }
@@ -55,7 +57,7 @@ function linkBeforeCaret(editor: Editor, at?: Point): Path | undefined {
   if (!at && (!selection || !Range.isCollapsed(selection))) return
   const point = at ?? selection!.anchor
   const inside = Editor.above(editor, { at: point, match: isAnchor })
-  if (inside && Point.equals(point, Editor.end(editor, inside[1]))) return inside[1]
+  if (inside && (isIconOnlyLink(inside[0]) || Point.equals(point, Editor.end(editor, inside[1])))) return inside[1]
   if (inside || point.offset !== 0 || point.path[point.path.length - 1] === 0) return
   const previous = Path.previous(point.path)
   if (Node.has(editor, previous) && isAnchor(Node.get(editor, previous))) return previous
@@ -65,9 +67,6 @@ function linkBeforeCaret(editor: Editor, at?: Point): Path | undefined {
 export function pointAfterLinkAtEnd(editor: Editor, range = editor.selection): Point | undefined {
   if (!range || !Range.isCollapsed(range)) return
   const path = linkBeforeCaret(editor, range.anchor)
-  // Replacing a selected label temporarily leaves an empty link. That is an
-  // editing position, rather than the visible right edge of an existing label.
-  if (path && Path.isAncestor(path, range.anchor.path) && Node.string(Node.get(editor, path)) === '') return
   if (path) return outsideLink(editor, path, false)
 }
 
@@ -81,6 +80,13 @@ function linkAfterCaret(editor: Editor, at?: Point): Path | undefined {
   if (inside || point.offset !== Editor.leaf(editor, point)[0].text.length) return
   const next = Path.next(point.path)
   if (Node.has(editor, next) && isAnchor(Node.get(editor, next))) return next
+}
+
+export function linkAtLabelStart(editor: Editor): Path | undefined {
+  const selection = editor.selection
+  if (!selection || !Range.isCollapsed(selection) || selection.anchor.offset !== 0) return
+  const link = Editor.above(editor, { at: selection.anchor, match: isAnchor })
+  if (link && Editor.isStart(editor, selection.anchor, link[1]) && !isIconOnlyLink(link[0])) return link[1]
 }
 
 export function selectedLink(editor: Editor): Path | undefined {
@@ -114,17 +120,32 @@ export function handleLinkKey(editor: Editor, key: string): boolean {
     }
     return true
   }
+  if (key === 'ArrowLeft' || key === 'Backspace') {
+    const start = linkAtLabelStart(editor)
+    if (start) {
+      if (key === 'Backspace') {
+        if (quotePrefixBoundary(editor)) return false
+        selectLink(editor, start)
+      }
+      else Transforms.select(editor, pointBeforeLink(editor, start))
+      return true
+    }
+  }
   const link = key === 'ArrowRight' || key === 'Delete' ? linkAfterCaret(editor) : linkBeforeCaret(editor)
   if (!link) return false
+  const iconOnly = isIconOnlyLink(Node.get(editor, link))
+  if (key === 'ArrowRight' && !iconOnly && !Path.isAncestor(link, editor.selection.anchor.path)) {
+    Transforms.select(editor, Editor.start(editor, link))
+    return true
+  }
   // The shared right-edge caret is outside the link. Moving left must skip its
   // equivalent inside endpoint, otherwise selection canonicalization traps it.
-  if (key === 'ArrowLeft' && !Path.isAncestor(link, editor.selection.anchor.path) && !isIconOnlyLink(Node.get(editor, link))) {
+  if (key === 'ArrowLeft' && !Path.isAncestor(link, editor.selection.anchor.path) && !iconOnly) {
     const point = Editor.before(editor, Editor.end(editor, link), { unit: 'character' })
-    if (point && Path.isAncestor(link, point.path)) { Transforms.select(editor, point); return true }
+    Transforms.select(editor, point && Path.isAncestor(link, point.path) ? point : Editor.start(editor, link))
+    return true
   }
-  // Visible link text uses Slate's normal caret navigation and deletion.
-  // Only icon-only links need atomic two-step selection, including empty ones.
-  if (!isIconOnlyLink(Node.get(editor, link))) return false
+  if (!iconOnly) return false
   selectLink(editor, link)
   return true
 }

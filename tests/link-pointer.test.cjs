@@ -6,6 +6,7 @@ const {createEditor,Editor,Transforms}=require('slate');
 const loaded=new Module('link-pointer.cjs');
 const reactEditor={
  focus(){},toDOMNode:(e,node)=>node===e?e.host:e.link,
+ isComposing:()=>false,toDOMRange:(_e,range)=>({startContainer:{point:range.anchor},startOffset:range.anchor.offset}),
  toSlatePoint:(_e,[node])=>node.point,
  toSlateRange:(_e,selection)=>selection.range,
  toSlateNode:e=>e.children[0].children[1],findPath:()=>[0,1],
@@ -14,9 +15,9 @@ const reactEditor={
 loaded.require=id=>id==='slate-react'?{ReactEditor:reactEditor}:require(id);
 loaded._compile(buildSync({entryPoints:['src/wysimark/anchor-plugin/pointer-selection.ts'],bundle:true,platform:'node',format:'cjs',external:['slate','slate-react'],write:false}).outputFiles[0].text,'link-pointer.cjs');
 const {trackLinkIconSelection,linkIconHit}=loaded.exports;
-function fixture(){
- const e=createEditor();e.wysimark={readOnly:false};e.isInline=n=>n.type==='anchor';e.children=[{type:'paragraph',children:[{text:'body'},{type:'anchor',href:'https://example.test',children:[{text:'Title'}]},{text:'after'}]}];
- const anchor={path:[0,1,0],offset:5},focus={path:[0,1,0],offset:0};Transforms.select(e,{anchor,focus});
+function fixture(label='Title'){
+ const e=createEditor();e.wysimark={readOnly:false};e.isInline=n=>n.type==='anchor';e.children=[{type:'paragraph',children:[{text:'body'},{type:'anchor',href:'https://example.test',children:[{text:label}]},{text:'after'}]}];
+ const anchor={path:[0,1,0],offset:label.length},focus={path:[0,1,0],offset:0};Transforms.select(e,{anchor,focus});
  let writes=0,next=0;const listeners=new Map(),frames=new Map();
  const listen=(target,type,fn,capture)=>listeners.set(target+type,{fn,capture}),remove=(target,type)=>listeners.delete(target+type);
  const win={getComputedStyle:()=>({fontSize:'20px',lineHeight:'33px'}),addEventListener:(t,f)=>listen('win:',t,f),removeEventListener:t=>remove('win:',t),requestAnimationFrame:fn=>{frames.set(++next,fn);return next},cancelAnimationFrame:id=>frames.delete(id)};
@@ -55,7 +56,19 @@ test('the leading gap includes fractional-pixel rounding without absorbing prece
  const f=fixture();assert.ok(linkIconHit(f.e,f.link,3.5,20));assert.equal(linkIconHit(f.e,f.link,2,20),undefined);
 });
 
-for(const [x,y] of [[5,20],[20,20],[32,20],[35,20],[32,-4],[32,44]])test(`starting at ${x},${y} uses the expanded icon geometry`,()=>{
+for(const label of ['', 'Title'])test(`the right side of the icon places a caret ${label?'at the label start':'after the link'}`,()=>{
+ const f=fixture(label), point=label?Editor.start(f.e,[0,1]):Editor.start(f.e,[0,2]);
+ assert.ok(linkIconHit(f.e,f.link,29,20));
+ assert.deepEqual(linkIconHit(f.e,f.link,31,20).gap,point);
+ f.event.clientX=31;
+ const cleanup=trackLinkIconSelection(f.e,f.event);
+ assert.equal(f.event.prevented,true);
+ assert.deepEqual(f.e.selection,{anchor:point,focus:point});
+ assert.deepEqual(f.selection.anchorNode.point,f.e.selection.anchor);
+ cleanup();
+});
+
+for(const [x,y] of [[5,20],[20,20],[28,20],[29,20],[28,-4],[28,44]])test(`starting at ${x},${y} uses the expanded icon geometry`,()=>{
  const f=fixture();assert.equal(linkIconHit(f.e,f.link,x,y).overLabel,false);
  f.event.clientX=x;f.event.clientY=y;
  const cleanup=trackLinkIconSelection(f.e,f.event);

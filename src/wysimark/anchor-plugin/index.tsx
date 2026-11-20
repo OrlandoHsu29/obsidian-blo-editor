@@ -39,6 +39,8 @@ export const AnchorPlugin = createPlugin<AnchorPluginCustomTypes>(
       name: "anchor",
       editor: {
         insertText: () => { exitLinkEnd(editor); return false },
+        deleteBackward: unit => unit === 'character' && handleLinkKey(editor, 'Backspace'),
+        deleteForward: unit => unit === 'character' && handleLinkKey(editor, 'Delete'),
         deleteFragment: () => {
           if (editor.wysimark.readOnly) return false
           const range = completeLinkSelection(editor)

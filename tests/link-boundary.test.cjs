@@ -6,7 +6,7 @@ const {createEditor,Editor,Node,Range,Transforms}=require('slate');
 const {withHistory}=require('slate-history');
 const loaded=new Module('link-boundary.cjs');loaded.require=id=>id==='obsidian'?{getLanguage:()=> 'en'}:require(id);
 loaded._compile(buildSync({stdin:{contents:`export * from './src/wysimark/anchor-plugin/link-keyboard';export {parse,serialize} from './src/wysimark/convert';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'link-boundary.cjs');
-const {handleLinkKey,selectLink,isIconOnlyLink,parse,serialize}=loaded.exports;
+const {handleLinkKey,selectLink,isIconOnlyLink,isLinkFullySelected,parse,serialize}=loaded.exports;
 const link=(text,url='https://example.test')=>({type:'anchor',href:url,title:'Keep title',children:[{text,bold:true}]});
 function fixture(children){const editor=withHistory(createEditor());editor.wysimark={readOnly:false};editor.isInline=node=>node.type==='anchor';editor.children=[{type:'paragraph',children}];Editor.normalize(editor,{force:true});editor.history.undos=[];Transforms.select(editor,Editor.end(editor,[0]));return editor}
 function backspace(editor){if(!handleLinkKey(editor,'Backspace'))editor.deleteBackward('character')}
@@ -15,10 +15,33 @@ const anchors=editor=>[...Editor.nodes(editor,{at:[],match:node=>node.type==='an
 for(const text of ['',' ','\u200b','\u00a0'])test(`adjacent icon-only links (${JSON.stringify(text)}) delete one at a time without touching body text`,()=>{
  const editor=fixture([{text:'正文。'},link(text,'https://one.test'),{text:''},link(text,'https://two.test'),{text:''}]);
  for(const remaining of [2,1]){
-  const before=structuredClone(editor.children);backspace(editor);assert.deepEqual(editor.children,before);assert.equal(anchors(editor).length,remaining);
+  const before=structuredClone(editor.children);backspace(editor);assert.deepEqual(editor.children,before);
+  assert.equal(isLinkFullySelected(editor,anchors(editor).at(-1)[1]),true);
   backspace(editor);assert.equal(anchors(editor).length,remaining-1);assert.ok(Node.string(editor).startsWith('正文。'));assert.equal(editor.children[0].type,'paragraph');
  }
  assert.equal(Node.string(editor),'正文。');
+});
+
+test('Backspace between the icon and its title selects the link before it can delete it',()=>{
+ const editor=fixture([{text:'before。'},link('Title'),{text:' after'}]);
+ Transforms.select(editor,Editor.start(editor,[0,1]));
+ const before=structuredClone(editor.children);
+ backspace(editor);
+ assert.deepEqual(editor.children,before);
+ assert.equal(isLinkFullySelected(editor,[0,1]),true);
+ backspace(editor);
+ assert.equal(anchors(editor).length,0);
+ assert.equal(Node.string(editor),'before。 after');
+});
+
+test('left from an icon-only link selects it, then moves before it',()=>{
+ const editor=fixture([{text:'before'},link(''),{text:''}]);
+ assert.equal(handleLinkKey(editor,'ArrowLeft'),true);
+ assert.equal(isLinkFullySelected(editor,[0,1]),true);
+ assert.equal(handleLinkKey(editor,'ArrowLeft'),true);
+ assert.deepEqual(editor.selection.anchor,Editor.end(editor,[0,0]));
+ assert.equal(Range.isCollapsed(editor.selection),true);
+ assert.equal(anchors(editor).length,1);
 });
 
 test('an empty link click can select the token and undo restores only that link',()=>{

@@ -16,7 +16,7 @@ import { MarkdownChangeTracker } from "./markdown-change-tracker"
 import type { GetVaultFilePathsHandler, GetVaultImagePathsHandler } from "./types"
 import { SlashPopover } from '../../SlashPopover'
 import { trackLinkIconSelection } from '../anchor-plugin/pointer-selection'
-import { prepareLinkEndInput } from '../anchor-plugin/link-input'
+import { prepareLinkBoundaryInput } from '../anchor-plugin/link-input'
 import { renderLinkInputText } from '../anchor-plugin/render-element/link-input-text'
 
 export type { Element, Text } from "./plugins"
@@ -251,7 +251,7 @@ export function Editable({
           clearPointerTarget()
           if (!event.ctrlKey && !event.metaKey && !event.altKey &&
             (event.key.length === 1 || event.nativeEvent.keyCode === 229)) {
-            prepareLinkEndInput(editor, event.currentTarget.ownerDocument)
+            prepareLinkBoundaryInput(editor, event.currentTarget.ownerDocument)
           }
         }}
         onBeforeInputCapture={clearPointerTarget}

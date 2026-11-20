@@ -9,14 +9,17 @@ let editor,path;
 const loaded=new Module('link-input-text.cjs');
 loaded.require=id=>id==='slate-react'?{useSlateStatic:()=>editor,ReactEditor:{findPath:()=>path}}:require(id);
 loaded._compile(buildSync({entryPoints:['src/wysimark/anchor-plugin/render-element/link-input-text.tsx'],bundle:true,platform:'node',format:'cjs',external:['react','slate','slate-react'],write:false}).outputFiles[0].text,'link-input-text.cjs');
-for(const scenario of ['after link','empty after link','ordinary text','inside link'])test(`the DOM-only caret marker is scoped to ${scenario}`,()=>{
- editor=createEditor();const link={type:'anchor',href:'https://example.test',children:[{text:'label'}]};
- const text={text:scenario==='empty after link'?'':'suffix'};
+for(const scenario of ['after link','empty after link','empty after icon','ordinary text','label start','later in label'])test(`the DOM-only caret marker is scoped to ${scenario}`,()=>{
+ editor=createEditor();const link={type:'anchor',href:'https://example.test',children:[{text:scenario==='empty after icon'?'':'label'},{text:'rest',bold:true}]};
+ if(scenario==='empty after icon')link.children.pop();
+ const text={text:scenario.startsWith('empty')?'':'suffix'};
  editor.children=[{type:'paragraph',children:scenario==='ordinary text'?[{text:'before'},text]:[link,text]}];
- path=scenario==='inside link'?[0,0,0]:[0,1];const leaf=scenario==='inside link'?link.children[0]:text;
+ path=scenario==='label start'?[0,0,0]:scenario==='later in label'?[0,0,1]:[0,1];
+ const leaf=path.length===3?link.children[path.at(-1)]:text;
  const before=structuredClone(editor.children);
  const html=renderToStaticMarkup(loaded.exports.renderLinkInputText({text:leaf,attributes:{'data-slate-node':'text'},children:React.createElement('span',{'data-slate-leaf':true},React.createElement('span',{'data-slate-string':true},leaf.text))}));
- assert.equal(html.includes('data-slate-zero-width="z"'),scenario==='after link');
+ assert.equal(html.includes('data-slate-zero-width="z"'),scenario==='after link'||scenario==='label start');
+ assert.equal(html.includes('data-link-caret="true"'),scenario==='empty after icon');
  if(scenario==='after link'){assert(html.includes('data-slate-length="0"'));assert.equal((html.match(/suffix/g)||[]).length,1)}
  assert.deepEqual(editor.children,before);assert.equal(JSON.stringify(editor.children).includes('\uFEFF'),false);assert.deepEqual(editor.operations,[]);
 });

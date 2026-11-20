@@ -32,10 +32,11 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
   (editor, _options, { createPolicy }) => {
     const { shouldMergeNodesRemovePrevNode } = editor
     editor.shouldMergeNodesRemovePrevNode = (previous, current) => {
-      // An empty list item still owns its marker, indentation and task state.
-      // Backspace from following prose must merge into it rather than replace it.
-      if (isListItem(previous[0]) && !previous[0].blockChildren &&
-        Element.isElement(current[0]) && Editor.hasInlines(editor, current[0])) return false
+      const [target] = previous
+      const [source] = current
+      // Empty headings and list items keep their block format when joined with text.
+      if (Element.isElement(target) && Element.isElement(source) && Editor.hasInlines(editor, source) &&
+        (target.type === 'heading' || isListItem(target) && !target.blockChildren)) return false
       return shouldMergeNodesRemovePrevNode(previous, current)
     }
     editor.convertElement.addConvertElementType(LIST_ITEM_TYPES)

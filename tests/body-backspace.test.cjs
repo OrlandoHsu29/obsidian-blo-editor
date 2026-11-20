@@ -32,6 +32,56 @@ test('populated prose merges without stepping through its indentation levels',()
  e.deleteBackward('character');assert.equal(e.children.length,1);assert.equal(Node.string(e.children[0]),'BeforeBody');
 });
 
+const heading=(level,text,marks={})=>({type:'heading',level,children:[{text,...marks}]});
+const bullet=text=>({type:'unordered-list-item',depth:0,children:[{text}]});
+for(const [label,previous] of [
+ ['empty bullet',bullet('')],
+ ['populated bullet',bullet('Microphone ')],
+ ['empty H2',heading(2,'')],
+ ['populated H2',heading(2,'Microphone ')],
+ ['paragraph',paragraph('Microphone ')],
+])for(const source of [heading(3,'PCM',{bold:true}),{type:'paragraph',children:[{text:'PCM',bold:true}]}])test(`Backspace at ${source.type} clears its prefix if present, then merges into the preceding ${label}`,async()=>{
+ const text=Node.string(previous);
+ const e=fixture([structuredClone(previous),source,paragraph('Body')],withFoldedLists);
+ Editor.normalize(e,{force:true});Transforms.select(e,Editor.start(e,[1]));
+ const original=structuredClone(e.children);
+ if(source.type==='heading') {
+  e.deleteBackward('character');
+  assert.deepEqual(e.children.map(Node.string),[text,'PCM','Body']);
+  assert.deepEqual(e.children[0],original[0]);
+  assert.deepEqual(e.children[1].__headingList,{style:'hash',enabled:false});
+  assert.deepEqual(e.selection.anchor,Editor.start(e,[1]));
+  // Let Slate flush the first input event before delivering the next keypress.
+  await Promise.resolve();
+ }
+ const beforeMerge=structuredClone(e.children);
+ e.deleteBackward('character');
+ assert.deepEqual(e.children.map(n=>n.type),[previous.type,'paragraph']);
+ assert.equal(e.children[0].level,previous.level);
+ assert.deepEqual(e.children.map(Node.string),[text+'PCM','Body']);
+ assert.equal(e.children[0].children.at(-1).bold,true);
+ assert.equal(Editor.string(e,{anchor:Editor.start(e,[0]),focus:e.selection.anchor}),text);
+ const merged=structuredClone(e.children);
+ e.undo();assert.deepEqual(e.children,beforeMerge);
+ if(source.type==='heading') {
+  e.undo();assert.deepEqual(e.children,original);
+  e.redo();assert.deepEqual(e.children,beforeMerge);
+ }
+ e.redo();assert.deepEqual(e.children,merged);
+});
+
+for(const previous of [paragraph('Before'),bullet('Before'),heading(2,'Before')])test(`Backspace clears an empty heading prefix after ${previous.type}`,()=>{
+ const e=fixture([previous,heading(2,''),paragraph('Body')],withFoldedLists);
+ Editor.normalize(e,{force:true});Transforms.select(e,Editor.start(e,[1]));
+ const before=structuredClone(e.children);
+ e.deleteBackward('character');
+ assert.deepEqual(e.children.map(n=>n.type),[previous.type,'heading','paragraph']);
+ assert.deepEqual(e.children[0],before[0]);
+ assert.deepEqual(e.children[1].__headingList,{style:'hash',enabled:false});
+ assert.deepEqual(e.selection.anchor,Editor.start(e,[1]));
+ e.undo();assert.deepEqual(e.children,before);
+});
+
 test('merging populated prose does not outdent its descendants',()=>{
  const e=fixture([paragraph('Before'),paragraph('Body',1),{type:'unordered-list-item',depth:2,__blockDepth:2,children:[{text:'child'}]},paragraph('attached',3),paragraph('Next')]);
  Transforms.select(e,Editor.start(e,[1]));const before=structuredClone(e.children);e.deleteBackward('character');assert.deepEqual(e.children.map(blockDepth),[0,2,3,0]);assert.deepEqual(e.children.map(Node.string),['BeforeBody','child','attached','Next']);e.undo();assert.deepEqual(e.children,before);

@@ -5,9 +5,8 @@ import { curryOne } from "../../sink"
 import { parse } from "../../convert"
 import { pasteTableFragment } from '../../table-plugin/paste-table'
 
-function pasteMarkdown(editor: Editor, markdown: string) {
-
-  const fragment = parse(markdown)
+function pasteMarkdown(editor: Editor, markdown: string, fromHtml = false) {
+  const fragment = parse(markdown, { enableInternalLinks: true, collapseListGaps: fromHtml })
   for (const element of fragment) {
     delete element.__markdownLeadingNewlines
     delete element.__markdownTrailingNewlines

@@ -6,7 +6,7 @@ import { clipboardTextTable, pasteTableFragment } from '../table-plugin/paste-ta
 import { createPasteMarkdownMethods } from "./methods"
 
 type PasteMarkdownMethods = {
-  pasteMarkdown: (markdown: string) => void
+  pasteMarkdown: (markdown: string, fromHtml?: boolean) => void
 }
 
 export type PasteMarkdownEditor = {
@@ -40,7 +40,7 @@ export const PasteMarkdownPlugin = createPlugin<PasteMarkdownPluginCustomTypes>(
           // than turning every newline of the fallback text into a paragraph.
           const markdown = html ? clipboardHtmlToMarkdown(html) : data.getData("text/plain")
           if (!markdown) return false
-          editor.pasteMarkdown.pasteMarkdown(markdown)
+          editor.pasteMarkdown.pasteMarkdown(markdown, !!html)
           stopEvent(e)
           return true
         },

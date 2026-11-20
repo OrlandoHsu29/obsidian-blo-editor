@@ -8,6 +8,8 @@ loaded._compile(buildSync({stdin:{contents:`
 import {createWithSink} from './src/wysimark/sink/editor';
 import {BlockStructurePlugin} from './src/blocks/plugin';
 export const withBlocks=createWithSink([BlockStructurePlugin.fn]);
+export {parse} from './src/wysimark/convert';
+export {restoreClipboardCodeBlocks} from './src/wysimark/paste-markdown-plugin/html-code-block';
 `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-react','slate-history','react','react-dom'],write:false}).outputFiles[0].text,'paste-style.cjs');
 const targets=[{type:'heading',level:2},{type:'ordered-list-item',depth:1,start:3},{type:'unordered-list-item',depth:1},{type:'task-list-item',depth:1,checked:true},{type:'paragraph',__subtitle:true}];
 function fixture(target,text=''){
@@ -41,4 +43,22 @@ test('a word copied from a numbered heading carries neither heading nor list sty
  e.children[0]={type:'ordered-list-item',depth:0,blockChildren:true,children:[{type:'heading',level:2,children:[{text:'Two words',italic:true}]}]};
  Transforms.select(e,{anchor:{path:[0,0,0],offset:4},focus:{path:[0,0,0],offset:9}});
  assert.deepEqual(e.getFragment(),[{type:'paragraph',children:[{text:'words',italic:true}]}]);
+});
+
+test('browser list spacing drops the extra boundary paragraph without flattening inline code or later gaps',()=>{
+ const source='- One `1`\n- Two `0`\n\n\nFollowing\n\n\nLater';
+ const {parse}=loaded.exports;
+ const browser=parse(source,{enableInternalLinks:true,collapseListGaps:true});
+ assert.deepEqual(browser.map(Node.string),['One 1','Two 0','Following','','Later']);
+ assert.equal(browser[1].children.find(n=>n.type==='inline-code').children[0].text,'0');
+ assert.deepEqual(parse(source).map(Node.string),['One 1','Two 0','','Following','','Later']);
+});
+
+test('restored code keeps its quote prefix, fence delimiters and literal indentation',()=>{
+ const {parse,restoreClipboardCodeBlocks}=loaded.exports, marker='\uE000bloCode';
+ const source=`> Before\n>\n> \`\`\`\n> ${marker}0\uE001\n> \`\`\`\n>\n> After`;
+ const lines=['one','   ```','\tindented  ','','last'];
+ const [quote]=parse(restoreClipboardCodeBlocks(source,marker,[['````text',...lines,'````'].join('\n')]));
+ assert.deepEqual(quote.children.map(n=>n.type),['paragraph','code-block','paragraph']);
+ assert.deepEqual(quote.children[1].children.map(Node.string),lines);
 });

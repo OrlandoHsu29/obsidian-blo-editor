@@ -1,4 +1,5 @@
 import { htmlToMarkdown } from 'obsidian'
+import { prepareClipboardCodeBlocks, restoreClipboardCodeBlocks } from './html-code-block'
 
 /** Preserve semantic marks even where Markdown punctuation cannot open/close them. */
 export function clipboardHtmlToMarkdown(html: string): string {
@@ -19,7 +20,9 @@ export function clipboardHtmlToMarkdown(html: string): string {
     }
   }
   let prefix = '\uE000blo'
-  while (html.includes(prefix)) prefix += 'x'
+  while (html.includes(prefix) || document.body.textContent?.includes(prefix)) prefix += 'x'
+  const codeMarker = `${prefix}code`
+  const codeBlocks = prepareClipboardCodeBlocks(document.body, codeMarker)
   const tags: string[] = []
   const token = (tag: string) => `${prefix}${tags.push(tag) - 1}\uE001`
   for (const element of document.body.querySelectorAll('strong,b,em,i,s,del,u,mark,sup,sub,kbd')) {
@@ -29,5 +32,6 @@ export function clipboardHtmlToMarkdown(html: string): string {
     element.replaceWith(...element.childNodes)
   }
   const markdown = htmlToMarkdown(document.body)
-  return markdown.replace(new RegExp(`${prefix}(\\d+)\uE001`, 'g'), (_, index: string) => tags[Number(index)])
+  const restoredMarks = markdown.replace(new RegExp(`${prefix}(\\d+)\uE001`, 'g'), (_, index: string) => tags[Number(index)])
+  return restoreClipboardCodeBlocks(restoredMarks, codeMarker, codeBlocks)
 }

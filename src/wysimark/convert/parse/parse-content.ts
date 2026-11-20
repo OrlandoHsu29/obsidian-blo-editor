@@ -15,9 +15,14 @@ import { parseThematicBreak } from "./parse-thematic-break"
 import { serializeLinkDestination, serializeLinkTitle } from "../serialize/serialize-link-destination"
 import { rowImages } from '../../image-plugin/row-model'
 
+export type ParseOptions = InternalLinkOptions & {
+  /** Rich clipboard wrappers can add redundant Markdown separators after lists. */
+  collapseListGaps?: boolean
+}
+
 export function parseContents(
   contents: TopLevelContent[],
-  options: InternalLinkOptions = {}
+  options: ParseOptions = {}
 ): Element[] {
   const elements: Element[] = []
   let previousBlockStart = 0
@@ -42,7 +47,8 @@ export function parseContents(
         if (gap === 0 && (prev.type === "definition" || curr.type === "definition") && elements.length) {
           elements[elements.length - 1].__markdownCompactAfter = true
         }
-        for (let b = 1; b < gap; b++) {
+        const preserveGap = !options.collapseListGaps || prev.type !== 'list' || curr.type !== 'paragraph'
+        for (let b = 1; preserveGap && b < gap; b++) {
           elements.push({
             type: "paragraph",
             children: [{ text: "" }],

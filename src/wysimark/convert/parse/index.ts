@@ -7,7 +7,7 @@ import {
   InternalLinkOptions,
   protectEscapedWikiLinks,
 } from "../obsidian-links"
-import { parseContents } from "./parse-content"
+import { parseContents, ParseOptions } from "./parse-content"
 import { transformInlineLinks } from "./transform-inline-links"
 import { getLineEnding, withLineEnding } from "../line-endings"
 import { parseBlockDocument } from '../../../blocks/persistence'
@@ -148,7 +148,7 @@ export function parseToAst(
  */
 export function parse(
   markdown: string,
-  options: InternalLinkOptions = { enableInternalLinks: true }
+  options: ParseOptions = { enableInternalLinks: true }
 ): Element[] {
   if(options.yuqueFormatting===undefined)options={...options,yuqueFormatting:/<font\b[^>]*\b(?:style|color)\s*=/i.test(markdown)}
   const blockDocument=parseBlockDocument(markdown, text=>parse(text,options))

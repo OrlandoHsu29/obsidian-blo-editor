@@ -1,4 +1,4 @@
-import { Editor, Element, Point, Range, Transforms } from 'slate'
+import { Editor, Element, Node, Path, Point, Range, Transforms } from 'slate'
 import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, rangeToMediaBlock, selectStructuredBoundary } from './boundary'
@@ -124,6 +124,18 @@ export function deleteAtBlockBoundary(editor:Editor):boolean {
  if(editor.wysimark.readOnly)return false
  if(editor.selection&&Range.isCollapsed(editor.selection)) {
   const point=editor.selection.anchor,index=point.path[0],node=editor.children[index]
+  const paragraph=point.offset===0&&Editor.above(editor,{at:point,match:n=>Element.isElement(n)&&n.type==='paragraph'&&!n.__subtitle})
+  if(paragraph&&Element.isElement(paragraph[0])&&Editor.isEmpty(editor,paragraph[0])&&Path.hasPrevious(paragraph[1])) {
+   const previous=Path.previous(paragraph[1]),rule=Node.get(editor,previous)
+   if(Element.isElement(rule)&&rule.type==='horizontal-rule') {
+    withHistoryBatch(editor,()=>{
+     // Merge the empty leaf so redo also returns its caret to the rule.
+     editor.apply({type:'merge_node',path:paragraph[1],position:rule.children.length,properties:Node.extractProps(paragraph[0])})
+     Transforms.select(editor,Editor.start(editor,previous))
+    })
+    return true
+   }
+  }
   if(Element.isElement(node)&&node.type==='paragraph'&&!node.__subtitle&&
    Editor.isEmpty(editor,node)&&Point.equals(point,Editor.start(editor,[index]))) {
    const cache=rootCache(editor),previous=cache.previousVisible.get(node)

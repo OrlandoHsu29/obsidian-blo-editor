@@ -11,13 +11,15 @@ loaded._compile(buildSync({stdin:{contents:`
  import {BlockStructurePlugin} from './src/blocks/plugin';
  import {ConvertElementPlugin} from './src/wysimark/convert-element-plugin';
  import {ListPlugin} from './src/wysimark/list-plugin';
+ import {HorizontalRulePlugin} from './src/wysimark/horizontal-rule-plugin';
  import {CollapsibleParagraphPlugin} from './src/wysimark/collapsible-paragraph-plugin';
  export const withBlocks=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn]);
  export const withFoldedLists=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,CollapsibleParagraphPlugin.fn,ListPlugin.fn]);
+ export const withRules=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,HorizontalRulePlugin.fn,CollapsibleParagraphPlugin.fn]);
  export {deleteAtBlockBoundary} from './src/blocks/selection';
  export {blockDepth} from './src/blocks/model';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react'],write:false}).outputFiles[0].text,'body-backspace.cjs');
-const {withBlocks,withFoldedLists,deleteAtBlockBoundary,blockDepth}=loaded.exports;
+const {withBlocks,withFoldedLists,withRules,deleteAtBlockBoundary,blockDepth}=loaded.exports;
 const paragraph=(text,depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes,withEditor=withBlocks){const base=withHistory(createEditor());base.wysimark={readOnly:false};base.normalizeAfterDelete={};base.isInline=node=>node.type==='anchor';const editor=withEditor(base,{});editor.children=nodes;return editor}
 
@@ -101,6 +103,21 @@ test('the first populated block retains indentation when there is nothing to del
 
 test('empty indented prose retains its one-level Backspace behavior',()=>{
  const e=fixture([paragraph('Before'),paragraph('',1)]);Transforms.select(e,Editor.start(e,[1]));e.deleteBackward('character');assert.equal(e.children.length,2);assert.equal(blockDepth(e.children[1]),0);
+});
+
+for(const depth of [0,2])test(`Backspace on empty prose at depth ${depth} selects the preceding rule before removing it`,async()=>{
+ const rule={type:'horizontal-rule',__blockDepth:depth,children:[{text:''}]};
+ const e=fixture([rule,paragraph('',depth),{type:'heading',level:3,children:[{text:'Next'}]}],withRules);
+ Editor.normalize(e,{force:true});Transforms.select(e,Editor.start(e,[1]));
+ const before=structuredClone(e.children),selection=structuredClone(e.selection);
+ e.deleteBackward('character');
+ assert.deepEqual(e.children,[before[0],before[2]]);
+ assert.deepEqual(e.selection.anchor,Editor.start(e,[0]));
+ const after=structuredClone(e.children);
+ await Promise.resolve();
+ e.undo();assert.deepEqual(e.children,before);assert.deepEqual(e.selection,selection);
+ e.redo();assert.deepEqual(e.children,after);assert.deepEqual(e.selection.anchor,Editor.start(e,[0]));
+ e.deleteBackward('character');assert.deepEqual(e.children,[before[2]]);
 });
 
 for(const type of ['unordered-list-item','ordered-list-item'])for(const depth of [0,1])test(`Backspace from empty prose after folded ${type} at depth ${depth} returns to the visible parent`,()=>{

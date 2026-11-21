@@ -48,7 +48,7 @@ Export **Markdown**, copy **rich text for cloud documents**, or save **HTML** an
 
 ![The four export choices](assets/tour-export.png)
 
-Also included: `/` commands, find/replace, automatic saving, reading mode and an optional floating memo integration. The bundled **blo-editor-notes** Skill helps file-capable AI tools write Blo's block structure, tables and editable drawings. Copy its installation/update prompt from **Settings → Blo Editor → AI note writing** and give it to your AI tool.
+Also included: `/` commands, find/replace, automatic saving, reading mode and an optional floating memo integration. The bundled **blo-editor-notes** Skill helps file-capable AI tools write Blo's block structure, tables and editable drawings. Copy its installation/update prompt from **Settings → Blo Editor → AI collaboration** and give it to your AI tool.
 
 ## Try it
 

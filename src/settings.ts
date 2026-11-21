@@ -78,7 +78,7 @@ export class BloSettingsTab extends PluginSettingTab {
     const scopeGroup = group(ui('编辑范围'))
     const attachmentGroup = group(ui('附件'))
     const integrationGroup = group(ui('扩展功能'))
-    const aiGroup = group(ui('AI 写笔记'))
+    const aiGroup = group(ui('AI 协作'))
     new Setting(aiGroup)
       .setName(ui('AI 默认写作格式'))
       .setClass('blo-ai-skill-setting')
@@ -107,6 +107,9 @@ export class BloSettingsTab extends PluginSettingTab {
           new Notice(ui('无法准备或复制 Skill，请重试；也可选中预览中的提示词手动复制。'))
         } finally { button.setDisabled(false) }
       }))
+    new Setting(aiGroup)
+      .setName(ui('AI 引用'))
+      .setDesc(ui('在桌面端选中文字，右键选择「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置，可粘贴到 AI 对话中。'))
     new Setting(editorGroup)
       .setName(ui('默认使用富文本编辑器'))
       .setDesc(ui('Markdown 笔记默认使用富文本编辑；阅读视图不受影响。'))

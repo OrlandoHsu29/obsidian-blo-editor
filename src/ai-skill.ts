@@ -3,8 +3,10 @@ import type { App, PluginManifest } from 'obsidian'
 import { ui } from './wysimark/utils/translations'
 import instructions from '../skills/blo-editor-notes/SKILL.md'
 import format from '../skills/blo-editor-notes/references/format.md'
+import design from '../skills/blo-editor-notes/references/design.md'
 import drawings from '../skills/blo-editor-notes/references/drawings.md'
 import example from '../skills/blo-editor-notes/assets/example-note.md'
+import draft from '../skills/blo-editor-notes/assets/example-draft.md'
 import drawing from '../skills/blo-editor-notes/assets/example.excalidraw.md'
 
 // Embed resources: Obsidian's standard updater only downloads the plugin's
@@ -13,8 +15,10 @@ import drawing from '../skills/blo-editor-notes/assets/example.excalidraw.md'
 export const AI_SKILL_FILES: Readonly<Record<string, string>> = {
   'SKILL.md': instructions,
   'references/format.md': format,
+  'references/design.md': design,
   'references/drawings.md': drawings,
   'assets/example-note.md': example,
+  'assets/example-draft.md': draft,
   'assets/example.excalidraw.md': drawing,
 }
 

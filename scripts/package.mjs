@@ -26,7 +26,7 @@ for (const file of ['main.js', 'styles.css', 'manifest.json', 'README.md', 'READ
   await copyFile(resolve(root, file), resolve(destination, file))
 }
 // Only the maintained Skill resources belong in the distribution.
-for (const file of ['SKILL.md', 'references/format.md', 'references/drawings.md', 'assets/example-note.md', 'assets/example.excalidraw.md']) {
+for (const file of ['SKILL.md', 'references/format.md', 'references/design.md', 'references/drawings.md', 'assets/example-draft.md', 'assets/example-note.md', 'assets/example.excalidraw.md']) {
   const target = resolve(destination, 'skills/blo-editor-notes', file)
   await mkdir(dirname(target), { recursive: true })
   await copyFile(resolve(root, 'skills/blo-editor-notes', file), target)

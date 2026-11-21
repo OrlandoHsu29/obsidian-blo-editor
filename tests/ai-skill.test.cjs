@@ -21,8 +21,8 @@ const loaded = new Module('ai-skill.cjs');
 loaded.require = id => id === 'obsidian' ? {
   FileSystemAdapter, TFile, normalizePath: p => p.replace(/\\/g, '/'), getLanguage: () => language,
 } : require(id);
-loaded._compile(buildSync({stdin:{contents:"export * from './src/ai-skill'; export * from './src/ai-directory-rules'; export {parse,serialize} from './src/wysimark/convert'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',loader:{'.md':'text'},external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text, 'ai-skill.cjs');
-const {AI_SKILL_FILES, aiSkillDirectory, aiSkillInstallPrompt, writeAiSkill, directoryRulesPath, directoryRulesBody, mergeDirectoryRules, writeDirectoryRules, parse, serialize} = loaded.exports;
+loaded._compile(buildSync({stdin:{contents:"export * from './src/ai-skill'; export * from './src/ai-directory-rules'; export {parse,serialize} from './src/wysimark/convert'; export {getCalloutInfo} from './src/wysimark/block-quote-plugin/callout'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',loader:{'.md':'text'},external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text, 'ai-skill.cjs');
+const {AI_SKILL_FILES, aiSkillDirectory, aiSkillInstallPrompt, writeAiSkill, directoryRulesPath, directoryRulesBody, mergeDirectoryRules, writeDirectoryRules, parse, serialize, getCalloutInfo} = loaded.exports;
 const manifest = {id:'blo-editor',version:'0.1.30',dir:'custom-config/plugins/blo-editor'};
 
 test('standard plugin install materializes a complete skill and repairs missing or outdated resources',async()=>{
@@ -30,7 +30,7 @@ test('standard plugin install materializes a complete skill and repairs missing 
   await writeAiSkill(app,manifest);
   const root = aiSkillDirectory(app,manifest);
   assert.equal(root,'custom-config/plugins/blo-editor/skills/blo-editor-notes');
-  assert.equal(adapter.files.size,5);
+  assert.deepEqual([...adapter.files.keys()].sort(),Object.keys(AI_SKILL_FILES).map(file=>`${root}/${file}`).sort());
   const writes=adapter.writes;
   await writeAiSkill(app,manifest);
   assert.equal(adapter.writes,writes,'unchanged resources must not be rewritten');
@@ -80,7 +80,7 @@ test('bundled note preserves block structure, folding, styles, table, formula an
   const source=AI_SKILL_FILES['assets/example-note.md'];
   const nodes=parse(source), restored=parse(serialize(nodes));
   for(const result of [nodes,restored]) {
-    assert.equal(result.length,11);
+    assert.equal(result.length,16);
     assert.equal(result[1].children[0].type,'heading');
     assert.equal(result[1].children[0].__headingList.style,'number');
     assert.equal(result[2].__collapsed,true);
@@ -92,7 +92,32 @@ test('bundled note preserves block structure, folding, styles, table, formula an
     assert.equal(result[9].type,'task-list-item');assert.equal(result[9].checked,false);
     assert(result[10].children.some(child=>child.type==='math-inline'&&child.latex==='E=mc^2'));
     assert(result[3].children.some(child=>child.bold&&child.inlineStyle?.includes('#1677FF')));
+    assert(result[5].children[1].children[2].children[0].children.some(child=>child.inlineStyle?.includes('#1677FF')));
+    assert.equal(getCalloutInfo(result[12])?.type,'warning');
+    for(const key of ['kbd','sub','sup']) assert(result[13].children.some(child=>child[key]));
+    assert(result[14].children.some(child=>child.highlight));
+    assert(result[14].children.some(child=>child.strike));
+    assert(result[14].children.some(child=>child.inlineStyle?.includes('background-color')));
+    assert.equal(result[15].language,'mermaid');
   }
+});
+
+test('the low-token draft remains ordinary Markdown and all Skill references are bundled and packaged',()=>{
+  const draft=AI_SKILL_FILES['assets/example-draft.md'];
+  assert.doesNotMatch(draft,/<!-- wysimark-/);
+  const nodes=parse(draft);
+  for(const type of ['heading','unordered-list-item','table','code-block','task-list-item']) {
+    assert(nodes.some(node=>node.type===type),type);
+  }
+  assert.equal(nodes.some(node=>node.__collapsed||node.__headingList),false);
+  for(const [file,content] of Object.entries(AI_SKILL_FILES)) {
+    if(file.endsWith('.excalidraw.md')) continue;
+    for(const [,relative] of content.matchAll(/\]\(([^\s()]+\.md)(?:#[^\s()]*)?\)/g)) {
+      assert(Object.hasOwn(AI_SKILL_FILES,path.posix.join(path.posix.dirname(file),relative)),file+' → '+relative);
+    }
+  }
+  const packageScript=fs.readFileSync('scripts/package.mjs','utf8');
+  for(const file of Object.keys(AI_SKILL_FILES)) assert(packageScript.includes("'"+file+"'"),file);
 });
 
 test('bundled skill has valid discovery fields and a complete editable drawing scene',()=>{

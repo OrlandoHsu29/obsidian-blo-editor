@@ -24,8 +24,8 @@
 
 | 阶段 | 输出 | 状态 |
 | :--- | :--- | :---: |
-| 理解 | 概念与问题 | 进行中 |
-| 实践 | 可编辑画板<br>与示例 | 待处理 |
+| 理解 | 概念与问题 | <span style="color:#1677FF">进行中</span> |
+| 实践 | 可编辑画板<br>与示例 | <span style="color:#ED740C">待处理</span> |
 
 <!-- wysimark-block:v1 %7B%22depth%22%3A1%7D -->
 
@@ -49,3 +49,28 @@ console.log(stages.join(" → "));
 <!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
 
 公式 $E=mc^2$，<u>需要核实的概念</u>，以及 `stage` 变量。
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A0%2C%22numbering%22%3A%22continue%22%2C%22headingStyles%22%3A%5B%7B%22path%22%3A%5B0%5D%2C%22style%22%3A%22number%22%2C%22enabled%22%3Atrue%7D%5D%7D -->
+
+1. ## 验收与回顾
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
+
+> [!warning] 提交前核对
+>
+> 确认画板能编辑，确认阶段顺序和**状态文本**清楚。
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
+
+核对示例。用 <kbd>Ctrl</kbd> + <kbd>F</kbd> 找到 `stage`，为 H<sub>2</sub>O 的 2 和 x<sup>2</sup> 的 2 分别使用下标和上标。
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
+
+已采用 <span style="background-color:rgba(22,119,255,0.14)">整理输出</span> 作为步骤名，旧称为 ~~发布~~。==复核最终步骤名==。
+
+<!-- wysimark-block:v1 %7B%22depth%22%3A0%7D -->
+
+```mermaid
+flowchart LR
+  A[收集资料] --> B[绘制思路] --> C[整理输出]
+```

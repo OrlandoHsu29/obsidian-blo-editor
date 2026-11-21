@@ -1,6 +1,6 @@
 import type BloEditorPlugin from './main';
 import { ui } from "./wysimark/utils/translations"
-import { FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice, MarkdownView, resolveSubpath } from 'obsidian';
+import { FileSystemAdapter, FileView, WorkspaceLeaf, TFile, normalizePath, Plugin, App, MarkdownRenderer, Component, Scope, setIcon, Notice, MarkdownView, resolveSubpath } from 'obsidian';
 import { NoteSync, NoteSyncConflict, NoteSyncView, validateWrite, lockElement } from './note-sync';
 import { getLanguage } from './wysimark/utils/translations';
 import { Editor, Node, Transforms, Element as SlateElement } from 'slate';
@@ -44,6 +44,8 @@ import { isRowImage } from './wysimark/image-plugin/row-model';
 import { startImageDrag } from './blocks/RootBlock';
 import { clearTableCellTextDrag, tableTextDropAllowed } from './wysimark/table-plugin/cell-selection';
 import { clearTextDrag } from './blocks/text-drag';
+import { prepareAiQuote } from './ai-quote';
+import { addSelectionContextAction } from './selection-context-menu';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -687,6 +689,19 @@ export class BloView extends FileView {
       clearTableCellTextDrag(this.editor);
       clearTextDrag(this.editor);
     }, true);
+    this.registerDomEvent(contentEl, 'contextmenu', event => {
+      const adapter = this.app.vault.adapter;
+      if (event.defaultPrevented || !this.editor || !this.currentFile || !(adapter instanceof FileSystemAdapter)) return;
+      const target = event.target;
+      const host = isDomElement(target) && target.closest<HTMLElement>('[data-slate-editor="true"]');
+      if (!host || target.closest('button,input,textarea,[contenteditable="false"]')) return;
+      const copy = prepareAiQuote(this.editor, host, adapter, this.currentFile.path);
+      if (!copy) return;
+      addSelectionContextAction(event, host, !this.readOnly, {
+        label: ui('复制为 AI 引用'),
+        run: copy,
+      });
+    });
     let bottomClick = false;
     this.registerDomEvent(contentEl, 'mousedown', event => {
       bottomClick = !!this.editor && !this.readOnly && selectDocumentEndFromPointer(this.editor, event, contentEl);

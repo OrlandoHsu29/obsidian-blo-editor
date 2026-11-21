@@ -33,14 +33,8 @@ test('chunks share observation and release listeners when removed or the editor 
  const c=f.create();f.resize(c.node,100);assert.equal(c.node.styles.get('--blo-chunk-height'),'100px');c.dispose();
 });
 
-test('native visibility changes drive CSS fades without a reveal scheduler',()=>{
+test('native visibility changes do not hide or animate returning chunks',()=>{
  const f=fixture(),{node,dispose}=f.create();f.resize(node,800);
  for(let i=0;i<50;i++){f.skip(node,true);f.skip(node,false)}
- assert.equal(node.dataset.bloChunkSkipped,'false');assert.equal(node.dataset.bloChunkPending,undefined);assert.equal(node.dataset.bloChunkRevealing,undefined);assert.equal(f.frames.size,0);assert.equal(node.writes,1);dispose();
-});
-
-test('new and rebuilt visible chunks do not animate during formatting changes',()=>{
- const f=fixture(),a=f.create();assert.equal(a.node.dataset.bloChunkSkipped,undefined);f.skip(a.node,false);f.resize(a.node,80);f.skip(a.node,false);assert.equal(a.node.dataset.bloChunkSkipped,undefined);a.dispose();
- const b=f.create();f.skip(b.node,false);assert.equal(b.node.dataset.bloChunkSkipped,undefined);
- f.skip(b.node,true);assert.equal(b.node.dataset.bloChunkSkipped,'true');f.skip(b.node,false);assert.equal(b.node.dataset.bloChunkSkipped,'false');b.dispose();
+ assert.deepEqual(node.dataset,{bloChunkMeasured:'true'});assert.equal(f.frames.size,0);assert.equal(node.writes,1);dispose();
 });

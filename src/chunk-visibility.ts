@@ -17,20 +17,11 @@ export function createChunkVisibilityRegistry(doc: Document) {
   })
   const visibility = (event: Event) => {
     const root = event.currentTarget as HTMLElement, chunk = chunks.get(root)
-    if (chunk) {
-      const wasSkipped = chunk.skipped
-      chunk.skipped = (event as Event & { skipped: boolean }).skipped
-      // An initial visible notification also occurs after editing rebuilds a
-      // chunk. Animate only a real skipped -> rendered transition.
-      if (!chunk.skipped && !wasSkipped) return
-      const state = String(chunk.skipped)
-      if (root.dataset.bloChunkSkipped !== state) root.dataset.bloChunkSkipped = state
-    }
+    if (chunk) chunk.skipped = (event as Event & { skipped: boolean }).skipped
   }
   return {
     add(root: HTMLElement) {
       chunks.set(root, { skipped: false })
-      delete root.dataset.bloChunkSkipped
       observer.observe(root)
       root.addEventListener('contentvisibilityautostatechange', visibility)
       return () => {

@@ -401,10 +401,6 @@
 /* Measure tall media and zero-height boundary chunks once, then preserve their
    own height instead of keeping most of a long document laid out forever. */
 .ks-editor-chunk-leaf:not([data-blo-chunk-measured]):has([data-blo-drawing],[data-blo-image],table,p[data-block-boundary]) { content-visibility:visible; contain:layout style paint; contain-intrinsic-block-size:none; }
-.ks-editor-chunk-leaf[data-blo-chunk-skipped="true"] { opacity:0; }
-.ks-editor-chunk-leaf[data-blo-chunk-skipped="false"] { animation:blo-chunk-resume 220ms ease-out both; }
-@keyframes blo-chunk-resume { from { opacity:0; } to { opacity:1; } }
-@media (prefers-reduced-motion:reduce) { .ks-editor-chunk-leaf[data-blo-chunk-skipped="false"] { animation:none; } }
 .wysimark-editor :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,table,hr,[data-wysimark-code-block]) { margin-block: 0 !important; }
 .wysimark-editor :is(p,li) { line-height: 1.65 !important; }
 .wysimark-editor :is(p,li,[data-wysimark-block])[data-subtitle="true"] { font-weight:var(--font-bold,700); }

@@ -17,6 +17,7 @@ import {
 import { getCalloutInfo } from "./callout"
 import { deleteQuotePrefix } from "./delete-backward"
 import { blockDepth, quoteContentIndent } from '../../blocks/model'
+import { sharedQuoteIndent } from '../../blocks/quote-indent'
 import {
   $BlockQuote, $Callout, $CalloutBody, $CalloutFoldIcon, $CalloutIcon,
   $CalloutTitle, $CalloutTitleText,
@@ -76,7 +77,11 @@ function BlockQuote({
   const path=ReactEditor.findPath(editor,element)
   const parent=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='block-quote'})
   const inherited=parent?quoteContentIndent(parent[0]):path.length===1?blockDepth(element):0
-  return <$BlockQuote {...attributes} style={{marginLeft:`calc(${Math.max(0,indent-inherited)*2}em + 2px)`,
+  const shared = sharedQuoteIndent(element)
+  const inheritedShared = parent && parent[1].length === path.length - 1 ? sharedQuoteIndent(parent[0]) : 0
+  const offset = Math.max(0, indent - inherited) + Math.max(0, shared - inheritedShared)
+  return <$BlockQuote {...attributes} style={{marginLeft:`calc(${offset*2}em + 2px)`,
+    '--blo-shared-quote-indent':`${shared*2}em`,
     '--blo-quote-content-indent':`${indent*2}em`} as CSSProperties}>{children}</$BlockQuote>
 }
 

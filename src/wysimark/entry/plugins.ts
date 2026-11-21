@@ -63,6 +63,7 @@ type CustomEditor = PluginTypes["Editor"]
 type CustomElement = PluginTypes["Element"] & {
   __blockId?: string
   __blockDepth?: number
+  __quoteIndent?: number
   __collapsed?: true
   __subtitle?: true
   /** Heading prefix choice and whether it is applied; persisted in block metadata. */

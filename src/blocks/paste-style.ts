@@ -1,6 +1,6 @@
-import { Editor, Element, Path, Range, Text } from 'slate'
+import { Editor, Element, Node, Path, Range, Text } from 'slate'
 import type { Descendant } from 'slate'
-import { isListBlock } from './model'
+import { blockDepth, isEditorSpacer, isListBlock } from './model'
 
 function styledTextBlock(node: Descendant): node is Element {
   return Element.isElement(node) && (node.type === 'heading' || isListBlock(node) || node.type === 'paragraph' && !!node.__subtitle)
@@ -16,7 +16,16 @@ function inlineContent(editor: Editor, node: Element): Descendant[] | undefined 
 /** Ordinary prose supplies content, rather than replacing the destination style. */
 export function pasteTextContent(editor: Editor, fragment: Descendant[]): Descendant[] {
   const first = fragment[0], selection = editor.selection
-  if (!selection || fragment.length !== 1 || !Element.isElement(first) || first.type !== 'paragraph' || first.__subtitle) return fragment
+  if (!selection || fragment.length !== 1 || !Element.isElement(first)) return fragment
+  if (Range.isCollapsed(selection) && (first.type === 'image-block' ||
+    first.type === 'paragraph' && !Node.string(first).includes('\n'))) {
+    const target = Editor.above<Element>(editor, { match: node => Element.isElement(node) && node.type === 'paragraph' })?.[0]
+    if (target && !target.__subtitle && !isEditorSpacer(target) && Editor.isEmpty(editor, target)) {
+      const depth = blockDepth(target), quoteDepth = target.__quoteIndent
+      if (depth || quoteDepth) return [{ ...first, __blockDepth: depth, ...(quoteDepth ? { __quoteIndent: quoteDepth } : {}) }]
+    }
+  }
+  if (first.type !== 'paragraph' || first.__subtitle) return fragment
   const target = Editor.above(editor, { at: Range.start(selection), match: n => Element.isElement(n) && styledTextBlock(n), mode: 'lowest' })
   if (!target || !Path.isAncestor(target[1], Range.end(selection).path) ||
     !(target[0].children as Descendant[]).every(child => Text.isText(child) || editor.isInline(child as Element))) return fragment

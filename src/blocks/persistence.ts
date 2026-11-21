@@ -4,25 +4,30 @@ import { blockDepth, isEditorSpacer, isFoldableList, isListBlock, orderedNumbers
 import { headingDefaults } from './heading-defaults'
 
 const prefix='<!-- wysimark-block:v1 '
-const formats = new WeakMap<Element, { subtitles:number[][]; headingStyles:({path:number[]} & NonNullable<Element['__headingList']>)[] }>()
+const formats = new WeakMap<Element, {
+  subtitles: number[][]
+  headingStyles: ({ path: number[] } & NonNullable<Element['__headingList']>)[]
+  quoteIndents: { path: number[]; depth: number }[]
+}>()
 function blockFormats(node:Element) {
   let value=formats.get(node)
   if(!value) {
-    value={subtitles:[],headingStyles:[]}
+    value={subtitles:[],headingStyles:[],quoteIndents:[]}
     for(const [element,path] of Node.elements(node)) {
       if(element.__subtitle)value.subtitles.push(path)
       if(element.type==='heading'&&element.__headingList)value.headingStyles.push({path,...element.__headingList})
+      if(path.length && element.__quoteIndent)value.quoteIndents.push({path,depth:element.__quoteIndent})
     }
     formats.set(node,value)
   }
   return value
 }
-export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>headingDefaults(n)||n.__collapsed||n.__blockDepth!==undefined||n.__numbering!==undefined||blockFormats(n).subtitles.length>0||blockFormats(n).headingStyles.length>0)}
+export function needsBlockMetadata(nodes: Element[]) {return nodes.some(n=>headingDefaults(n)||n.__collapsed||n.__blockDepth!==undefined||n.__numbering!==undefined||blockFormats(n).subtitles.length>0||blockFormats(n).headingStyles.length>0||blockFormats(n).quoteIndents.length>0)}
 export function serializeBlockDocument(nodes: Element[], serializeOne:(node:Element,number?:number)=>string) {
   const numbers=orderedNumbers(nodes)
   return nodes.filter(n=>!isEditorSpacer(n)).map(node=>{
-    const {subtitles,headingStyles:styles}=blockFormats(node)
-    const metadata={depth:blockDepth(node),headingDefaults:headingDefaults(node),collapsed:node.__collapsed||undefined,subtitles:subtitles.length?subtitles:undefined,headingStyles:styles.length?styles:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
+    const {subtitles,headingStyles:styles,quoteIndents}=blockFormats(node)
+    const metadata={depth:blockDepth(node),headingDefaults:headingDefaults(node),collapsed:node.__collapsed||undefined,subtitles:subtitles.length?subtitles:undefined,headingStyles:styles.length?styles:undefined,quoteIndents:quoteIndents.length?quoteIndents:undefined,numbering:node.__numbering,start:node.type==='ordered-list-item'?node.start:undefined}
     const plain=isListBlock(node)?{...node,depth:0,...(node.type==='ordered-list-item'?{start:numbers.get(node)}:{})}:node
     return `${prefix}${encodeURIComponent(JSON.stringify(metadata))} -->\n\n${serializeOne(plain as Element,numbers.get(node)).trimEnd()}\n\n`
   }).join('').trimEnd()+'\n'
@@ -84,6 +89,15 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
       if(SlateElement.isElement(target)&&target.type==='heading')target.__headingList={style:saved.style,enabled:saved.enabled,
         ...(Array.isArray(saved.levels)&&saved.levels.every((level:unknown)=>typeof level==='number'&&Number.isInteger(level)&&level>=1&&level<=4)
           ?{levels:[...new Set(saved.levels)] as (1|2|3|4)[]}:{})}
+    }
+    if (Array.isArray(chunk.metadata.quoteIndents)) for (const saved of chunk.metadata.quoteIndents) {
+      if (!saved || !Array.isArray(saved.path) || !saved.path.length ||
+        !saved.path.every((index: unknown) => Number.isInteger(index) && Number(index) >= 0) ||
+        !Number.isInteger(saved.depth) || saved.depth < 1 || saved.depth > 32 || !Node.has(node, saved.path)) continue
+      const parent = Node.parent(node, saved.path)
+      const target = Node.get(node, saved.path)
+      if (SlateElement.isElement(parent) && parent.type === 'block-quote' &&
+        SlateElement.isElement(target) && target.type !== 'block-quote') target.__quoteIndent = saved.depth
     }
     if(node.type==='ordered-list-item'&&!recoveredList) {
       if(typeof chunk.metadata.start==='number')node.start=chunk.metadata.start;else delete node.start

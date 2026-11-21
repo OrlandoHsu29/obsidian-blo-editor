@@ -6,6 +6,7 @@ import { HistoryEditor } from 'slate-history'
 import type { Descendant } from 'slate'
 import { clearBlockSelection, deleteAtBlockBoundary, deleteImageRowAtCaret, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary, selectedImageFragment } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
+import { indentQuoteContents } from './quote-indent'
 import { boundaryBlockIndex, deleteRangeEndingAtBoundary, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary, outdentEmptyParagraph, selectStructuredBoundary } from './boundary'
 import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
 import { exitEmptyQuote } from './subtitle'
@@ -104,7 +105,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   if(event.key!=='Tab'||event.ctrlKey||event.metaKey||event.altKey||event.nativeEvent?.isComposing)return false
   const delta=event.shiftKey?-1:1
   const whole=editor.selection&&isWholeBlockSelected(editor,editor.selection.anchor.path[0])
-  const textHandled=!whole&&indentCodeSelection(editor,delta)
+  const textHandled=!whole&&(indentCodeSelection(editor,delta)||indentQuoteContents(editor,delta))
   if(!textHandled&&!indentBlockSelection(editor,delta))return false
   event.preventDefault();event.stopPropagation();return true
  }},

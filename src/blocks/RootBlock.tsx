@@ -18,6 +18,7 @@ import { toggleBlockFold } from './folding'
 import { mediaContentSelector } from './structured-block'
 import { canDropImage, imageRowDropTarget, insertImageRow, moveImageToBlock } from './image-row'
 import { isRowImage } from '../wysimark/image-plugin/row-model'
+import { isQuoteContent } from './quote-indent'
 
 type DropPosition = 'before' | 'after'
 type DropPreview={position:DropPosition;depth:number;maxDepth?:number;origin:number;step:number;left:number;top:number}
@@ -182,7 +183,13 @@ export function RootBlock({ element, children }: { element: Element; children: R
     dragHandlers.set(root,handlers)
     return()=>{dragHandlers.delete(root)}
   },[index!==undefined&&!isEditorSpacer(element)])
-  if (index === undefined || isEditorSpacer(element)) return <>{children}</>
+  if (index === undefined || isEditorSpacer(element)) {
+    if (element.type !== 'block-quote' && !editor.isInline(element) && isQuoteContent(editor, ReactEditor.findPath(editor, element))) {
+      const indent = (element.__quoteIndent ?? 0) * 2
+      return <div style={{ marginInlineStart: `max(0em, ${indent}em - var(--blo-shared-quote-indent, 0em))` }}>{children}</div>
+    }
+    return <>{children}</>
+  }
 
   const selectAndOpenMenu = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()

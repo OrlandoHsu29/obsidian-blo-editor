@@ -22,11 +22,55 @@ loaded._compile(buildSync({stdin:{contents:`
  import {BlockQuotePlugin} from './src/wysimark/block-quote-plugin';
  export const withBlocks=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,InlineCodePlugin.fn,HeadingPlugin.fn,CodeBlockPlugin.fn,TablePlugin.fn,TrailingBlockPlugin.fn,BlockQuotePlugin.fn,ListPlugin.fn,AtomicDeletePlugin.fn,NormalizeAfterDeletePlugin.fn,CollapsibleParagraphPlugin.fn]);
  export {blockDepth} from './src/blocks/model';
+ export {sharedQuoteIndent} from './src/blocks/quote-indent';
+ export {parse,serialize} from './src/wysimark/convert';
+ export {createPasteMarkdownMethods} from './src/wysimark/paste-markdown-plugin/methods';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
-const {withBlocks,blockDepth}=loaded.exports;
+const {withBlocks,blockDepth,sharedQuoteIndent,parse,serialize,createPasteMarkdownMethods}=loaded.exports;
 const p=(text='',depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes){const e=withHistory(createEditor());e.wysimark={readOnly:false};withBlocks(e,{});e.children=nodes;Editor.normalize(e,{force:true});e.history.undos=[];Transforms.select(e,Editor.end(e,[0]));return e}
 function tab(e){let prevented=false;const handled=e.sink.plugins[0].editableProps.onKeyDown({key:'Tab',nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}});assert(handled&&prevented)}
+
+test('Tab indents only the quoted child or children touched by the range and persists the offsets',()=>{
+ const e=fixture(parse('> first\n>\n> - second\n>\n> third'));
+ const depths=()=>e.children[0].children.map(node=>node.__quoteIndent??0);
+ Transforms.select(e,Editor.start(e,[0,1]));tab(e);assert.deepEqual(depths(),[0,1,0]);
+ Transforms.select(e,{anchor:Editor.end(e,[0,1]),focus:Editor.start(e,[0,0])});tab(e);assert.deepEqual(depths(),[1,2,0]);
+ assert.equal(blockDepth(e.children[0]),0);
+ const saved=parse(serialize(e.children));assert.deepEqual(saved[0].children.map(node=>node.__quoteIndent??0),[1,2,0]);
+ e.undo();assert.deepEqual(depths(),[0,1,0]);
+});
+
+test('the shared quote indent follows the least-indented child across separate edits and undo',()=>{
+ const e=fixture(parse('> first\n>\n> second'));
+ Transforms.select(e,Editor.start(e,[0,1]));tab(e);tab(e);
+ assert.equal(sharedQuoteIndent(e.children[0]),0);
+ Transforms.select(e,Editor.start(e,[0,0]));tab(e);
+ assert.equal(sharedQuoteIndent(e.children[0]),1);
+ assert.deepEqual(e.children[0].children.map(node=>node.__quoteIndent),[1,2]);
+ assert.equal(sharedQuoteIndent(parse(serialize(e.children))[0]),1);
+ Transforms.select(e,Editor.range(e,[0]));tab(e);
+ assert.equal(sharedQuoteIndent(e.children[0]),2);
+ e.undo();assert.equal(sharedQuoteIndent(e.children[0]),1);
+ e.undo();assert.equal(sharedQuoteIndent(e.children[0]),0);
+});
+
+test('single-line text and an image replace an indented blank without losing its depth',()=>{
+ const prose=fixture([p('parent'),p('',2),p('following')]);
+ Transforms.select(prose,Editor.start(prose,[1]));createPasteMarkdownMethods(prose).pasteMarkdown('one line');
+ assert.equal(Node.string(prose.children[1]),'one line');assert.equal(blockDepth(prose.children[1]),2);
+ const images=fixture([p('parent'),p('',2),p('following')]);
+ Transforms.select(images,Editor.start(images,[1]));images.insertFragment([{type:'image-block',url:'photo.png',children:[{text:''}]}]);
+ const image=images.children.find(node=>node.type==='image-block');assert(image);assert.equal(blockDepth(image),2);
+});
+
+test('multiline Markdown pasted into an indented blank uses the pasted blocks’ own depths',()=>{
+ for(const markdown of ['first\nsecond','first\n\nsecond']) {
+  const e=fixture([p('parent'),p('',2),p('following')]);Transforms.select(e,Editor.start(e,[1]));
+  createPasteMarkdownMethods(e).pasteMarkdown(markdown);
+  assert.equal(blockDepth(e.children[1]),0);assert.match(Node.string(e.children[1]),/^first/);
+ }
+});
 
 test('Tab then Enter returns an empty paragraph to its original indentation without adding a row',()=>{
  const e=fixture([p(),p('following')]);tab(e);assert.equal(blockDepth(e.children[0]),1);e.insertBreak();

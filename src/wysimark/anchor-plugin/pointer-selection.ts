@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 import { Editor, Element as SlateElement, Node, Path, Point, Range, Text } from 'slate'
 import { ReactEditor } from 'slate-react'
-import { isPointerSelecting, mediaRangeFromPointer, pointerRangeFromPoint, tableEdgeRangeFromPointer, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
+import { isPointerSelecting, mediaRangeFromPointer, pointerRangeFromPoint, preservePointerSelectionClick, tableEdgeRangeFromPointer, setPointerSelection, startPointerSelection } from '../../blocks/pointer-selection'
 import { mediaContentSelector } from '../../blocks/structured-block'
 import { prepareLinkBoundaryInput } from './link-input'
 import { isIconOnlyLink, pointAfterLink, pointBeforeLink, selectLink } from './link-keyboard'
@@ -58,6 +58,14 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   const host = event.currentTarget, doc = host.ownerDocument, win = doc.defaultView!
   if((event.target as HTMLElement|null)?.closest?.(mediaContentSelector))return
   const x = event.clientX, y = event.clientY
+  const initialSelection = doc.getSelection()
+  // A press within the painted range can start a native text move.
+  if (initialSelection?.rangeCount && !initialSelection.isCollapsed &&
+    initialSelection.anchorNode && host.contains(initialSelection.anchorNode) &&
+    initialSelection.focusNode && host.contains(initialSelection.focusNode) &&
+    Array.from(initialSelection.getRangeAt(0).getClientRects()).some(
+      rect => rect.width > 0 && x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom,
+    )) return
   // The native hit target can be the line container above/below the glyph.
   // Resolve the nearest caret as well, without scanning other document links.
   const hit = doc.elementFromPoint(x, y)?.closest<HTMLAnchorElement>('a[data-link-icon]')
@@ -186,10 +194,27 @@ export function trackLinkIconSelection(editor: Editor, event: MouseEvent<HTMLEle
   }
   const selectionChanged = () => { if (moved && pointer) correct(pointer) }
   const preventDrag = (event: DragEvent) => {
-    if (!managedDrag) return
+    if (!managedDrag && !(event.target as HTMLElement | null)?.closest?.('a[data-link-icon]')) return
     event.preventDefault(); event.stopPropagation()
   }
-  const up = (event: globalThis.MouseEvent) => { if (moved) correct(event); cleanup() }
+  const up = (event: globalThis.MouseEvent) => {
+    if (event.button) return
+    if (moved) {
+      correct(event)
+      if (active && anchor?.current) {
+        const selection = doc.getSelection()
+        const native = selection && ReactEditor.toSlateRange(editor, selection, { exactMatch: false, suppressThrow: true })
+        const range = native && Range.isExpanded(native) ? native :
+          pointerRangeFromPoint(editor, host, event.clientX, event.clientY, anchor.current)
+        if (range && Range.isExpanded(range)) {
+          preservePointerSelectionClick(editor)
+          event.preventDefault()
+          setPointerSelection(editor, range, doc)
+        }
+      }
+    }
+    cleanup()
+  }
   doc.addEventListener('mousemove', move, true)
   doc.addEventListener('mouseup', up, true)
   doc.addEventListener('dragstart', preventDrag, true)

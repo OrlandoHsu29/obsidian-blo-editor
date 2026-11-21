@@ -23,6 +23,12 @@ export function consumePointerSelectionClick(editor: Editor): boolean {
   return true
 }
 
+export function preservePointerSelectionClick(editor: Editor) {
+  const session = sessions.get(editor) ?? { suppressClickUntil: 0 }
+  session.suppressClickUntil = Date.now() + 500
+  sessions.set(editor, session)
+}
+
 /** Keep the browser and Slate pointed at the same real document range. */
 export function setPointerSelection(editor: Editor, range: Range, doc: Document) {
   Transforms.select(editor, range)
@@ -102,10 +108,19 @@ export function startPointerSelection(editor: Editor, point: Point,
     doc.documentElement.classList.remove('blo-selecting-from-boundary')
     session.cleanup = undefined
   }
-  const up = () => {
+  const up = (event: globalThis.MouseEvent) => {
+    if (event.button) return
+    if (anchor.current && moved) {
+      const range = pointerRangeFromPoint(editor, host, event.clientX, event.clientY, anchor.current)
+      if (range) {
+        moved = true
+        event.preventDefault()
+        setPointerSelection(editor, range, doc)
+      }
+    }
     // A drag can still produce a click. Void blocks and gutter clicks would
     // otherwise collapse the selection that was just extended.
-    if (moved) session.suppressClickUntil = Date.now() + 500
+    if (moved) preservePointerSelectionClick(editor)
     cleanup()
   }
   const preventDrag = (event: DragEvent) => {

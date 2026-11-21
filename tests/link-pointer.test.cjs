@@ -31,7 +31,7 @@ function fixture(label='Title'){
  e.host=host;
  e.link=link;
  const event={currentTarget:host,button:0,detail:1,clientX:80,clientY:20,preventDefault(){this.prevented=true},stopPropagation(){this.stopped=true}};
- return {e,event,link,selection,listeners,frames,missIcon(){hit=false},setNativeCaret(point){nativePoint=point},pointToPreviousLine(){previousLine={top:-22,bottom:0,height:22}},pointToNextLine(){previousLine={top:40,bottom:62,height:22}},get writes(){return writes},dispatch(type,extra={}){listeners.get('doc:'+type)?.fn({buttons:1,clientX:20,clientY:20,...extra})},blur(){listeners.get('win:blur')?.fn()},paint(){for(const [id,fn]of frames){frames.delete(id);fn()}}};
+ return {e,event,link,selection,listeners,frames,missIcon(){hit=false},setNativeCaret(point){nativePoint=point},pointToPreviousLine(){previousLine={top:-22,bottom:0,height:22}},pointToNextLine(){previousLine={top:40,bottom:62,height:22}},get writes(){return writes},dispatch(type,extra={}){listeners.get('doc:'+type)?.fn({buttons:1,clientX:20,clientY:20,preventDefault(){},...extra})},blur(){listeners.get('win:blur')?.fn()},paint(){for(const [id,fn]of frames){frames.delete(id);fn()}}};
 }
 
 test('a gesture already owned by table selection does not start a competing text tracker',()=>{
@@ -176,6 +176,20 @@ test('ordinary text dragging never repairs an anchor before crossing an icon',()
  Transforms.select(f.e,range);f.selection.range=range;
  f.dispatch('mousemove',{clientX:130});f.dispatch('selectionchange');f.paint();
  assert.equal(f.writes,0);assert.deepEqual(f.e.selection,range);cleanup();
+});
+
+test('a native range that collapses on release is restored from the press and release points',()=>{
+ const f=fixture();f.missIcon();
+ const anchor={path:[0,0],offset:1},focus={path:[0,2],offset:3};
+ f.setNativeCaret(anchor);
+ const cleanup=trackLinkIconSelection(f.e,f.event);
+ f.setNativeCaret(focus);
+ f.dispatch('mousemove',{clientX:130});
+ f.selection.range={anchor:focus,focus};
+ f.dispatch('mouseup',{clientX:130});
+ assert.deepEqual(f.e.selection,{anchor,focus});
+ assert.equal(f.listeners.size,0);
+ cleanup();
 });
 
 test('a later claimed move cancels queued link corrections and releases references',()=>{

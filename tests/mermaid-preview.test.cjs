@@ -109,6 +109,7 @@ test('Mermaid source switching keeps the clicked block stationary until keyboard
   if(id.endsWith('/throttle'))return {throttle:fn=>Object.assign(fn,{cancel(){},flush(){}})};
   if(id==='./markdown-change-tracker')return {MarkdownChangeTracker:class {next(){}}};
   if(id.endsWith('/pointer-selection'))return {isPointerSelecting:()=>false,trackLinkIconSelection:()=>{}};
+  if(id.endsWith('/text-drag'))return {clearTextDrag(){}};
   if(id.endsWith('/cell-selection'))return {tableCellSelection:()=>null};
   if(id.endsWith('/boundary'))return {takeBoundaryInputScroll:()=>false};
   if(id.endsWith('/dom-guards'))return {isDomElement:node=>!!node?.closest};

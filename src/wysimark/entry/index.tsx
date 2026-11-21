@@ -3,6 +3,7 @@ import { Descendant, Editor } from "slate"
 import { HistoryEditor } from "slate-history"
 import { defaultScrollSelectionIntoView, RenderLeafProps, Slate } from "slate-react"
 import { isPointerSelecting } from '../../blocks/pointer-selection'
+import { clearTextDrag, dropTextDrag, startTextDrag, textDragOver } from '../../blocks/text-drag'
 import { takeBoundaryInputScroll } from '../../blocks/boundary'
 import { tableCellSelection } from '../table-plugin/cell-selection'
 import { isDomElement } from '../../dom-guards'
@@ -67,6 +68,7 @@ export function Editable({
   const pointerTargetRef = useRef<HTMLElement | null>(null)
   const linkDragRef = useRef<(() => void) | undefined>(undefined)
   useEffect(() => () => linkDragRef.current?.(), [editor])
+  useEffect(() => () => clearTextDrag(editor), [editor])
   const clearPointerTarget = useCallback(() => { pointerTargetRef.current = null }, [])
   const scrollSelectionIntoView = useCallback((editor: Editor, range: globalThis.Range) => {
     const boundaryInput = takeBoundaryInputScroll(editor)
@@ -240,6 +242,7 @@ export function Editable({
       <SinkEditable
         scrollSelectionIntoView={scrollSelectionIntoView}
         onMouseDownCapture={event => {
+          clearTextDrag(editor)
           linkDragRef.current?.()
           linkDragRef.current = trackLinkIconSelection(editor, event)
           const target = isDomElement(event.target) ? event.target : null
@@ -247,6 +250,9 @@ export function Editable({
             target?.closest('[data-wysimark-mermaid-scroller]')?.closest<HTMLElement>('[data-wysimark-code-block]')
           pointerTargetRef.current = anchor && event.currentTarget.contains(anchor) ? anchor : null
         }}
+        onDragStart={event => !readOnly && startTextDrag(editor, event)}
+        onDragOver={event => { if (!readOnly) textDragOver(editor, event) }}
+        onDrop={event => dropTextDrag(editor, event)}
         onKeyDownCapture={event => {
           clearPointerTarget()
           if (!event.ctrlKey && !event.metaKey && !event.altKey &&

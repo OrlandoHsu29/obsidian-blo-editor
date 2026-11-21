@@ -43,6 +43,7 @@ import { imageRowTargetFromEvent } from './blocks/image-row';
 import { isRowImage } from './wysimark/image-plugin/row-model';
 import { startImageDrag } from './blocks/RootBlock';
 import { clearTableCellTextDrag, tableTextDropAllowed } from './wysimark/table-plugin/cell-selection';
+import { clearTextDrag } from './blocks/text-drag';
 
 export const VIEW_TYPE_BLO = 'blo-view';
 const noteSync = new NoteSync();
@@ -681,7 +682,11 @@ export class BloView extends FileView {
         event.dataTransfer.dropEffect = 'copy';
       }
     }, true);
-    this.registerDomEvent(contentEl, 'dragend', () => { if (this.editor) clearTableCellTextDrag(this.editor); }, true);
+    this.registerDomEvent(contentEl, 'dragend', () => {
+      if (!this.editor) return;
+      clearTableCellTextDrag(this.editor);
+      clearTextDrag(this.editor);
+    }, true);
     let bottomClick = false;
     this.registerDomEvent(contentEl, 'mousedown', event => {
       bottomClick = !!this.editor && !this.readOnly && selectDocumentEndFromPointer(this.editor, event, contentEl);

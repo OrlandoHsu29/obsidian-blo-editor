@@ -5,7 +5,7 @@ import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { ui } from '../../utils/translations'
 import { isDomElement } from '../../../dom-guards'
-import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, tableCellSelection } from '../cell-selection'
+import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, selectWholeTableDrag, tableCellSelection } from '../cell-selection'
 import type { TableColumnAlign, TableElement } from '../types'
 import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
@@ -41,7 +41,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const table = ReactEditor.toDOMNode(editor, element) as HTMLTableElement
     const doc = table.ownerDocument, win = doc.defaultView!
     let origin: Path | undefined, snapped: Range | undefined
-    let enteringEdit = false
+    let enteringEdit = false, selectingMultipleCells = false
     let hoverTimer: number | undefined, leaveTimer: number | undefined
     let pending: Insertion[] | undefined
     let repairing = false, showingInsertions = false, watchingScroll = false
@@ -79,7 +79,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const down = (event: MouseEvent) => {
       if (event.button !== 0 || menuRef.current?.contains(event.target as globalThis.Node) || insertRef.current?.contains(event.target as globalThis.Node)) return
       hideInsertions()
-      origin = undefined; snapped = undefined; enteringEdit = false
+      origin = undefined; snapped = undefined; enteringEdit = false; selectingMultipleCells = false
       const target = event.target as HTMLElement
       if (target.closest('[contenteditable="false"],button')) return
       if (table.contains(target)) {
@@ -166,7 +166,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       }
       const cell = cellAt(event.target)
       if (!cell) return
-      if (!Path.equals(cell, origin) || snapped) {
+      selectingMultipleCells = !Path.equals(cell, origin)
+      if (selectingMultipleCells || snapped) {
         const path = Path.parent(Path.parent(origin))
         const top = Math.min(origin[origin.length - 2], cell[cell.length - 2])
         const bottom = Math.max(origin[origin.length - 2], cell[cell.length - 2])
@@ -174,13 +175,13 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         const right = Math.max(origin[origin.length - 1], cell[cell.length - 1])
         snapped = { anchor: Editor.start(editor, [...path, top, left]), focus: Editor.end(editor, [...path, bottom, right]) }
         event.preventDefault()
-        if(Path.equals(cell,origin))selectTableCell(editor,cell)
+        if (!selectingMultipleCells) selectTableCell(editor, cell)
         synchronize()
       }
     }
     const up = () => {
       if (!origin) return
-      synchronize()
+      if (!selectingMultipleCells || !snapped || !selectWholeTableDrag(editor, origin.slice(0, -2), snapped)) synchronize()
       origin = undefined; snapped = undefined
     }
     const dismiss = hideInsertions

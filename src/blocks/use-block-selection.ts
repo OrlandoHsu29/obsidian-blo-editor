@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react'
 import { Element } from 'slate'
 import { useSlateSelector, useSlateStatic } from 'slate-react'
 import { rootCache } from './model'
-import { hasMultipleImagesSelected, isWholeBlockSelected, subscribeBlockSelection } from './selection'
+import { hasMultipleImagesSelected, isWholeBlockSelected, rangeCoversRootTable, subscribeBlockSelection } from './selection'
 
 /** Follow both native ranges and disjoint image selections, including when
  * another image is removed while the focused image stays selected. */
@@ -28,6 +28,7 @@ export function useBlockSelection(element: Element): boolean {
   )
   return useSlateSelector(useCallback(editor => {
     const index = rootCache(editor).indices.get(element)
-    return !!snapshot && index !== undefined && isWholeBlockSelected(editor, index)
+    return index !== undefined && (snapshot && isWholeBlockSelected(editor, index) ||
+      element.type === 'table' && !!editor.selection && rangeCoversRootTable(editor, index, editor.selection))
   }, [element, snapshot]))
 }

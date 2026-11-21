@@ -25,8 +25,9 @@ loaded._compile(buildSync({stdin:{contents:`
  export {sharedQuoteIndent} from './src/blocks/quote-indent';
  export {parse,serialize} from './src/wysimark/convert';
  export {createPasteMarkdownMethods} from './src/wysimark/paste-markdown-plugin/methods';
+ export {selectWholeTableDrag,tableCellSelection} from './src/wysimark/table-plugin/cell-selection';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
-const {withBlocks,blockDepth,sharedQuoteIndent,parse,serialize,createPasteMarkdownMethods}=loaded.exports;
+const {withBlocks,blockDepth,sharedQuoteIndent,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection}=loaded.exports;
 const p=(text='',depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes){const e=withHistory(createEditor());e.wysimark={readOnly:false};withBlocks(e,{});e.children=nodes;Editor.normalize(e,{force:true});e.history.undos=[];Transforms.select(e,Editor.end(e,[0]));return e}
 function tab(e){let prevented=false;const handled=e.sink.plugins[0].editableProps.onKeyDown({key:'Tab',nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}});assert(handled&&prevented)}
@@ -69,6 +70,30 @@ test('multiline Markdown pasted into an indented blank uses the pasted blocks’
   const e=fixture([p('parent'),p('',2),p('following')]);Transforms.select(e,Editor.start(e,[1]));
   createPasteMarkdownMethods(e).pasteMarkdown(markdown);
   assert.equal(blockDepth(e.children[1]),0);assert.match(Node.string(e.children[1]),/^first/);
+ }
+});
+
+const markdownTable='| A | B |\n| --- | --- |\n| C | D |';
+test('dragging over the complete table selects the block and deletion is undoable',()=>{
+ const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`));
+ const index=e.children.findIndex(node=>node.type==='table'), path=[index];
+ const partial=Editor.range(e,[index,0,0]);Transforms.select(e,partial);
+ assert.equal(selectWholeTableDrag(e,path,partial),false);
+ const full=Editor.range(e,path);Transforms.select(e,full);
+ assert(selectWholeTableDrag(e,path,full));assert.equal(tableCellSelection(e),undefined);
+ e.deleteFragment();assert(!e.children.some(node=>node.type==='table'));
+ e.undo();assert.equal(Node.string(e.children[index]),'ABCD');
+});
+
+test('mixed text selection removes a fully covered table and only the selected surrounding text',()=>{
+ for(const anchorInTable of [false,true]) {
+  const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`));
+  const index=e.children.findIndex(node=>node.type==='table'),after=e.children.findIndex(node=>Node.string(node)==='After');
+  const anchor=anchorInTable?Editor.start(e,[index]):{path:[0,0],offset:3};
+  Transforms.select(e,{anchor,focus:{path:[after,0],offset:2}});e.deleteFragment();
+  assert(!e.children.some(node=>node.type==='table'));
+  assert.equal(e.children.map(Node.string).join(''),anchorInTable?'Beforeter':'Befter');
+  e.undo();assert(e.children.some(node=>node.type==='table'));
  }
 });
 

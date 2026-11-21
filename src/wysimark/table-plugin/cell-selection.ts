@@ -1,7 +1,7 @@
 import { Editor, Element, Node, Path, PathRef, Point, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor } from 'slate-react'
-import { clearBlockSelection, isWholeBlockSelected } from '../../blocks/selection'
+import { clearBlockSelection, isWholeBlockSelected, selectBlockContents } from '../../blocks/selection'
 import { blockDepth, indentSelectedBlocks, isEditorSpacer } from '../../blocks/model'
 import { selectStructuredBoundary } from '../../blocks/boundary'
 import type { TableElement } from './types'
@@ -38,6 +38,13 @@ export function selectTableCell(editor: Editor, cellPath: Path): void {
   const path = cellPath.slice(0, -2)
   const cell = { x: cellPath[cellPath.length - 1], y: cellPath[cellPath.length - 2] }
   selectTableCellRange(editor, path, cell, cell)
+}
+
+export function selectWholeTableDrag(editor: Editor, path: Path, range: Range): boolean {
+  if (path.length !== 1 || editor.wysimark.readOnly || !Range.equals(range, Editor.range(editor, path))) return false
+  clearEditingCell(editor)
+  clearTableAxisSelection(editor)
+  return selectBlockContents(editor, path[0])
 }
 
 export function selectTableCellRange(editor: Editor, path: Path, anchorCell: { x: number; y: number }, focusCell: { x: number; y: number }): void {

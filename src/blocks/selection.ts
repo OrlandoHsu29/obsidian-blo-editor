@@ -33,6 +33,13 @@ export function isWholeBlockSelected(editor:Editor,index:number):boolean {
  return !!pending&&!!editor.selection&&Range.equals(editor.selection,pending.range)&&
   (pending.images?pending.images.has(editor.children[index] as Element):index>=pending.index&&index<=Math.max(pending.range.anchor.path[0],pending.range.focus.path[0]))
 }
+export function rangeCoversRootTable(editor: Editor, index: number, range: Range): boolean {
+ const [start,end]=Range.edges(range)
+ const node=editor.children[index]
+ if(start.path[0]===end.path[0]||index<start.path[0]||index>end.path[0]||!Element.isElement(node)||node.type!=='table')return false
+ return (index>start.path[0]||Point.equals(start,Editor.start(editor,[index])))&&
+  (index<end.path[0]||Point.equals(end,Editor.end(editor,[index])))
+}
 export function selectedImageFragment(editor:Editor):Element[]|undefined {
  const pending=staged.get(editor)
  if(!pending?.images||!editor.selection||!Range.equals(editor.selection,pending.range))return

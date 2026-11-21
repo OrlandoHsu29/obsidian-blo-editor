@@ -62,7 +62,7 @@ export function Table({
       <div ref={frame} className="blo-table-frame" data-scrollbar-active={isSelected||blockSelected||!!cells||undefined}>
         <div className="blo-table-placeholder" aria-hidden="true" />
         <div className="blo-table-scroll">
-          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&(cells||isSelected&&crossBlockSelection)?true:undefined}
+          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&!blockSelected&&(cells||isSelected&&crossBlockSelection)?true:undefined}
             data-text-selection={readOnly||isSelected&&!cells&&!blockSelected&&!crossBlockSelection||undefined}>
             <tbody>{children}</tbody>
           </$Table>

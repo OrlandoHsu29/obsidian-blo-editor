@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.11 — 2026-11-21
+
+### 中文
+
+- 新增「复制为 AI 引用」。从右键菜单复制精简 Markdown 文段、本机笔记路径和引用位置，可粘贴到任意 AI 客户端。在设置的「AI 协作」中可查看用法和笔记 Skill 的安装说明。
+- 扩充笔记 Skill 的样式、排版与画板示例。可先用普通 Markdown 起稿，再按需添加 Blo 的块结构、表格样式和画板。
+- 修复拖选时选区偶发被清除的问题。移动所选文字现在可以单独撤销。
+- 引用内按 Tab 只缩进光标所在或拖选涉及的块，竖线跟随缩进最少的块。在缩进空行粘贴单行文字或一张图片会保留缩进，多行内容使用自身的缩进。
+- 拖选整张表格时显示整表选中样式，按 Backspace 可删除整张表，并可撤销。
+- 长笔记滚动时，重新进入视口的块直接显示，避免淡入造成的空白。
+
+### English
+
+- Copy a Markdown excerpt, local note path, and quote location from the context menu with **Copy as AI quote**. Paste the result into any AI client. Find usage and note Skill setup in **AI collaboration** settings.
+- The note Skill now includes more examples of styling, layout, and drawings. Draft in plain Markdown and add Blo block structure, table styles, and drawings as needed.
+- Preserve text selection when releasing the mouse after a drag. Moving selected text can now be undone as a single edit.
+- In quotes, Tab indents the current block or the blocks touched by the selection. The quote bar follows the least-indented block. Pasting a single line or image into an indented blank keeps its indentation. Multiline content keeps its own indentation.
+- Dragging across a complete table highlights it as a block. Backspace deletes the table in one undoable edit.
+- Blocks returning to view in long notes appear immediately, avoiding blank space caused by the fade-in.
+
 ## 0.2.10 — 2026-11-20
 
 ### 中文

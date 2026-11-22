@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react'
-import type { Editor } from 'slate'
+import { Editor, Element } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { rootCache } from './model'
 import { selectStructuredBoundary } from './boundary'
@@ -7,11 +7,35 @@ import { clearBlockSelection } from './selection'
 import { structuredBlockBounds, structuredBlockContent, structuredBlockSelector } from './structured-block'
 import { startPointerSelection, tableGapFromPointer } from './pointer-selection'
 
-/** Catch the right page gutter before Slate resolves it to a table cell. */
+/** The bullet's non-editable rail can resolve to the end of the line in Chromium. */
+function unorderedListStart(editor: Editor, target: HTMLElement, x: number, y: number) {
+  const item = target.closest('li[data-slate-node="element"]')
+  const marker = item?.querySelector(':scope > [data-list-marker]')
+  const content = item?.querySelector(':scope > .wysimark-list-content')
+  if (!item || !marker || !content) return
+  const bounds = marker.getBoundingClientRect()
+  if (x < (bounds.left + bounds.right) / 2 || x >= content.getBoundingClientRect().left ||
+    y < bounds.top || y >= bounds.bottom) return
+  const node = ReactEditor.toSlateNode(editor, item)
+  if (!Element.isElement(node) || node.type !== 'unordered-list-item') return
+  return Editor.start(editor, ReactEditor.findPath(editor, node))
+}
+
+/** Resolve list and structured-block gaps before the browser places its caret. */
 export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTMLElement>): boolean {
   if (editor.wysimark.readOnly || event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
   const target = event.target as HTMLElement
   if (target.closest('button,input,textarea,select,[role="menu"],[data-wysimark-toolbar],[data-wysimark-image-resize]')) return false
+  const listStart = event.detail <= 1 && unorderedListStart(editor, target, event.clientX, event.clientY)
+  if (listStart) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.type === 'mousedown') {
+      clearBlockSelection(editor)
+      startPointerSelection(editor, listStart, event)
+    }
+    return true
+  }
   const tableGap = tableGapFromPointer(editor, event.currentTarget, event.clientX, event.clientY)
   if (tableGap) {
     event.preventDefault()

@@ -5,7 +5,6 @@ import { cleanInlineStyle } from '../../blocks/typography'
 import { serializeMath } from "../math-plugin/serialize"
 import { formulaMarks } from "../math-plugin/formula-marks"
 import type { FormulaMarks } from "../math-plugin/formula-marks"
-import { serialize } from "../convert"
 let clipboardRevision = 0
 
 /** Mark → tag pairs shared by text runs and inline formulas. */
@@ -21,6 +20,39 @@ function wrapMarks(document: Document, leaf: Text, result: globalThis.Node): glo
   }
   if (style) { const span = document.createElement('span'); span.setAttribute('style', style); span.append(result); result = span }
   return result
+}
+
+/** Plain text for targets without rich text: no Markdown tokens, no block metadata. */
+export function clipboardPlainText(fragment: Descendant[], labels = new Map<Node, string>()): string {
+  const inlineText = (nodes: Descendant[]): string => nodes.map(node => {
+    if (Text.isText(node)) return node.text
+    if (node.type === 'math-inline' || node.type === 'math-block') return node.latex
+    if (node.type === 'image-inline') return node.alt || ''
+    if (node.type === 'image-row-caret') return ''
+    return inlineText(node.children)
+  }).join('')
+  const blocks = (nodes: Descendant[]): string[] => {
+    const resolved = resolveOrderedNumbers(nodes), lines: string[] = []
+    for (const node of nodes) {
+      if (!Element.isElement(node) || isEditorSpacer(node)) continue
+      const indent = (amount: number) => '  '.repeat(Math.max(0, amount))
+      if (isListBlock(node)) {
+        const label = labels.get(node) || resolved.numberLabels.get(node) ||
+          (node.type === 'ordered-list-item' ? `${resolved.numbers.get(node) || 1}.` : node.type === 'task-list-item' ? node.checked ? '☑' : '☐' : '•')
+        lines.push(indent(blockDepth(node)) + label + ' ' + inlineText(node.children))
+      } else if (node.type === 'code-block') lines.push(node.children.map(line => Node.string(line)).join('\n'))
+      else if (node.type === 'table') for (const row of node.children) lines.push(row.children.map(cell => inlineText(cell.children)).join('\t'))
+      else if (node.type === 'math-block') lines.push(node.latex)
+      else if (node.type === 'html-block') lines.push(node.html)
+      else if (node.type === 'link-definition') lines.push(node.markdown)
+      else if (node.type === 'block-quote') lines.push(...blocks(node.children))
+      else if (node.type === 'image-block') { if (node.alt) lines.push(node.alt) }
+      else if (node.type === 'horizontal-rule') continue
+      else lines.push(inlineText(node.children))
+    }
+    return lines
+  }
+  return blocks(fragment).join('\n').trim()
 }
 
 /** Build semantic HTML from just the copied fragment, without editor controls/CSS. */
@@ -173,9 +205,8 @@ export function installRichClipboard(editor: Editor): void {
       if (label) labels.set(node, label)
     })
     data.setData('text/html', clipboardFragmentHtml(fragment, encoded, labels, editor.wysimark.resolveImageUrl))
-    if (fragment.some(node => [...Node.elements(node)].some(([element]) => ['math-inline', 'math-block', 'image-inline', 'image-block'].includes(element.type)))) {
-      data.setData('text/plain', serialize(fragment as Element[], { enableInternalLinks: true }))
-    }
+    // Plain-text targets get the visible text; Markdown structure stays in the HTML.
+    data.setData('text/plain', clipboardPlainText(fragment, labels))
     prepareImageClipboard(editor, fragment, encoded)
     return result
   }

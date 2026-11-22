@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.12 — 2026-11-22
+
+### 中文
+
+- 标题列表菜单为 H1～H4 分别提供无序和有序两排按钮。同级标题混用两种样式时，两边都会高亮，点击可统一该级样式。默认 H1～H3 使用无序列表，H4 不使用列表。段落样式中的 H5 改称「小标题」。
+- 缩窄链接和附件菜单。网页链接的显示文字留空时会尝试获取网页标题，失败时提示并保留原链接。本地库链接留空时使用链接地址。
+- 普通引用文字以 80% 不透明度显示，保留手动设置的字色；在引用内清除列表标记时，保留引用和其他块的缩进。
+- 拖选同时包含正文和表格时，选中的表格按整块处理。撤销删除会恢复整表选中状态，点击表格外的空白仍可正常定位光标和开始拖选。
+
+### English
+
+- Heading lists offer separate unordered and ordered buttons for H1–H4. Both reflect mixed styles at a level. Click a button to apply one style across that level. H1–H3 default to unordered lists and H4 has no list prefix. H5 is labeled Subheading.
+- Narrow the link and attachment menus. A blank web link label triggers a title lookup. If it fails, the editor shows a notice and keeps the original link. A blank vault link label uses the link address.
+- Render ordinary quote text at 80% opacity and preserve custom text colors. Removing a list marker inside a quote preserves indentation for the quote and its other blocks.
+- Treat selected tables as whole blocks when a drag selection also includes body text. Undo restores whole-table selection, and clicks in gaps outside tables can place the caret or start a drag.
+
 ## 0.2.11 — 2026-11-21
 
 ### 中文

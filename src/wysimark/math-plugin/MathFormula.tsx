@@ -1,7 +1,7 @@
 import { finishRenderMath } from "obsidian"
 import { clsx } from "clsx"
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { Editor, Text, Transforms } from "slate"
+import { Editor, Element, Point, Text, Transforms } from "slate"
 import { HistoryEditor } from "slate-history"
 import { ReactEditor, useReadOnly, useSelected, useSlateStatic } from "slate-react"
 import type { RenderElementProps } from "slate-react"
@@ -10,6 +10,7 @@ import { editMath, useMathEditing } from "./editing"
 import type { MathElement } from "./types"
 import { loadFormulaRenderer, renderFormula } from "./render-formula"
 import { inlineStyleProps } from "../../blocks/typography"
+import { startPointerSelection } from "../../blocks/pointer-selection"
 
 export function MathFormula({ element, attributes, children }: Omit<RenderElementProps, "element"> & { element: MathElement }) {
   const editor = useSlateStatic(), readOnly = useReadOnly(), selected = useSelected()
@@ -161,7 +162,25 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
     }} onMouseDown={event => {
       if (readOnly || editing) return
       event.preventDefault(); event.stopPropagation()
-      Transforms.select(editor, ReactEditor.findPath(editor, element)); ReactEditor.focus(editor)
+      const path = ReactEditor.findPath(editor, element)
+      ReactEditor.focus(editor)
+      Transforms.select(editor, path)
+      if (event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
+      // Tables own their drag gestures: a formula drag must stay in its cell.
+      const cell = Editor.above(editor, { match: node => Element.isElement(node) && node.type === 'table-cell' })
+      let clampPoint: ((point: Point) => Point) | undefined
+      if (cell) {
+        const cellStart = Editor.start(editor, cell[1]), cellEnd = Editor.end(editor, cell[1])
+        clampPoint = point => Point.isBefore(point, cellStart) ? cellStart : Point.isAfter(point, cellEnd) ? cellEnd : point
+      }
+      // Pressing inside a void formula would otherwise only resolve on mouseup;
+      // drag the selection live from the half of the formula that was pressed.
+      const surface = event.currentTarget as HTMLElement
+      const host = surface.closest<HTMLElement>('[data-slate-editor="true"]')
+      if (!host) return
+      const bounds = surface.getBoundingClientRect()
+      const anchor = event.clientX >= bounds.left + bounds.width / 2 ? Editor.end(editor, path) : Editor.start(editor, path)
+      startPointerSelection(editor, anchor, { clientX: event.clientX, clientY: event.clientY, currentTarget: host, preventDefault: () => {} }, false, Editor.range(editor, path), clampPoint)
     }}>
       {editing && <span id={sourceLabel} hidden>{ui('LaTeX 公式源码')}</span>}
       {editing ? display

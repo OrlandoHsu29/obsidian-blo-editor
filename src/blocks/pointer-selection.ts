@@ -114,8 +114,10 @@ export function pointerRangeFromPoint(editor: Editor, host: HTMLElement, x: numb
 
 /** Preserve the real Slate anchor when a boundary click replaces native mousedown. */
 export function startPointerSelection(editor: Editor, point: Point,
-  event: Pick<MouseEvent<HTMLElement>, 'clientX' | 'clientY' | 'currentTarget' | 'preventDefault'>, placeCaret = true): () => void {
+  event: Pick<MouseEvent<HTMLElement>, 'clientX' | 'clientY' | 'currentTarget' | 'preventDefault'>, placeCaret = true, initial?: Range,
+  clampPoint?: (point: Point) => Point): () => void {
   resetPointerSelection(editor)
+  const clamp = clampPoint ?? ((value: Point) => value)
   const anchor = Editor.pointRef(editor, point)
   const host = event.currentTarget, doc = host.ownerDocument, win = doc.defaultView!
   const startX = event.clientX, startY = event.clientY
@@ -123,7 +125,9 @@ export function startPointerSelection(editor: Editor, point: Point,
   sessions.set(editor, session)
   event.preventDefault()
   ReactEditor.focus(editor)
-  if (placeCaret) Transforms.select(editor, point)
+  // A clicked void keeps its own selection until the drag actually extends it.
+  if (initial) Transforms.select(editor, initial)
+  else if (placeCaret) Transforms.select(editor, point)
   else Transforms.deselect(editor)
   let active = true, moved = false
   const cleanup = () => {
@@ -144,7 +148,7 @@ export function startPointerSelection(editor: Editor, point: Point,
       if (range) {
         moved = true
         event.preventDefault()
-        setPointerSelection(editor, range, doc)
+        setPointerSelection(editor, { anchor: clamp(range.anchor), focus: clamp(range.focus) }, doc)
       }
     }
     // A drag can still produce a click. Void blocks and gutter clicks would
@@ -165,7 +169,7 @@ export function startPointerSelection(editor: Editor, point: Point,
     if (!range) return
     moved = true
     event.preventDefault()
-    setPointerSelection(editor, range, doc)
+    setPointerSelection(editor, { anchor: clamp(range.anchor), focus: clamp(range.focus) }, doc)
   }
   session.cleanup = cleanup
   doc.addEventListener('mousemove', move, true)

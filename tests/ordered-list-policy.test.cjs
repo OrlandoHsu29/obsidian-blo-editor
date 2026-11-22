@@ -6,8 +6,8 @@ const {createEditor,Editor,Node,Transforms}=require('slate');
 const {withHistory}=require('slate-history');
 const loaded=new Module('ordered-list-policy.cjs');
 loaded.require=id=>id==='obsidian'?{getLanguage:()=> 'en',Platform:{isMacOS:false}}:require(id);
-loaded._compile(buildSync({stdin:{contents:"export {ListPlugin} from './src/wysimark/list-plugin'; export {ConvertElementPlugin} from './src/wysimark/convert-element-plugin'; export {listItems} from './src/wysimark/toolbar-plugin/items/list-items'; export {headingListState,setHeadingListStyle,toggleHeadingListLevel} from './src/blocks/heading-numbering'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'ordered-list-policy.cjs');
-const {ListPlugin,ConvertElementPlugin,listItems,headingListState,setHeadingListStyle,toggleHeadingListLevel}=loaded.exports;
+loaded._compile(buildSync({stdin:{contents:"export {ListPlugin} from './src/wysimark/list-plugin'; export {ConvertElementPlugin} from './src/wysimark/convert-element-plugin'; export {listItems} from './src/wysimark/toolbar-plugin/items/list-items'; export {headingListState,toggleHeadingListLevel} from './src/blocks/heading-numbering'",resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history'],write:false}).outputFiles[0].text,'ordered-list-policy.cjs');
+const {ListPlugin,ConvertElementPlugin,listItems,headingListState,toggleHeadingListLevel}=loaded.exports;
 const toolbar=listItems.find(item=>item!=='divider'&&item.title==='Numbered List');
 const bullet=listItems.find(item=>item!=='divider'&&item.title==='Bullet List');
 const heading=level=>({type:'heading',level,children:[{text:'title'}]});
@@ -25,18 +25,19 @@ const fixture=nodes=>{
 };
 
 for(const level of [1,2,3,4])for(const style of ['hash','number']){
- test(`${style} H${level} allows its own control and blocks the opposite toolbar and shortcut`,()=>{
-  const node=style==='number'?{type:'ordered-list-item',depth:0,blockChildren:true,children:[heading(level)]}:heading(level);
+ test(`${style} H${level} can switch rows or clear its prefix via either list control`,()=>{
+  const node=style==='number'?{type:'ordered-list-item',depth:0,blockChildren:true,children:[heading(level)]}:{...heading(level),__headingList:{style:'hash',enabled:true}};
   const {editor,key}=fixture([node]);const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
   const current=style==='number'?toolbar:bullet,opposite=style==='number'?bullet:toolbar,otherStyle=style==='number'?'hash':'number';
-  assert.equal(opposite.disabled(editor),true);assert.equal(current.disabled(editor),false);assert.equal(current.active(editor),true);
-  opposite.action(editor);assert.deepEqual(key(otherStyle),{prevented:true,stopped:true});
-  assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
-  current.action(editor);assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].__headingList.enabled,false);
-  assert.equal(current.active(editor),false);assert.equal(opposite.disabled(editor),true);
-  assert.deepEqual(key(style),{prevented:true,stopped:true});assert.equal(current.active(editor),true);
+  assert.equal(opposite.disabled(editor),false);assert.equal(current.disabled(editor),false);assert.equal(current.active(editor),true);
+  opposite.action(editor);assert.equal(opposite.active(editor),true);assert.equal(current.active(editor),false);
+  assert.deepEqual(key(otherStyle),{prevented:true,stopped:true});
+  assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[0].__headingList.enabled,false);
+  assert.equal(opposite.active(editor),false);assert.equal(current.active(editor),false);
   assert.equal(Node.string(editor.children[0]),'title');
-  editor.undo();assert.equal(editor.children[0].__headingList.enabled,false);editor.redo();assert.equal(current.active(editor),true);
+  editor.undo();assert.equal(opposite.active(editor),true);
+  editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
+  editor.redo();assert.equal(opposite.active(editor),true);
  });
 }
 
@@ -58,7 +59,7 @@ test('a heading/body selection applies the current type together as one undo ste
  const {editor,key}=fixture([heading(2),{type:'paragraph',children:[{text:'body'}]}]);
  Transforms.select(editor,{anchor:Editor.start(editor,[0]),focus:Editor.end(editor,[1])});
  const before=structuredClone(editor.children),selection=structuredClone(editor.selection);
- assert.equal(toolbar.disabled(editor),true);assert.equal(bullet.disabled(editor),false);key('hash');
+ assert.equal(toolbar.disabled(editor),false);assert.equal(bullet.disabled(editor),false);key('hash');
  assert.equal(editor.children[0].type,'heading');assert.equal(editor.children[1].type,'unordered-list-item');
  editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);
 });
@@ -80,17 +81,11 @@ for(const style of ['number','hash'])for(const depth of [0,2])test(`Backspace re
  editor.undo();assert.deepEqual(editor.children,before);assert.deepEqual(editor.selection,selection);editor.redo();assert.equal(editor.children[1].__headingList.enabled,false);
 });
 
-test('a level is selected only when all headings of that level have the selected list style',()=>{
+test('clicking a partly formatted heading level applies the style to every heading of that level',()=>{
  const num=level=>({type:'ordered-list-item',depth:0,blockChildren:true,children:[heading(level)]});
  const {editor}=fixture([num(1),num(2),num(2)]);Transforms.select(editor,Editor.start(editor,[1]));toolbar.action(editor);
- assert(!headingListState(editor).levels.includes(2));toggleHeadingListLevel(editor,2);
- assert(headingListState(editor).levels.includes(2));assert.equal(editor.children[1].type,'ordered-list-item');assert.equal(editor.children[2].type,'ordered-list-item');
-});
-
-test('changing the document mode reverses disabled controls without offering a mixed mode',()=>{
- const {editor,key}=fixture([heading(1),heading(2)]);setHeadingListStyle(editor,'number');
- assert.equal(bullet.disabled(editor),true);setHeadingListStyle(editor,'hash');assert.equal(toolbar.disabled(editor),true);assert.equal(bullet.disabled(editor),false);
- const before=structuredClone(editor.children);key('number');assert.deepEqual(editor.children,before);assert.equal(headingListState(editor).style,'hash');
+ assert.equal(headingListState(editor).byLevel[2],null);toggleHeadingListLevel(editor,2,'number');
+ assert.equal(headingListState(editor).byLevel[2],'number');assert.equal(editor.children[1].type,'ordered-list-item');assert.equal(editor.children[2].type,'ordered-list-item');
 });
 
 test('body lists can still switch freely between ordered and unordered styles',()=>{

@@ -13,6 +13,7 @@ import { insertBreak } from "./insert-break"
 import { createHeadingMethods } from "./methods"
 import { $H1, $H2, $H3, $H4, $H5, $H6 } from "./styles"
 import { HeadingPluginCustomTypes } from "./types"
+import { hasHeadingHashPrefix, headingDefaults } from '../../blocks/heading-defaults'
 
 export const HeadingPlugin = createPlugin<HeadingPluginCustomTypes>(
   (editor) => {
@@ -40,7 +41,7 @@ export const HeadingPlugin = createPlugin<HeadingPluginCustomTypes>(
       editableProps: {
         renderElement: ({ element, attributes, children }) => {
           if (element.type === "heading") {
-            const headingAttributes = { ...attributes, 'data-heading-list-enabled': element.__headingList?.enabled }
+            const headingAttributes = { ...attributes, 'data-heading-list-enabled': hasHeadingHashPrefix(element, headingDefaults(editor.children[0])) }
             switch (element.level) {
               case 1:
                 return <$H1 {...headingAttributes}>{children}</$H1>

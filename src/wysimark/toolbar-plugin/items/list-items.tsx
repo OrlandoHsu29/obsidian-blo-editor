@@ -1,5 +1,5 @@
 import { MenuItemData } from "../../shared-overlays"
-import { selectionHasHeading, selectionHasMainHeading } from '../../../blocks/heading-policy'
+import { selectionHasHeading } from '../../../blocks/heading-policy'
 import { headingListControlDisabled, headingListSelectionActive } from '../../../blocks/heading-numbering'
 import { findElementUp } from "../../sink"
 
@@ -13,7 +13,7 @@ export const listItems: MenuItemData[] = [
   {
     icon: Icon.BulletList,
     title: t("bulletList"),
-    disabled: editor => headingListControlDisabled(editor,'hash') || (selectionHasHeading(editor)&&!selectionHasMainHeading(editor)),
+    disabled: editor => headingListControlDisabled(editor, true),
     hotkey: "mod+shift+8",
     action: (editor) => editor.list.convertUnorderedList(true),
     active: (editor) => headingListSelectionActive(editor,'hash') || !!findElementUp(editor, "unordered-list-item"),
@@ -21,7 +21,7 @@ export const listItems: MenuItemData[] = [
   {
     icon: Icon.ListNumbers,
     title: t("numberedList"),
-    disabled: editor => headingListControlDisabled(editor,'number'),
+    disabled: headingListControlDisabled,
     hotkey: "mod+shift+7",
     action: (editor) => editor.list.convertOrderedList(true),
     active: (editor) => headingListSelectionActive(editor,'number') || !!findElementUp(editor, "ordered-list-item"),

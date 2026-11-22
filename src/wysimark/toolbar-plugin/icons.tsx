@@ -73,7 +73,7 @@ export const H4 = () => (
   </TablerIcon>
 )
 
-export const Subtitle = () => (
+export const Subheading = () => (
   <TablerIcon data-wysimark-subtitle-icon>
     <path d="M4 5h12M10 5v11M7 16h6M17 12h3M17 16h3M4 21h16" />
   </TablerIcon>
@@ -95,7 +95,7 @@ export const ParagraphStyle = () => {
   })
   const heading = entry?.[0]
   const CurrentIcon = heading && Element.isElement(heading) && heading.type === 'heading'
-    ? [H1, H2, H3, H4, Subtitle][heading.level - 1] || Normal
+    ? [H1, H2, H3, H4, Subheading][heading.level - 1] || Normal
     : Normal
   return <CurrentIcon />
 }
@@ -277,7 +277,6 @@ export const ListNumbers = () => (
   </TablerIcon>
 )
 
-export const HeadingHashes = () => <TablerIcon><path d="M5 9h15M4 15h15M11 3 7 21M17 3l-4 18" /></TablerIcon>
 export const MultilevelList = () => <TablerIcon><path d="M4 5h3M11 5h9M7 12h3M14 12h6M10 19h3M17 19h3M5 8v4h1M8 15v4h1" /></TablerIcon>
 
 export const IncreaseDepth = () => (

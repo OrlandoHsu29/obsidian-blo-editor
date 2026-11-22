@@ -1,7 +1,7 @@
 import type { Element } from '../wysimark/convert/types'
 import { Element as SlateElement, Node } from 'slate'
 import { blockDepth, isEditorSpacer, isFoldableList, isListBlock, orderedNumbers } from './model'
-import { headingDefaults } from './heading-defaults'
+import { headingDefaults, parseHeadingDefaults } from './heading-defaults'
 
 const prefix='<!-- wysimark-block:v1 '
 const formats = new WeakMap<Element, {
@@ -60,10 +60,8 @@ export function parseBlockDocument(source: string, parseOne:(text:string)=>Eleme
     }
     const parsed=parseOne(chunk.lines.join('\n').trim());const node=parsed[0]
     if(!node)continue
-    const defaults=chunk.metadata.headingDefaults
-    if(defaults&&['hash','number'].includes(defaults.style)&&Array.isArray(defaults.levels)&&defaults.levels.every((level:unknown)=>typeof level==='number'&&Number.isInteger(level)&&level>=1&&level<=4)) {
-      node.__headingDefaults={style:defaults.style,levels:[...new Set(defaults.levels)] as (1|2|3|4)[]}
-    }
+    const defaults = parseHeadingDefaults(chunk.metadata.headingDefaults)
+    if (defaults) node.__headingDefaults = defaults
     if(chunk.metadata.collapsed===true&&isFoldableList(node))node.__collapsed=true
     const depth=Math.max(0,Math.min(32,Number(chunk.metadata.depth)||0))
     const recoveredList=isListBlock(node)&&node.__blockDepth!==undefined

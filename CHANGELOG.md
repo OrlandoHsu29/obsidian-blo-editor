@@ -177,7 +177,7 @@ Validation: type checking, 821 automated tests, production packaging and targete
 
 ### 中文
 
-- 有序列表在正文、标题和子标题之间切换时保留编号；子标题序号使用统一的紫色。
+- 有序列表在正文、标题和小标题之间切换时保留编号；小标题序号使用统一的紫色。
 - 链接文字支持直接定位光标和编辑。选满文字后输入会保留链接地址；点击图标或拖选经过图标才能选中整条链接，剪切不再残留图标。
 - 所有链接统一显示图标；仅图标的空白链接可编辑，并保留第一次退格选中、第二次删除的行为。多个空格统一保存为一个空白标签。
 - 链接弹窗增加靠右的浅灰提示，显示文字留空时使用链接地址；开启自动标题时优先获取网页标题。
@@ -186,7 +186,7 @@ Validation: type checking, 821 automated tests, production packaging and targete
 
 ### English
 
-- Preserve ordered-list numbering when switching body, heading and subtitle styles; use the same accent color for subtitle numbers.
+- Preserve ordered-list numbering when switching body, heading and subheading styles; use the same accent color for subheading numbers.
 - Edit link text directly with a visible caret. Replacing the entire label preserves its destination; click or drag across the icon to select and cut the complete link without leaving an orphan icon.
 - Show a consistent icon on all links. Editable icon-only blank links retain two-step Backspace selection/deletion, and whitespace-only labels persist as one blank label.
 - Add right-aligned display-text hints to link dialogs. Empty labels use the link address, or a fetched page title when automatic titles are enabled.

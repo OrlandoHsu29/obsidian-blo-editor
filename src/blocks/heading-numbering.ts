@@ -1,27 +1,34 @@
 import { Editor, Element, Node, Range, Transforms } from 'slate'
 import type { Location, Path } from 'slate'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
-import { rootCache } from './model'
-import { selectionHasMainHeading } from './heading-policy'
+import { headingPathsForLevel, rootCache } from './model'
+import { isHeading, isMainHeadingOrOwner } from './heading-policy'
 import { setListBlock } from './list-container'
 import { unwrapHeadingList } from './heading-conversion'
-import { headingDefaults } from './heading-defaults'
-import type { HeadingDefaults } from './heading-defaults'
+import { defaultHeadingListStyles, hasHeadingHashPrefix, headingDefaults, headingLevels, mapHeadingLevels } from './heading-defaults'
+import type { HeadingDefaults, HeadingListLevel, HeadingListStyle } from './heading-defaults'
 
-const isNumberedHeading = (node: Node) => Element.isElement(node) && node.type === 'heading' && node.level >= 1 && node.level <= 4 && !node.__subtitle
-export type HeadingListStyle = 'hash' | 'number'
-export type HeadingListLevel = 1 | 2 | 3 | 4
-const defaultLevels: readonly HeadingListLevel[] = [1, 2, 3, 4]
-type HeadingListState = { count: number; style: HeadingListStyle; levels: readonly HeadingListLevel[]; uniform: boolean; defaults?: HeadingDefaults }
+const isNumberedHeading = (node: Node): node is Extract<Element, { type: 'heading' }> =>
+  isHeading(node) && node.level >= 1 && node.level <= 4 && !node.__subtitle
+type HeadingListState = {
+  count: number
+  byLevel: HeadingDefaults
+  activeLevels: Record<HeadingListStyle, HeadingListLevel[]>
+  defaults?: HeadingDefaults
+}
 const listStates = new WeakMap<ReturnType<typeof rootCache>['headings'], HeadingListState>()
 
-export function toggleHeadingListLevel(editor: Editor, level: HeadingListLevel): void {
+export function toggleHeadingListLevel(editor: Editor, level: HeadingListLevel, style: HeadingListStyle): void {
   if (editor.wysimark.readOnly) return
-  const { style, levels } = headingListState(editor)
-  const enabled = !levels.includes(level)
-  const nextLevels = defaultLevels.filter(value => value === level ? enabled : levels.includes(value))
-  changeHeadings(editor, heading => heading.type === 'heading' && heading.level === level
-    ? { style, enabled } : undefined, { style, levels: nextLevels })
+  const { byLevel, defaults } = headingListState(editor)
+  const enabled = byLevel[level] !== style
+  const paths = headingPathsForLevel(editor, level)
+  withHistoryBatch(editor, () => {
+    saveDefaults(editor, { ...(defaults ?? byLevel), [level]: enabled ? style : null })
+    // Work backwards so wrapping or unwrapping does not shift subsequent paths.
+    const settings = { style, enabled }
+    for (const path of paths.reverse()) setHeadingList(editor, path, settings)
+  })
 }
 
 export function headingListState(editor: Editor): HeadingListState {
@@ -33,7 +40,7 @@ export function headingListState(editor: Editor): HeadingListState {
     const counts = new Map<HeadingListLevel,{total:number;hash:number;number:number}>()
     for (const heading of headings) {
       const node = heading.node
-      if (!isNumberedHeading(node) || node.type !== 'heading') continue
+      if (!isNumberedHeading(node)) continue
       count++
       savedStyle ??= node.__headingList?.style
       savedLevels ??= node.__headingList?.levels
@@ -42,62 +49,75 @@ export function headingListState(editor: Editor): HeadingListState {
       const current = counts.get(level) ?? {total:0,hash:0,number:0}
       current.total++
       if(heading.numberLabel !== undefined)current.number++
-      else if(node.__headingList?.enabled !== false)current.hash++
+      else if (hasHeadingHashPrefix(node, defaults)) current.hash++
       counts.set(level,current)
     }
-    const style = defaults?.style ?? savedStyle ?? (numbered ? 'number' : 'hash')
-    state = { count, style, defaults, levels: defaultLevels.filter(level => {
+    const fallbackStyle = savedStyle ?? (numbered ? 'number' : 'hash')
+    const byLevel = mapHeadingLevels(level => {
       const current = counts.get(level)
-      return current ? current[style] === current.total : (defaults?.levels ?? savedLevels ?? defaultLevels).includes(level)
-    }),
-      uniform: [...counts.values()].every(n=>n[style==='number'?'hash':'number']===0) }
+      if (!current) {
+        if (defaults) return defaults[level]
+        const enabled = savedLevels ? savedLevels.includes(level) : defaultHeadingListStyles[level] !== null
+        return enabled ? fallbackStyle : null
+      }
+      if (current.hash === current.total) return 'hash'
+      if (current.number === current.total) return 'number'
+      return null
+    })
+    const active = (style: HeadingListStyle) => headingLevels.filter(level => {
+      const current = counts.get(level)
+      return current ? current[style] > 0 : byLevel[level] === style
+    })
+    state = { count, defaults, byLevel, activeLevels: { hash: active('hash'), number: active('number') } }
     listStates.set(headings, state)
   }
   return state
-}
-
-export function setHeadingListStyle(editor: Editor, style: HeadingListStyle): void {
-  const state=headingListState(editor)
-  if (state.style === style && state.uniform) return
-  changeHeadings(editor, heading => {
-    const enabled = heading.__headingList?.enabled !== false
-    return { style, enabled }
-  }, { style, levels: [...state.levels] })
 }
 
 /** Use the state from before conversion, before a new heading affects level totals. */
 export function inheritHeadingList(editor:Editor,at:Location,state:HeadingListState,preserveOrderedLists=false):void {
   // Consolidate inferred/legacy choices into the same document preset used by
   // the menu, rather than repeating level snapshots on every new heading.
-  if(!state.defaults&&state.count)saveDefaults(editor,{style:state.style,levels:[...state.levels]})
+  if(!state.defaults&&state.count)saveDefaults(editor,state.byLevel)
   const entries=[...Editor.nodes(editor,{at,match:isNumberedHeading})]
   for(const [heading,path] of entries.reverse()) {
-    const enabled=Element.isElement(heading)&&heading.type==='heading'&&state.levels.includes(heading.level as HeadingListLevel)
+    if (!Element.isElement(heading) || heading.type !== 'heading') continue
+    const style = state.byLevel[heading.level as HeadingListLevel]
     const owner=Editor.above(editor,{at:path,match:n=>Element.isElement(n)&&n.type==='ordered-list-item'})
-    if(owner&&(preserveOrderedLists||state.style==='number'&&enabled))continue
+    if(owner&&(preserveOrderedLists||style==='number'))continue
     if(!state.count&&!state.defaults){unwrapHeadingList(editor,path);continue}
-    if(Element.isElement(heading)&&heading.type==='heading')setHeadingList(editor,path,{
-      style:state.style,enabled,
-    })
+    setHeadingList(editor,path,{style:style ?? 'hash',enabled:style !== null})
   }
 }
 
 function currentHeadingStyle(editor:Editor,heading:Element,path:Path):HeadingListStyle|undefined {
   const parent=path.length>1?Node.get(editor,path.slice(0,-1)):undefined
   if(Element.isElement(parent)&&parent.type==='ordered-list-item'&&parent.blockChildren&&path[path.length-1]===0)return 'number'
-  return heading.__headingList?.enabled===false?undefined:'hash'
+  return heading.type === 'heading' && hasHeadingHashPrefix(heading, headingDefaults(editor.children[0])) ? 'hash' : undefined
 }
 
-/** Toolbar and keyboard shortcuts share the document's selected heading-list type. */
-export function headingListControlDisabled(editor:Editor,style:HeadingListStyle):boolean {
-  if(!selectionHasMainHeading(editor))return false
-  return headingListState(editor).style!==style || !Editor.nodes(editor,{match:isNumberedHeading}).next().value
+/** Protect heading owners and restrict subheadings to the controls they support. */
+export function headingListControlDisabled(editor: Editor, includeSubheadings = false): boolean {
+  if (!editor.selection) return false
+  const headings = Editor.nodes(editor, {
+    mode: 'all', match: node => isMainHeadingOrOwner(node) || includeSubheadings && isHeading(node),
+  })
+  let hasHeading = false
+  for (const [node] of headings) {
+    if (isNumberedHeading(node)) return false
+    hasHeading = true
+  }
+  return hasHeading
 }
 
 export function headingListSelectionActive(editor:Editor,style:HeadingListStyle):boolean {
   if(!editor.selection)return false
-  const entries=[...Editor.nodes(editor,{match:isNumberedHeading})]
-  return entries.length>0&&entries.every(([node,path])=>Element.isElement(node)&&currentHeadingStyle(editor,node,path)===style)
+  let hasHeading = false
+  for (const [node, path] of Editor.nodes(editor, { match: isNumberedHeading })) {
+    if (!isHeading(node) || currentHeadingStyle(editor, node, path) !== style) return false
+    hasHeading = true
+  }
+  return hasHeading
 }
 
 /** Only selections containing main headings take this path; prose uses the existing commands. */
@@ -105,8 +125,6 @@ export function convertSelectedHeadingList(editor:Editor,style:HeadingListStyle,
   if(!editor.selection||editor.wysimark.readOnly)return false
   const selected=new Set([...Editor.nodes(editor,{match:isNumberedHeading})].map(([node])=>node))
   if(!selected.size)return false
-  // The selection already contains a main heading; don't traverse it again.
-  if(headingListState(editor).style!==style)return true
   const type=style==='number'?'ordered-list-item':'unordered-list-item'
   const entries=[...Editor.nodes(editor,{mode:'highest',match:n=>Element.isElement(n)&&(isNumberedHeading(n)||
     ('blockChildren' in n&&n.blockChildren&&n.type.endsWith('list-item'))||editor.convertElement.isConvertibleElement(n))})]
@@ -141,35 +159,24 @@ export function deleteHeadingListPrefix(editor:Editor):boolean {
 
 function saveDefaults(editor: Editor, defaults: HeadingDefaults) {
   const current=headingDefaults(editor.children[0])
-  if(current?.style===defaults.style&&current.levels.length===defaults.levels.length&&current.levels.every((level,index)=>level===defaults.levels[index]))return
+  if (current && headingLevels.every(level => current[level] === defaults[level])) return
   if (Element.isElement(editor.children[0])) Transforms.setNodes(editor, { __headingDefaults: defaults }, { at: [0] })
 }
 
-function changeHeadings(editor: Editor, change: (heading: Element) => NonNullable<Element['__headingList']> | undefined, defaults?: HeadingDefaults): void {
-  if (editor.wysimark.readOnly) return
-  const entries = [...Editor.nodes(editor, { at: [], match: isNumberedHeading })]
-  withHistoryBatch(editor, () => {
-    if (defaults) saveDefaults(editor, defaults)
-    // Work backwards so wrapping/unwrapping cannot invalidate subsequent paths.
-    for (const [heading, path] of entries.reverse()) {
-      if (!Element.isElement(heading)) continue
-      const update = change(heading)
-      if (!update) continue
-      setHeadingList(editor,path,update)
-    }
-  })
-}
-
 function setHeadingList(editor:Editor,path:Path,settings:NonNullable<Element['__headingList']>):void {
+  const heading = Node.get(editor, path)
+  if (!isHeading(heading)) return
   const numbered=settings.style==='number'&&settings.enabled
   const parentPath=path.slice(0,-1)
   const parent=parentPath.length?Node.get(editor,parentPath):undefined
   const owner=Element.isElement(parent)&&parent.type==='ordered-list-item'&&parent.blockChildren&&path[path.length-1]===0?parent:undefined
-  Transforms.setNodes(editor,{__headingList:settings,__blockDepth:0},{at:path})
+  const current = heading.__headingList
+  if (heading.__blockDepth !== 0 || current?.style !== settings.style || current.enabled !== settings.enabled || current.levels) {
+    Transforms.setNodes(editor, { __headingList: settings, __blockDepth: 0 }, { at: path })
+  }
   if(numbered) {
     if(owner) {
-      Transforms.unsetNodes(editor,['start','__firstAtDepth'],{at:parentPath})
-      Transforms.setNodes(editor,{__numbering:'continue',depth:0,__blockDepth:0},{at:parentPath})
+      Transforms.setNodes(editor,{start:undefined,__firstAtDepth:undefined,__numbering:'continue',depth:0,__blockDepth:0},{at:parentPath})
     } else {
       Transforms.wrapNodes(editor,{
         type:'ordered-list-item',blockChildren:true,depth:0,__numbering:'continue',children:[],

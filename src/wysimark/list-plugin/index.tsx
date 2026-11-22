@@ -44,8 +44,8 @@ export const ListPlugin = createPlugin<ListPluginCustomTypes>(
     const hotkeyHandler = createHotkeyHandler({
       tab: list.indent,
       "shift+tab": list.outdent,
-      "super+7": () => headingListControlDisabled(editor,'number') ? true : list.convertOrderedList(true),
-      "super+8": () => headingListControlDisabled(editor,'hash') ? true : list.convertUnorderedList(true),
+      "super+7": () => headingListControlDisabled(editor) ? true : list.convertOrderedList(true),
+      "super+8": () => headingListControlDisabled(editor) ? true : list.convertUnorderedList(true),
       "super+9": curryOne(list.convertTaskList, true),
     })
 

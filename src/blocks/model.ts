@@ -25,15 +25,22 @@ export function groupEnd(nodes: Node[], start: number) {
   let end=start+1;while(end<nodes.length&&(isEditorSpacer(nodes[end])||blockDepth(nodes[end])>blockDepth(nodes[start])))end++;return end
 }
 export type BlockHeading={node:Element;number?:number;numberLabel?:string;listIndex?:number}
-type HeadingProjection={headings:{node:Element;listOffset?:number;numberedOwner?:Node}[];listCount:number}
-const headingNodes=new WeakMap<Node,HeadingProjection>(),emptyHeadings:HeadingProjection={headings:[],listCount:0}
+type HeadingProjection={headings:{node:Extract<Element,{type:'heading'}>;path:Path;listOffset?:number;numberedOwner?:Node}[];listCount:number}
+const headingNodes=new WeakMap<Node,HeadingProjection>()
+const emptyHeadings:HeadingProjection={headings:[],listCount:0}
+const bodyList:HeadingProjection={headings:[],listCount:1}
 function blockHeadings(node:Node):HeadingProjection {
   if(!Element.isElement(node))return emptyHeadings
-  if(node.type==='heading')return {headings:[{node}],listCount:0}
-  if(isListBlock(node)&&!('blockChildren' in node&&node.blockChildren))return {headings:[],listCount:1}
-  if(node.type!=='block-quote'&&!('blockChildren' in node&&node.blockChildren))return emptyHeadings
+  const hasBlockChildren = 'blockChildren' in node && node.blockChildren
+  if(isListBlock(node)&&!hasBlockChildren)return bodyList
+  if(node.type!=='heading'&&node.type!=='block-quote'&&!hasBlockChildren)return emptyHeadings
   let projection=headingNodes.get(node)
   if(!projection){
+    if(node.type==='heading') {
+      projection={headings:[{node,path:[]}],listCount:0}
+      headingNodes.set(node,projection)
+      return projection
+    }
     projection={headings:[],listCount:0}
     const lists=new Map<Node,number>()
     for(const [element,path] of Node.elements(node)) {
@@ -47,11 +54,23 @@ function blockHeadings(node:Node):HeadingProjection {
         if(Element.isElement(parent)&&parent.type==='ordered-list-item'&&parent.children[0]===element)numberedOwner=parent
         break
       }
-      projection.headings.push({node:element,listOffset,numberedOwner})
+      projection.headings.push({node:element,path,listOffset,numberedOwner})
     }
     headingNodes.set(node,projection)
   }
   return projection
+}
+
+export function headingPathsForLevel(editor: Editor, level: 1 | 2 | 3 | 4): Path[] {
+  const paths: Path[] = []
+  editor.children.forEach((node, index) => {
+    for (const heading of blockHeadings(node).headings) {
+      if (heading.node.level === level && !heading.node.__subtitle) {
+        paths.push([index, ...heading.path])
+      }
+    }
+  })
+  return paths
 }
 const caches = new WeakMap<Editor,{children: Editor['children']; indices: Map<Node,number>; numbers: Map<Node,number>;numberLabels:Map<Node,string>;headings:BlockHeading[];listCount:number;listGuides:Map<Node,number>;completedTasks:Set<Node>;foldable:Set<Node>;foldedBy:Map<Node,Node>;previousVisible:Map<Node,number>}>()
 export function rootCache(editor: Editor) {
@@ -113,7 +132,7 @@ export function listHeadingLevel(node: Node): number | undefined {
     if(Element.isElement(first)&&first.type==='heading')return first.level
   }
 }
-/** Titles, subtitles and their numbered owners always stay at root depth. */
+/** Titles, subheadings and their numbered owners always stay at root depth. */
 export const canIndentBlock = (node: Node) => listHeadingLevel(node) === undefined
 export function normalizeHeadingIndent(editor: Editor, [node,path]: NodeEntry): boolean {
   if (!Element.isElement(node) || canIndentBlock(node)) return false
@@ -156,7 +175,7 @@ export function resolveOrderedNumbers(nodes: Node[]) {
       const block=node as Block
       const number=block.__numbering==='explicit'&&block.start!==undefined?block.start:restartsNumbering(block)?1:(counts.get(depth)||0)+1
       counts.set(depth,number);numbers.set(node,number)
-      // Subtitles use an independent lowercase alphabetic sequence.
+      // Subheadings use an independent lowercase alphabetic sequence.
       if(headingLevel===5)numberLabels.set(node,`${alphabeticNumber(number)}.`)
       else if(headingLevel===undefined)numberLabels.set(node,`${number}.`)
       else {

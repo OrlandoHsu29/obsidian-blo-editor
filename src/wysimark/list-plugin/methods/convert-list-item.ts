@@ -12,7 +12,7 @@ import {
 
 export function convertOrderedList(editor: Editor, allowToggle: boolean) {
   if(editor.wysimark.readOnly)return false
-  if(headingListControlDisabled(editor,'number'))return false
+  if(headingListControlDisabled(editor))return false
   if(convertSelectedHeadingList(editor,'number',allowToggle))return true
   if(convertContainingList(editor,'ordered-list-item',allowToggle))return true
   return editor.convertElement.convertElements<OrderedListItemElement>(
@@ -47,9 +47,8 @@ export function convertTaskList(editor: Editor, allowToggle: boolean) {
 
 export function convertUnorderedList(editor: Editor, allowToggle: boolean) {
   if(editor.wysimark.readOnly)return false
-  if(headingListControlDisabled(editor,'hash'))return false
+  if(headingListControlDisabled(editor,true))return false
   if(convertSelectedHeadingList(editor,'hash',allowToggle))return true
-  if(selectionHasHeading(editor))return false
   if(convertContainingList(editor,'unordered-list-item',allowToggle))return true
   return editor.convertElement.convertElements<UnorderedListItemElement>(
     (element) => element.type === "unordered-list-item",

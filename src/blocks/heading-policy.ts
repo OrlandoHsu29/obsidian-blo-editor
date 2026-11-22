@@ -1,11 +1,15 @@
-import { Editor, Element } from 'slate'
+import { Editor, Element, Node } from 'slate'
+
+export function isHeading(node: Node): node is Extract<Element, { type: 'heading' }> {
+ return Element.isElement(node) && node.type === 'heading'
+}
+
+const isMainHeading = (node: Node | undefined) => node !== undefined && isHeading(node) && node.level !== 5
+
 export function selectionHasHeading(editor:Editor) {
- if(!editor.selection)return false
- return !!Editor.nodes(editor,{match:n=>Element.isElement(n)&&n.type==='heading'}).next().value
+ return !!editor.selection && !Editor.nodes(editor,{match:isHeading}).next().done
 }
 /** Also detect heading owners so a body selection cannot rewrite its containing heading list. */
-export function selectionHasMainHeading(editor:Editor) {
- if(!editor.selection)return false
- const main=(node:unknown)=>Element.isElement(node)&&node.type==='heading'&&node.level!==5
- return !!Editor.nodes(editor,{match:n=>main(n)||(Element.isElement(n)&&n.type==='ordered-list-item'&&n.blockChildren&&main(n.children[0]))}).next().value
+export function isMainHeadingOrOwner(node: Node): boolean {
+ return isMainHeading(node) || Element.isElement(node) && node.type === 'ordered-list-item' && !!node.blockChildren && isMainHeading(node.children[0])
 }

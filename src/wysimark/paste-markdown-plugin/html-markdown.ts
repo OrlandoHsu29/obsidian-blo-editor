@@ -1,5 +1,6 @@
 import { htmlToMarkdown } from 'obsidian'
 import { prepareClipboardCodeBlocks, restoreClipboardCodeBlocks } from './html-code-block'
+import { prepareClipboardMath } from './html-math'
 
 /** Preserve semantic marks even where Markdown punctuation cannot open/close them. */
 export function clipboardHtmlToMarkdown(html: string): string {
@@ -25,6 +26,7 @@ export function clipboardHtmlToMarkdown(html: string): string {
   const codeBlocks = prepareClipboardCodeBlocks(document.body, codeMarker)
   const tags: string[] = []
   const token = (tag: string) => `${prefix}${tags.push(tag) - 1}\uE001`
+  prepareClipboardMath(document.body, token, block => `${codeMarker}${codeBlocks.push(block) - 1}\uE001`)
   for (const element of document.body.querySelectorAll('strong,b,em,i,s,del,u,mark,sup,sub,kbd')) {
     if (element.closest('pre,code')) continue
     element.before(document.createTextNode(token(`<${element.localName}>`)))

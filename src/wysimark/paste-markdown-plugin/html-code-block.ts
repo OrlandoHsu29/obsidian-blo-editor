@@ -75,13 +75,17 @@ export function prepareClipboardCodeBlocks(body: HTMLElement, marker: string): s
     const block = serializeCodeBlock({ type: 'code-block', language, children: text.split('\n').map(text => ({
       type: 'code-block-line', children: [{ text }],
     })) }).trimEnd()
-    const prePlaceholder = body.ownerDocument.createElement('pre')
-    const codePlaceholder = body.ownerDocument.createElement('code')
-    codePlaceholder.textContent = `${marker}${blocks.push(block) - 1}\uE001`
-    prePlaceholder.append(codePlaceholder)
-    element.replaceWith(prePlaceholder)
+    replaceClipboardFencedBlock(element, `${marker}${blocks.push(block) - 1}\uE001`)
   }
   return blocks
+}
+
+export function replaceClipboardFencedBlock(element: Element, token: string) {
+  const pre = element.ownerDocument.createElement('pre')
+  const code = element.ownerDocument.createElement('code')
+  code.textContent = token
+  pre.append(code)
+  element.replaceWith(pre)
 }
 
 export function restoreClipboardCodeBlocks(markdown: string, marker: string, blocks: string[]): string {

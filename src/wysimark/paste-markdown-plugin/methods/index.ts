@@ -5,9 +5,12 @@ import { curryOne } from "../../sink"
 import { parse } from "../../convert"
 import { pasteTableFragment } from '../../table-plugin/paste-table'
 import { deleteMixedTableSelection } from '../../table-plugin/mixed-selection'
+import { normalizePastedLatex } from '../latex-delimiters'
+import { separatePastedDisplayMath } from '../separate-display-math'
 
 function pasteMarkdown(editor: Editor, markdown: string, fromHtml = false) {
-  const fragment = parse(markdown, { enableInternalLinks: true, collapseListGaps: fromHtml })
+  const parsed = parse(normalizePastedLatex(markdown), { enableInternalLinks: true, collapseListGaps: fromHtml })
+  const fragment = separatePastedDisplayMath(parsed)
   for (const element of fragment) {
     delete element.__markdownLeadingNewlines
     delete element.__markdownTrailingNewlines
@@ -17,10 +20,12 @@ function pasteMarkdown(editor: Editor, markdown: string, fromHtml = false) {
   // Explicit Markdown blocks (headings, tables, etc.) retain their own structure.
   const emptyParagraph = editor.selection && Range.isCollapsed(editor.selection) &&
     Editor.above(editor, { match: node => Element.isElement(node) && node.type === "paragraph" && Editor.isEmpty(editor, node) })
-  if (emptyParagraph || fragment.every(element => element.type === "paragraph")) {
+  const hasDisplayMath = fragment.some(element => element.type === 'math-block')
+  if (emptyParagraph && (!hasDisplayMath || emptyParagraph[1].length === 1) ||
+      !hasDisplayMath && fragment.every(element => element.type === "paragraph")) {
     editor.insertFragment(fragment)
   } else {
-    const insert = () => Transforms.insertNodes(editor, fragment)
+    const insert = () => Transforms.insertNodes(editor, fragment, hasDisplayMath ? { mode: 'highest' } : undefined)
     if (!deleteMixedTableSelection(editor, insert)) insert()
   }
 }

@@ -26,14 +26,69 @@ loaded._compile(buildSync({stdin:{contents:`
  export {isWholeBlockSelected} from './src/blocks/selection';
  export {parse,serialize} from './src/wysimark/convert';
  export {createPasteMarkdownMethods} from './src/wysimark/paste-markdown-plugin/methods';
+ export {normalizePastedLatex} from './src/wysimark/paste-markdown-plugin/latex-delimiters';
  export {selectWholeTableDrag,tableCellSelection} from './src/wysimark/table-plugin/cell-selection';
  export {mixedRangeCoversTable} from './src/wysimark/table-plugin/mixed-selection';
  export {moveTextSelection} from './src/blocks/text-drag';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
-const {withBlocks,blockDepth,sharedQuoteIndent,isWholeBlockSelected,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection,mixedRangeCoversTable,moveTextSelection}=loaded.exports;
+const {withBlocks,blockDepth,sharedQuoteIndent,isWholeBlockSelected,parse,serialize,createPasteMarkdownMethods,normalizePastedLatex,selectWholeTableDrag,tableCellSelection,mixedRangeCoversTable,moveTextSelection}=loaded.exports;
 const p=(text='',depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes){const e=withHistory(createEditor());e.wysimark={readOnly:false};withBlocks(e,{});e.children=nodes;Editor.normalize(e,{force:true});e.history.undos=[];Transforms.select(e,Editor.end(e,[0]));return e}
 function tab(e){let prevented=false;const handled=e.sink.plugins[0].editableProps.onKeyDown({key:'Tab',nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}});assert(handled&&prevented)}
+
+test('pasted LaTeX retains display and inline formulas alongside prose and lists',()=>{
+ const latex=String.raw`f_{WS}=\text{每秒帧数}=\text{每秒采样点数}=f_s`;
+ for(const [fromHtml,separator] of [[false,'\n'],[true,'  \n'],[true,'\n\n']]){
+  const e=fixture([p()]);
+  const isInline=e.isInline;
+  e.isInline=node=>node.type==='math-inline'||isInline(node);
+  const markdown=['所以：','','\\[',latex,'\\]','','举例：48 kHz 采样率时：','','- WS 频率 = \\(f_s\\)'].join(separator);
+  createPasteMarkdownMethods(e).pasteMarkdown(markdown,fromHtml);
+  const formulas=[...Node.elements(e)].map(([node])=>node).filter(node=>node.type==='math-block'||node.type==='math-inline');
+  assert.deepEqual(formulas.map(node=>[node.type,node.latex]),[['math-block',latex],['math-inline','f_s']], normalizePastedLatex(markdown));
+  assert.match(Node.string(e),/所以：.*举例：.*WS 频率/s);
+ }
+});
+
+test('a display formula copied inside a list is pasted as a separate block between its list items',()=>{
+ const e=fixture([p()]);
+ const isInline=e.isInline;
+ e.isInline=node=>node.type==='math-inline'||isInline(node);
+ const latex=String.raw`BCLK=f_s\times\text{声道数}`;
+ createPasteMarkdownMethods(e).pasteMarkdown([
+  '- **BCLK 是逐位传输时钟：**','','  $$','  '+latex,'  $$','','- PDM 说明',
+ ].join('\n'),true);
+ const blocks=e.children.filter(node=>!node.__collapsible);
+ assert.deepEqual(blocks.map(node=>node.type),['unordered-list-item','math-block','unordered-list-item']);
+ assert.equal(Node.string(blocks[0]),'BCLK 是逐位传输时钟：');
+ assert.equal(blocks[1].latex,latex);
+ assert.equal(Node.string(blocks[2]),'PDM 说明');
+ assert.match(serialize(e.children),/\n\n\$\$\nBCLK=.*\n\$\$\n\n- PDM 说明/);
+});
+
+test('pasting a display formula at the end of an existing list row places it outside that item',()=>{
+ const e=fixture(parse('- A list item'));
+ const isInline=e.isInline;
+ e.isInline=node=>node.type==='math-inline'||isInline(node);
+ createPasteMarkdownMethods(e).pasteMarkdown('$$\nf_s\n$$',true);
+ assert.equal(e.children[0].type,'unordered-list-item');
+ assert.equal(Node.string(e.children[0]),'A list item');
+ assert.equal(e.children[1].type,'math-block');
+ assert.equal(e.children[1].latex,'f_s');
+ assert.equal(serialize(e.children),'- A list item\n\n$$\nf_s\n$$');
+});
+
+test('pasted delimiters respect Markdown containers and preserve literal code and existing math',()=>{
+ const fenced=['~~~tex','\\[xyz\\]','~~~'].join('\n');
+ const inline='`\\(example\\)`';
+ const existing='$x+\\(y\\)$';
+ const quote=['> \\[','>','> ax+b','> \\]'].join('\n');
+ const document=[fenced,inline,existing,quote,'\\(p\\)\\(q\\)'].join('\n\n');
+ const normalized=normalizePastedLatex(document);
+ for(const source of [fenced,inline,existing]) assert(normalized.includes(source));
+ assert(normalized.includes('> $$\n> ax+b\n> $$'));
+ assert(normalized.endsWith('$p$ $q$'));
+});
 
 test('Tab indents only the quoted child or children touched by the range and persists the offsets',()=>{
  const e=fixture(parse('> first\n>\n> - second\n>\n> third'));

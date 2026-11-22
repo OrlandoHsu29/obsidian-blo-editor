@@ -4,13 +4,12 @@ import { Editor, Element, Path, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { ui } from '../../utils/translations'
-import { isDomElement } from '../../../dom-guards'
 import { beginTableCellEdit, clearTableAxisSelection, isTableCellEditing, prepareTableCellComposition, selectTableCell, selectWholeTableDrag, tableCellSelection } from '../cell-selection'
 import type { TableColumnAlign, TableElement } from '../types'
 import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
 import { structuredBlockBounds } from '../../../blocks/structured-block'
-import { pointerRangeFromPoint, setPointerSelection } from '../../../blocks/pointer-selection'
+import { pointerRangeFromPoint, setPointerSelection, tableCellFromPointer } from '../../../blocks/pointer-selection'
 import { TableContext } from './table-context'
 
 type Position = { left: number; top: number }
@@ -59,9 +58,8 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if (showingInsertions) { showingInsertions = false; setInsertions([]) }
     }
     setInsertions(previous => previous.length ? [] : previous)
-    const cellAt = (target: EventTarget | null) => {
-      if (!isDomElement(target)) return
-      const cell = (target as HTMLElement).closest('td')
+    const cellAt = (event: MouseEvent) => {
+      const cell = tableCellFromPointer(event.target, event.clientX, event.clientY)
       if (!cell || cell.closest('table') !== table) return
       const node = ReactEditor.toSlateNode(editor, cell)
       return Element.isElement(node) && node.type === 'table-cell' ? ReactEditor.findPath(editor, node) : undefined
@@ -81,7 +79,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if (target.closest('[contenteditable="false"],button')) return
       if (table.contains(target)) {
         clearTableAxisSelection(editor)
-        origin = cellAt(target)
+        origin = cellAt(event)
         if (!origin) return
         if (isTableCellEditing(editor,origin)) return
         if (event.detail >= 2) {
@@ -99,7 +97,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const click = (event: MouseEvent) => {
       const target=event.target as HTMLElement
       if(target.closest('[contenteditable="false"],button'))return
-      const cell=cellAt(target)
+      const cell=cellAt(event)
       if(!cell)return
       if(enteringEdit) {
         event.preventDefault();event.stopPropagation()
@@ -161,7 +159,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         }
         return
       }
-      const cell = cellAt(event.target)
+      const cell = cellAt(event)
       if (!cell) {
         if (table.contains(event.target as globalThis.Node)) return
         const range = pointerRangeFromPoint(editor, host, event.clientX, event.clientY, Editor.start(editor, origin))

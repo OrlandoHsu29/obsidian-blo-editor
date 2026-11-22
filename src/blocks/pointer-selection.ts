@@ -1,8 +1,9 @@
 import type { MouseEvent } from 'react'
-import { Editor, Path, Point, Range, Transforms } from 'slate'
+import { Editor, Point, Range, Transforms } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { mediaContentSelector } from './structured-block'
 import { rangeToMediaBlock } from './boundary'
+import { isDomElement } from '../dom-guards'
 
 type Session = { cleanup?: () => void; suppressClickUntil: number }
 const sessions = new WeakMap<Editor, Session>()
@@ -49,11 +50,19 @@ export function mediaRangeFromPointer(editor: Editor, host: HTMLElement, x: numb
   } catch { return }
 }
 
-/** Empty table gutters have no text caret. Resolve either vertical edge from
- * geometry instead of Chromium's arbitrary first/last descendant mapping. */
-export function tableEdgeRangeFromPointer(editor: Editor, host: HTMLElement, x: number, y: number, anchor: Point): Range | undefined {
+export function tableCellFromPointer(target: EventTarget | null, x: number, y: number): HTMLElement | undefined {
+  const cell = isDomElement(target) ? target.closest<HTMLElement>('td,th') : null
+  if (!cell) return
+  const bounds = cell.getBoundingClientRect()
+  if (x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom) return cell
+}
+
+/** The browser can return a cell caret even when the pointer is outside the grid. */
+export function tableGapFromPointer(editor: Editor, host: HTMLElement, x: number, y: number): { outside?: Point; edge: Point } | undefined {
   const doc=host.ownerDocument
-  let frame=doc.elementFromPoint(x,y)?.closest<HTMLElement>('.blo-table-frame')
+  const hit = doc.elementFromPoint(x, y)
+  if (hit?.closest('[data-table-axis],button') || tableCellFromPointer(hit, x, y)) return
+  let frame = hit?.closest<HTMLElement>('.blo-table-frame')
   if(!frame){
     const caret=doc.caretRangeFromPoint(x,y),node=caret?.startContainer
     frame=(node?.nodeType===1?node as HTMLElement:node?.parentElement)?.closest<HTMLElement>('.blo-table-frame')
@@ -61,12 +70,30 @@ export function tableEdgeRangeFromPointer(editor: Editor, host: HTMLElement, x: 
   const table=frame?.querySelector('table')
   if(!frame||!table||!host.contains(frame))return
   const bounds=frame.getBoundingClientRect(),content=table.getBoundingClientRect()
-  if(x<bounds.left||x>bounds.right||y>content.top+1&&y<content.bottom-1)return
+  if (x < bounds.left || x > bounds.right || y >= content.top && y <= content.bottom && !frame.contains(hit)) return
+  const scroll = frame.querySelector<HTMLElement>('.blo-table-scroll')
+  if (scroll && frame.dataset.overflow === 'true' && scroll.offsetHeight > scroll.clientHeight) {
+    const box = scroll.getBoundingClientRect()
+    const trackTop = box.top + box.height * scroll.clientHeight / scroll.offsetHeight
+    if (y >= trackTop && y <= box.bottom) return
+  }
   try {
     const path=ReactEditor.findPath(editor,ReactEditor.toSlateNode(editor,table))
-    if(Path.isAncestor(path,anchor.path))return
-    return {anchor,focus:y<=content.top+1?Editor.start(editor,path):Editor.end(editor,path)}
+    const above = y < content.top
+    const adjacent = above ? Editor.before : Editor.after
+    let outside = adjacent(editor, path)
+    while (outside) {
+      const neighbor = Editor.above(editor, { at: outside, match: node => 'type' in node && node.type === 'table' })
+      if (!neighbor) break
+      outside = adjacent(editor, neighbor[1])
+    }
+    return { outside, edge: above ? Editor.start(editor, path) : Editor.end(editor, path) }
   } catch { return }
+}
+
+export function tableEdgeRangeFromPointer(editor: Editor, host: HTMLElement, x: number, y: number, anchor: Point): Range | undefined {
+  const gap = tableGapFromPointer(editor, host, x, y)
+  if (gap) return { anchor, focus: gap.outside ?? gap.edge }
 }
 
 /** Once a drag crosses non-editable media, resolve its endpoint from the
@@ -87,7 +114,7 @@ export function pointerRangeFromPoint(editor: Editor, host: HTMLElement, x: numb
 
 /** Preserve the real Slate anchor when a boundary click replaces native mousedown. */
 export function startPointerSelection(editor: Editor, point: Point,
-  event: Pick<MouseEvent<HTMLElement>, 'clientX' | 'clientY' | 'currentTarget' | 'preventDefault'>): () => void {
+  event: Pick<MouseEvent<HTMLElement>, 'clientX' | 'clientY' | 'currentTarget' | 'preventDefault'>, placeCaret = true): () => void {
   resetPointerSelection(editor)
   const anchor = Editor.pointRef(editor, point)
   const host = event.currentTarget, doc = host.ownerDocument, win = doc.defaultView!
@@ -96,7 +123,8 @@ export function startPointerSelection(editor: Editor, point: Point,
   sessions.set(editor, session)
   event.preventDefault()
   ReactEditor.focus(editor)
-  Transforms.select(editor, point)
+  if (placeCaret) Transforms.select(editor, point)
+  else Transforms.deselect(editor)
   let active = true, moved = false
   const cleanup = () => {
     if (!active) return

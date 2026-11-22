@@ -5,13 +5,23 @@ import { rootCache } from './model'
 import { selectStructuredBoundary } from './boundary'
 import { clearBlockSelection } from './selection'
 import { structuredBlockBounds, structuredBlockContent, structuredBlockSelector } from './structured-block'
-import { startPointerSelection } from './pointer-selection'
+import { startPointerSelection, tableGapFromPointer } from './pointer-selection'
 
 /** Catch the right page gutter before Slate resolves it to a table cell. */
 export function selectBoundaryFromPointer(editor: Editor, event: MouseEvent<HTMLElement>): boolean {
   if (editor.wysimark.readOnly || event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
   const target = event.target as HTMLElement
   if (target.closest('button,input,textarea,select,[role="menu"],[data-wysimark-toolbar],[data-wysimark-image-resize]')) return false
+  const tableGap = tableGapFromPointer(editor, event.currentTarget, event.clientX, event.clientY)
+  if (tableGap) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.type === 'mousedown') {
+      clearBlockSelection(editor)
+      startPointerSelection(editor, tableGap.outside ?? tableGap.edge, event, !!tableGap.outside)
+    }
+    return true
+  }
   const direct = target.closest<HTMLElement>('[data-wysimark-block]')
   const candidates: HTMLElement[] = []
   if (direct) candidates.push(direct)

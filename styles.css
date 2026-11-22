@@ -532,7 +532,7 @@
 .wysimark-editor[contenteditable="true"] [data-link-caret="true"] { display:inline-block; min-inline-size:1px; }
 .wysimark-reference-field > span:has(> .wysimark-link-label-hint) { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:.25em .6em; }
 .wysimark-link-label-hint { margin-inline-start:auto; text-align:right; color:var(--text-faint); font-size:var(--font-ui-smaller); font-weight:normal; }
-.wysimark-editor blockquote a:not(:hover) {
+.wysimark-editor blockquote[data-callout] a:not(:hover) {
     color: color-mix(in srgb, var(--text-accent) 78%, transparent);
 }
 
@@ -572,9 +572,18 @@
     border-left: 3px solid var(--text-accent);
     margin: var(--wysimark-block-spacing) 0;
     padding-left: 1em;
+}
+.wysimark-editor blockquote[data-callout] {
     color: var(--text-muted);
 }
-.wysimark-editor blockquote:not([data-callout]) { margin-left: 2px; padding-left: calc(1em - 4px); }
+.wysimark-editor blockquote:not([data-callout]) {
+    margin-left: 2px;
+    padding-left: calc(1em - 4px);
+    color: inherit;
+}
+.wysimark-editor blockquote:not([data-callout]) [data-slate-string] {
+    opacity: .8;
+}
 
 /* Lists */
 .wysimark-editor ul,

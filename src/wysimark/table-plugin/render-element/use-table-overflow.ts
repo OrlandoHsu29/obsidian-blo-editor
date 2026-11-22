@@ -91,6 +91,16 @@ export function useTableOverflow(element: TableElement) {
         stopFit()
         if (disposed) return
         if (host.clientWidth !== width) { dirty = true; mask(); schedule(120); return }
+        // Editing that leaves the fit unchanged must not touch the live layout:
+        // re-entering the settling state made every keystroke shift the table.
+        const overflow = String(result.width !== undefined)
+        if (ready && !pending() && result.width === fittedWidth && host.dataset.overflow === overflow) {
+          dirty = false
+          lastWidth = observedWidth = host.clientWidth
+          lastHeight = table.offsetHeight; lastTableWidth = table.offsetWidth; lastFrameHeight = scroll.offsetHeight
+          hint()
+          return
+        }
         publish(result.width)
       }, error => {
         stopFit(); finish(); dirty = true

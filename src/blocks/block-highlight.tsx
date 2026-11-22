@@ -1,5 +1,4 @@
-import { useLayoutEffect } from 'react'
-import type { RefObject } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import type { Editor, Element } from 'slate'
 import { ReactEditor, useReadOnly } from 'slate-react'
 import { isEditorSpacer } from './model'
@@ -61,16 +60,17 @@ export function highlightBlockDrag(editor:Editor,group:BlockDragGroup,handleInde
   }
 }
 
-export function BlockHighlight({element,rootRef}:{element:Element;rootRef:RefObject<HTMLElement|null>}) {
+export function BlockHighlight({element}:{element:Element}) {
+  const highlightRef=useRef<HTMLSpanElement>(null)
   const readOnly=useReadOnly(),selected=useBlockSelection(element)
   useLayoutEffect(()=>{
-    const root=rootRef.current
+    const root=highlightRef.current?.parentElement
     if(!root||!selected||readOnly)return
     root.setAttribute('data-block-selected','true')
     const place=()=>measureBlockHighlight(root)
     place()
     const observer=new root.ownerDocument.defaultView!.ResizeObserver(place);observer.observe(root)
     return()=>{observer.disconnect();root.removeAttribute('data-block-selected');clearBlockHighlight(root)}
-  },[element,rootRef,selected,readOnly])
-  return <span className="wysimark-block-highlight" contentEditable={false} aria-hidden="true" />
+  },[element,selected,readOnly])
+  return <span ref={highlightRef} className="wysimark-block-highlight" contentEditable={false} aria-hidden="true" />
 }

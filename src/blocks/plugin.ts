@@ -4,7 +4,7 @@ import { cleanPastedFragment } from './typography'
 import { Editor, Element, Node, Range, Text, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import type { Descendant } from 'slate'
-import { clearBlockSelection, deleteAtBlockBoundary, deleteImageRowAtCaret, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary, selectedImageFragment } from './selection'
+import { clearBlockSelection, deleteAtBlockBoundary, deleteImageRowAtCaret, deleteWholeBlockSelection, indentBlockSelection, isBlockSelectionRange, isWholeBlockSelected, navigateBlockBoundary, restoreBlockSelectionOnUndo, selectedImageFragment } from './selection'
 import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/indent-selection'
 import { indentQuoteContents } from './quote-indent'
 import { boundaryBlockIndex, deleteRangeEndingAtBoundary, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary, outdentEmptyParagraph, selectStructuredBoundary } from './boundary'
@@ -19,6 +19,7 @@ import { activeImageRow, imageRowAtBoundary, imagesForRow, insertImageRow, prese
 import { normalizeNode as normalizeImageRow } from '../wysimark/image-plugin/normalize-node'
 type Types={Name:'block-structure';Editor:{}}
 export const BlockStructurePlugin=createPlugin<Types>(editor=>{
+ restoreBlockSelectionOnUndo(editor)
  const {insertFragment,insertText,getFragment}=editor
  editor.getFragment=()=>copiedTextContent(editor,selectedImageFragment(editor)??getFragment())
  const {apply}=editor

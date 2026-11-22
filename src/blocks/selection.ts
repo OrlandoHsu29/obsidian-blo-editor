@@ -1,16 +1,19 @@
 import { Editor, Element, Node, Path, Point, Range, Transforms } from 'slate'
+import { HistoryEditor } from 'slate-history'
+import type { History } from 'slate-history'
 import { blockDepth, changeBlockIndent, deleteBlockGroup, groupEnd, indentSelectedBlocks, isEditorSpacer, isListBlock, rootCache } from './model'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
 import { boundaryBlockIndex, insertBreakAtBoundary, isStructuredBlock, rangeToMediaBlock, selectStructuredBoundary } from './boundary'
 import { ReactEditor } from 'slate-react'
 import { firstTextRect } from './first-line-alignment'
-import { beginTableCellEdit } from '../wysimark/table-plugin/cell-selection'
+import { beginTableCellEdit, clearTableAxisSelection } from '../wysimark/table-plugin/cell-selection'
 import { isEditableStructure } from './structured-block'
 import { activeImageRow } from './image-row'
 
 type ArrowEvent={key:string;shiftKey?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;nativeEvent?:{isComposing?:boolean}}
 type BlockSelection={index:number;range:Range;end?:number;images?:Set<Element>;imageAnchor?:number}
 const staged=new WeakMap<Editor,BlockSelection>()
+const deletedBlockSelections = new WeakMap<History['undos'][number], BlockSelection>()
 const contentSelections=new WeakMap<Editor,Range>()
 const selectingBlock=new WeakSet<Editor>()
 /** Whole-block ranges include folded descendants without entering their text. */
@@ -28,6 +31,23 @@ function setBlockSelection(editor:Editor,value:BlockSelection|undefined) {
  listeners.get(editor)?.forEach(listener=>listener())
 }
 export function clearBlockSelection(editor:Editor){contentSelections.delete(editor);if(staged.has(editor))setBlockSelection(editor,undefined)}
+
+export function restoreBlockSelectionOnUndo(editor: Editor): void {
+ if (!HistoryEditor.isHistoryEditor(editor)) return
+ const { undo } = editor
+ editor.undo = () => {
+  const batch = editor.history.undos.at(-1)
+  undo()
+  // Slate restores the text range. Restore its block selection only when the
+  // same deletion batch was undone and Slate restored the original range.
+  const selected = batch && editor.history.redos.at(-1) === batch && deletedBlockSelections.get(batch)
+  if (selected && editor.selection && Range.equals(editor.selection, selected.range)) {
+   clearTableAxisSelection(editor)
+   setBlockSelection(editor, selected)
+  }
+ }
+}
+
 export function isWholeBlockSelected(editor:Editor,index:number):boolean {
  const pending=staged.get(editor)
  return !!pending&&!!editor.selection&&Range.equals(editor.selection,pending.range)&&
@@ -104,7 +124,13 @@ export function deleteWholeBlockSelection(editor:Editor):boolean {
  }
  if(index===undefined)return false
  clearBlockSelection(editor)
- return deleteBlockGroup(editor,index,selected?.end)
+ const previousBatch = HistoryEditor.isHistoryEditor(editor) ? editor.history.undos.at(-1) : undefined
+ const deleted = deleteBlockGroup(editor,index,selected?.end)
+ if (deleted && selected && HistoryEditor.isHistoryEditor(editor)) {
+  const batch = editor.history.undos.at(-1)
+  if (batch && batch !== previousBatch) deletedBlockSelections.set(batch, selected)
+ }
+ return deleted
 }
 /** A gap selects the adjacent image first, then deletion returns to the gap. */
 export function deleteImageRowAtCaret(editor:Editor,direction:-1|1):boolean {

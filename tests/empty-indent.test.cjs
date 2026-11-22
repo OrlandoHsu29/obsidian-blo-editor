@@ -23,11 +23,12 @@ loaded._compile(buildSync({stdin:{contents:`
  export const withBlocks=createWithSink([BlockStructurePlugin.fn,ConvertElementPlugin.fn,InlineCodePlugin.fn,HeadingPlugin.fn,CodeBlockPlugin.fn,TablePlugin.fn,TrailingBlockPlugin.fn,BlockQuotePlugin.fn,ListPlugin.fn,AtomicDeletePlugin.fn,NormalizeAfterDeletePlugin.fn,CollapsibleParagraphPlugin.fn]);
  export {blockDepth} from './src/blocks/model';
  export {sharedQuoteIndent} from './src/blocks/quote-indent';
+ export {isWholeBlockSelected} from './src/blocks/selection';
  export {parse,serialize} from './src/wysimark/convert';
  export {createPasteMarkdownMethods} from './src/wysimark/paste-markdown-plugin/methods';
  export {selectWholeTableDrag,tableCellSelection} from './src/wysimark/table-plugin/cell-selection';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
-const {withBlocks,blockDepth,sharedQuoteIndent,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection}=loaded.exports;
+const {withBlocks,blockDepth,sharedQuoteIndent,isWholeBlockSelected,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection}=loaded.exports;
 const p=(text='',depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes){const e=withHistory(createEditor());e.wysimark={readOnly:false};withBlocks(e,{});e.children=nodes;Editor.normalize(e,{force:true});e.history.undos=[];Transforms.select(e,Editor.end(e,[0]));return e}
 function tab(e){let prevented=false;const handled=e.sink.plugins[0].editableProps.onKeyDown({key:'Tab',nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}});assert(handled&&prevented)}
@@ -93,15 +94,27 @@ test('multiline Markdown pasted into an indented blank uses the pasted blocks’
 });
 
 const markdownTable='| A | B |\n| --- | --- |\n| C | D |';
-test('dragging over the complete table selects the block and deletion is undoable',()=>{
+test('undoing whole-table deletion restores block selection for another Backspace',()=>{
  const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`));
  const index=e.children.findIndex(node=>node.type==='table'), path=[index];
  const partial=Editor.range(e,[index,0,0]);Transforms.select(e,partial);
  assert.equal(selectWholeTableDrag(e,path,partial),false);
  const full=Editor.range(e,path);Transforms.select(e,full);
  assert(selectWholeTableDrag(e,path,full));assert.equal(tableCellSelection(e),undefined);
- e.deleteFragment();assert(!e.children.some(node=>node.type==='table'));
- e.undo();assert.equal(Node.string(e.children[index]),'ABCD');
+ const backspace=()=>{e.deleteFragment({direction:'backward'});assert(!e.children.some(node=>node.type==='table'))};
+ const undo=()=>{
+  e.undo();assert.equal(Node.string(e.children[index]),'ABCD');assert.deepEqual(e.selection,full);
+  assert(isWholeBlockSelected(e,index));assert.equal(tableCellSelection(e),undefined);
+ };
+ backspace();undo();e.redo();assert(!e.children.some(node=>node.type==='table'));
+ undo();backspace();undo();
+});
+
+test('undoing cell-content deletion does not promote a text range to whole-table selection',()=>{
+ const e=fixture(parse(markdownTable)),index=e.children.findIndex(node=>node.type==='table');
+ Transforms.select(e,Editor.range(e,[index]));
+ assert(tableCellSelection(e));e.deleteFragment();e.undo();
+ assert.equal(Node.string(e.children[index]),'ABCD');assert(!isWholeBlockSelected(e,index));assert(tableCellSelection(e));
 });
 
 test('mixed text selection removes a fully covered table and only the selected surrounding text',()=>{

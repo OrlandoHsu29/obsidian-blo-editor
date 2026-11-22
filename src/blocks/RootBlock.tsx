@@ -383,7 +383,7 @@ export function RootBlock({ element, children }: { element: Element; children: R
         </g>)}
       </svg>
     </span>}
-    <BlockHighlight element={element} rootRef={ref} />
+    <BlockHighlight element={element} />
     {children}
     {guideLevels.map(level=><span key={level} className="wysimark-list-guides" contentEditable={false} aria-hidden="true"
       style={{'--blo-guide-depth':depth,'--blo-guide-level':level,

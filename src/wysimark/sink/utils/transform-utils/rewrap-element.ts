@@ -26,6 +26,7 @@ export function rewrapElement<T extends Element = Element>(
       ...createTargetElement(source, targetElement),
       ...(source.__blockId ? { __blockId: source.__blockId } : {}),
       ...(source.__blockDepth !== undefined || isList(source.type) ? { __blockDepth: blockDepth(source) } : {}),
+      ...(source.__quoteIndent !== undefined ? { __quoteIndent: source.__quoteIndent } : {}),
     }
     if(originalEntry[0].__subtitle&&(nextElement.type==='paragraph'||isList(nextElement.type)))nextElement.__subtitle=true
     // Lists provide structure; a heading remains an independently editable child.

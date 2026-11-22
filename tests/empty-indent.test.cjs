@@ -56,6 +56,25 @@ test('the shared quote indent follows the least-indented child across separate e
  e.undo();assert.equal(sharedQuoteIndent(e.children[0]),0);
 });
 
+test('Backspace removes an empty quoted list marker without moving the quote bar or the previous item',()=>{
+ for(const blockChildren of [false,true]) {
+  const e=fixture([{type:'block-quote',children:[
+   {type:'unordered-list-item',depth:0,__quoteIndent:1,children:[{text:'Previous item'}]},
+   {type:'unordered-list-item',depth:0,__quoteIndent:1,...(blockChildren?{blockChildren:true}:{}),children:blockChildren?[p()]:[{text:''}]},
+  ]}]);
+  Transforms.select(e,Editor.start(e,[0,1]));
+  const previous=e.children[0].children[0],before=structuredClone(e.children),selection=structuredClone(e.selection);
+  assert.equal(sharedQuoteIndent(e.children[0]),1);
+  e.deleteBackward('character');
+  const quote=e.children[0],paragraph=quote.children[1];
+  assert.equal(quote.type,'block-quote');assert.equal(sharedQuoteIndent(quote),1);
+  assert.equal(quote.children[0],previous);assert.equal(paragraph.type,'paragraph');
+  assert.equal(paragraph.__quoteIndent,1);assert.equal(Node.string(paragraph),'');
+  assert.deepEqual(e.selection.anchor,Editor.start(e,[0,1]));
+  e.undo();assert.deepEqual(e.children,before);assert.deepEqual(e.selection,selection);
+ }
+});
+
 test('single-line text and an image replace an indented blank without losing its depth',()=>{
  const prose=fixture([p('parent'),p('',2),p('following')]);
  Transforms.select(prose,Editor.start(prose,[1]));createPasteMarkdownMethods(prose).pasteMarkdown('one line');

@@ -13,7 +13,10 @@ export function setListBlock(editor:Editor,node:Element,path:Path,type?:ListType
     rewrapElement(editor,()=>!type?{type:'paragraph',__blockDepth:blockDepth(node)}:{type,depth:blockDepth(node),...(type==='ordered-list-item'?{__numbering:'continue' as const}:{}),...(type==='task-list-item'?{checked:false}:{})},path)
   } else if(!type) {
     node.children.forEach((child,index)=>{
-      if(Element.isElement(child))Transforms.setNodes(editor,{__blockDepth:canIndentBlock(child)?Math.max(blockDepth(node),blockDepth(child)):0},{at:[...path,index]})
+      if (Element.isElement(child)) Transforms.setNodes(editor, {
+        __blockDepth: canIndentBlock(child) ? Math.max(blockDepth(node), blockDepth(child)) : 0,
+        ...(node.__quoteIndent !== undefined ? { __quoteIndent: node.__quoteIndent } : {}),
+      }, { at: [...path, index] })
     })
     if (node.__blockId && Element.isElement(node.children[0])) Transforms.setNodes(editor, { __blockId: node.__blockId }, { at: [...path, 0] })
     if (node.__headingDefaults && Element.isElement(node.children[0])) Transforms.setNodes(editor, { __headingDefaults: node.__headingDefaults }, { at: [...path, 0] })

@@ -1,6 +1,6 @@
 import { MenuItemData } from '../../shared-overlays'
 import { t, ui } from '../../utils/translations'
-import { Drawing, Formula } from '../icons'
+import { Drawing, Formula, FormulaBlock, FormulaInline } from '../icons'
 import { canInsertBlockMath, canInsertMath } from '../../math-plugin'
 import { compactBlockItems } from './block-items'
 import { dialogItems } from './dialogItems'
@@ -36,8 +36,8 @@ export const toolbarGroups: ToolbarEntry[][] = [
     entry('check-list',pick(listItems,t('checkList'))),
     entry('quote',pick(expandedQuoteItems,t('quote'))),entry('code-block',pick(expandedQuoteItems,t('codeBlock'))),
     entry('inline-math', { title: ui('LaTeX 公式'), icon: Formula, more: true, disabled: editor => !canInsertMath(editor), children: [
-      { title: ui('行内公式'), icon: Formula, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline(true) } },
-      { title: ui('独立公式'), icon: Formula, focusEditor: false, disabled: editor => !canInsertBlockMath(editor), action: editor => { editor.math.insertBlock() } },
+      { title: ui('行内公式'), icon: FormulaInline, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline(true) } },
+      { title: ui('行间公式'), icon: FormulaBlock, hotkey: 'mod+alt+m', focusEditor: false, disabled: editor => !canInsertBlockMath(editor), action: editor => { editor.math.insertBlock() } },
     ] }),
     entry('horizontal-rule',pick(dialogItems,t('horizontalRule')))],
   [entry('outdent',blockIndentItems[0]),entry('indent',blockIndentItems[1])],

@@ -4,7 +4,7 @@ import type { Editor } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { HistoryEditor } from 'slate-history'
 import { indentCurrentBlock } from './blocks/model'
-import { canInsertMath } from './wysimark/math-plugin'
+import { canInsertBlockMath, canInsertMath } from './wysimark/math-plugin'
 import { clearFormatting } from './wysimark/marks-plugin/methods/clear-formatting'
 import { t, ui } from './wysimark/utils/translations'
 
@@ -41,6 +41,7 @@ export function editorCommands(): EditorCommand[] {
     { id: 'toggle-reading', nativeId: 'markdown:toggle-preview', name: ui('切换富文本编辑与阅读'), hotkeys: key('p', 'Mod', 'Alt'), readOnly: true, run: e => { void e.wysimark.toggleReading?.() } },
     { id: 'text-color', name: ui('应用上次字体颜色'), hotkeys: key('c', 'Mod', 'Alt') },
     { id: 'insert-inline-math', nativeId: 'editor:toggle-inline-math', name: ui('插入行内公式'), hotkeys: key('m', 'Mod', 'Shift'), available: canInsertMath, run: e => { e.math.insertInline() } },
+    { id: 'insert-display-math', name: ui('插入行间公式'), hotkeys: key('m', 'Mod', 'Alt'), available: canInsertBlockMath, run: e => { e.math.insertBlock() } },
     { id: 'clear-formatting', nativeId: 'editor:clear-formatting', name: ui('清除格式'), hotkeys: [], run: clearFormatting },
     { id: 'insert-drawing', name: ui('插入画板'), hotkeys: [] },
   ]
@@ -141,7 +142,7 @@ export function installEditorHotkeys(plugin: Plugin, getEditor: () => Editor | u
   // Suppress old editor fallbacks after a hotkey has been removed or reassigned.
   const legacy = [key('j', 'Mod'), ...['0','1','2','3','4','5','7','8','9','k','.',','].map(k => key(k, 'Mod', Platform.isMacOS ? 'Alt' : 'Shift'))].flat()
   const retiredBindings = [...bindings.flatMap(({ command }) => command.hotkeys), ...legacy]
-  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text', [ui('行内公式')]: 'insert-inline-math' }
+  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text', [ui('行内公式')]: 'insert-inline-math', [ui('行间公式')]: 'insert-display-math' }
   return {
     commandHotkeys(id: string): Hotkey[] {
       return effective(`${plugin.manifest.id}:${id}`)

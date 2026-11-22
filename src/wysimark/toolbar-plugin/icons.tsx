@@ -12,6 +12,10 @@ export const ClearFormatting = () => <TablerIcon><path d="m16 3 5 5-11 11H5l-3-3
 export const FindReplace = () => <TablerIcon><circle cx="9" cy="8" r="5" /><path d="m13 12 5 5M3 20h12m-3-3 3 3-3 3" /></TablerIcon>
 export const Drawing = () => <TablerIcon><rect x="3" y="3" width="18" height="18" rx="2" /><path d="m7 16 1-4 7-7 3 3-7 7-4 1zM13 7l3 3" /></TablerIcon>
 export const Formula = () => <TablerIcon><path d="M18 4H6l6 8-6 8h12M18 4v3m0 10v3" /></TablerIcon>
+/** Σ inside running text: an inline formula. */
+export const FormulaInline = () => <TablerIcon><path d="M15 8H9l3.5 4L9 16h6" /><path d="M3 12h2.5M18.5 12h2.5" /></TablerIcon>
+/** Σ alone on a centered block: a display formula. */
+export const FormulaBlock = () => <TablerIcon><path d="M15 8H9l3.5 4L9 16h6" /><path d="M3.5 4.5h17M3.5 19.5h17" /></TablerIcon>
 
 export const TextColor = () => {
   const editor = useSlate()

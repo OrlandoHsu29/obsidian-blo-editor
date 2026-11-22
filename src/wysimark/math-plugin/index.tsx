@@ -1,4 +1,5 @@
-import { Editor, Element, Node, Range, Text, Transforms } from "slate"
+import { Editor, Element, Node, Point, Range, Text, Transforms } from "slate"
+import type { Descendant } from "slate"
 import { HistoryEditor } from "slate-history"
 import { createPlugin, TypedPlugin } from "../sink"
 import { MathFormula } from "./MathFormula"
@@ -6,7 +7,7 @@ import { editMath } from "./editing"
 import type { MathElement, MathPluginCustomTypes } from "./types"
 import { materializeTextBoundary } from "../../blocks/boundary"
 import { mathSelectionSource } from './selection-source'
-import { restoreInlineMathText, selectedInlineMath } from './inline-text'
+import { restoreInlineMathText } from './inline-text'
 import { withHistoryBatch } from '../utils/with-history-batch'
 import { selectionHasHeading } from '../../blocks/heading-policy'
 import { withHeadingMathPolicy } from './heading-math'
@@ -21,29 +22,88 @@ function editSelectedMath(editor: Editor) {
   const inserted = Editor.above<MathElement>(editor, { match: isMath })
   if (inserted) editMath(editor, inserted[0])
 }
-
-function insertInline(editor: Editor, fromMenu = false): boolean {
-  if (!canInsertMath(editor)) return false
-  const selected = selectedInlineMath(editor)
-  if (selected) {
-    if (fromMenu) editMath(editor, Node.get(editor, selected) as MathElement)
-    else withHistoryBatch(editor, () => restoreInlineMathText(editor, selected))
-    return true
+/** The formula the caret or selection belongs to: clicked voids select their whole range. */
+function selectedMath(editor: Editor): { node: MathElement; path: number[] } | undefined {
+  const selection = editor.selection
+  if (!selection) return
+  if (Range.isCollapsed(selection)) {
+    const entry = Editor.above<MathElement>(editor, { match: isMath })
+    return entry && { node: entry[0], path: entry[1] }
   }
-  const existing = Editor.above<MathElement>(editor, { match: isMath })
-  if (existing) {
-    const [node, path] = existing
-    if (!fromMenu || node.type !== 'math-block') { editMath(editor, node); return true }
-    withHistoryBatch(editor, () => {
-      const { type: _type, latex, children: _children, ...metadata } = node
-      Transforms.removeNodes(editor, { at: path })
-      Transforms.insertNodes(editor, { ...metadata, type: 'paragraph',
-        children: [{ type: 'math-inline', latex, children: [{ text: '' }] }] }, { at: path })
-      Transforms.select(editor, Editor.start(editor, [...path, 0]))
-    })
+  const [start, end] = Range.edges(selection)
+  for (const [node, path] of Editor.nodes<MathElement>(editor, { at: selection, match: isMath, voids: true })) {
+    if (Point.compare(start, Editor.start(editor, path)) <= 0 && Point.compare(end, Editor.end(editor, path)) >= 0) return { node, path }
+  }
+}
+
+const hasVisibleContent = (nodes: Descendant[]) => nodes.some(node => Text.isText(node) ? !!node.text.trim() : true)
+/** A rebuilt paragraph must not begin or end with an inline node. */
+function withTextEdges(children: Descendant[]): Descendant[] {
+  const result = [...children]
+  if (!result.length || !Text.isText(result[0])) result.unshift({ text: '' })
+  if (!Text.isText(result[result.length - 1])) result.push({ text: '' })
+  return result
+}
+
+/** Switch an inline formula to its own centered block, splitting the surrounding text. */
+function inlineToBlock(editor: Editor, selected: { node: MathElement; path: number[] }): boolean {
+  const rowPath = selected.path.slice(0, -1)
+  const index = selected.path[selected.path.length - 1]
+  const row = rowPath.length ? Node.get(editor, rowPath) : undefined
+  const formula = { type: 'math-block' as const, latex: selected.node.latex, children: [{ text: '' }] }
+  // A display formula cannot live inside a list item or another inline row, so
+  // move it out right after that row instead of rewriting the row's structure.
+  if (!rowPath.length || !Element.isElement(row) || row.type !== 'paragraph') {
+    const after = rowPath.length ? [...rowPath.slice(0, -1), rowPath[rowPath.length - 1] + 1] : [0]
+    withHistoryBatch(editor, () => Editor.withoutNormalizing(editor, () => {
+      Transforms.removeNodes(editor, { at: selected.path })
+      Transforms.insertNodes(editor, formula, { at: after, select: true })
+    }))
     editSelectedMath(editor)
     return true
   }
+  const { children: _children, type: _type, ...meta } = row as typeof row & Record<string, unknown>
+  const before = row.children.slice(0, index) as Descendant[]
+  const after = row.children.slice(index + 1) as Descendant[]
+  const keepBefore = hasVisibleContent(before), keepAfter = hasVisibleContent(after)
+  const depth = meta.__blockDepth !== undefined ? { __blockDepth: meta.__blockDepth } : {}
+  // Normalizing between nodes would insert caret paragraphs between two voids.
+  withHistoryBatch(editor, () => Editor.withoutNormalizing(editor, () => {
+    Transforms.removeNodes(editor, { at: rowPath })
+    const nodes: Descendant[] = []
+    if (keepBefore) nodes.push({ ...meta, type: 'paragraph', children: withTextEdges(before) } as Descendant)
+    nodes.push(keepBefore ? formula : { ...meta, ...formula } as Descendant)
+    if (keepAfter) nodes.push({ ...depth, type: 'paragraph', children: withTextEdges(after) } as Descendant)
+    Transforms.insertNodes(editor, nodes, { at: rowPath })
+    const blockPath = keepBefore ? [...rowPath.slice(0, -1), rowPath[rowPath.length - 1] + 1] : rowPath
+    Transforms.select(editor, Editor.start(editor, blockPath))
+  }))
+  editSelectedMath(editor)
+  return true
+}
+
+/** Switch a display formula back into the text flow of a paragraph. */
+function blockToInline(editor: Editor, selected: { node: MathElement; path: number[] }): boolean {
+  const { type: _type, children: _children, ...meta } = selected.node
+  withHistoryBatch(editor, () => Editor.withoutNormalizing(editor, () => {
+    Transforms.removeNodes(editor, { at: selected.path })
+    Transforms.insertNodes(editor, { ...meta, type: 'paragraph',
+      children: [{ text: '' }, { type: 'math-inline', latex: selected.node.latex, children: [{ text: '' }] }, { text: '' }] }, { at: selected.path })
+    Transforms.select(editor, Editor.start(editor, [...selected.path, 1]))
+  }))
+  editSelectedMath(editor)
+  return true
+}
+
+function insertInline(editor: Editor, fromMenu = false): boolean {
+  if (!canInsertMath(editor)) return false
+  const selected = selectedMath(editor)
+  if (selected?.node.type === 'math-inline') {
+    if (fromMenu) editMath(editor, selected.node)
+    else withHistoryBatch(editor, () => restoreInlineMathText(editor, selected.path))
+    return true
+  }
+  if (selected?.node.type === 'math-block') return blockToInline(editor, selected)
   const latex = mathSelectionSource(editor)
   HistoryEditor.withNewBatch(editor, () => Editor.withoutNormalizing(editor, () => {
     materializeTextBoundary(editor)
@@ -61,18 +121,12 @@ export function canInsertBlockMath(editor: Editor): boolean {
 
 function insertBlock(editor: Editor): boolean {
   if (!canInsertBlockMath(editor)) return false
-  const selection = editor.selection!
-  const existing = Range.isCollapsed(selection) && Editor.above<MathElement>(editor, { match: isMath })
-  if (existing && existing[0].type === 'math-block') { editMath(editor, existing[0]); return true }
-  const inline = selectedInlineMath(editor)
-  const latex = inline ? (Node.get(editor, inline) as MathElement).latex : mathSelectionSource(editor)
+  const selected = selectedMath(editor)
+  if (selected?.node.type === 'math-block') { editMath(editor, selected.node); return true }
+  if (selected?.node.type === 'math-inline') return inlineToBlock(editor, selected)
+  const latex = mathSelectionSource(editor)
   const formula = { type: 'math-block' as const, latex, children: [{ text: '' }] }
   withHistoryBatch(editor, () => {
-    if (inline) {
-      const before = Editor.before(editor, inline)
-      Transforms.removeNodes(editor, { at: inline })
-      if (before) Transforms.select(editor, before)
-    }
     const point = editor.selection?.anchor
     const at = point && [point.path[0]]
     const row = at && Node.get(editor, at)

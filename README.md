@@ -12,19 +12,25 @@
 
 The **Moonpost** demo brings a small project's plan, sketches and deliverables into one note. These are real editor screenshots, using synthetic content.
 
-## Structure beyond a list
+## Block hierarchy and heading lists
 
 Nest paragraphs, tables, quotes, code and media under the same parent. Drag the parent to move the group, use Tab / Shift+Tab to adjust depth, and fold list children when you need less detail. Hierarchy guides keep the relationships visible.
 
-Heading numbers such as **1.2.3** follow the actual heading levels and appear in Obsidian's native outline. Body lists keep their own numbering.
+H1–H4 can mix unordered and ordered list styles and appear in Obsidian’s native outline. When a level uses both styles, both buttons light up. Click either to apply one style across that level.
 
-![Mixed child blocks, heading numbering and hierarchy guides](assets/tour-structure.png)
+![Both H2 styles are active in the heading list menu, with different prefixes and a nested quote in the note](assets/tour-heading-lists.png)
 
 ## Tables that you can work in
 
-Select cells, rectangles, rows or columns; adjust alignment and header rows/columns from the floating toolbar. Paste a grid at the selected cell to fill and expand the table, with one-step undo. Wide tables scroll horizontally with directional edge hints.
+Select cells, regions, rows, columns or whole tables. A drag selection across body text and a table treats the selected table as a block. Undo restores deleted tables. Use the floating toolbar to adjust alignment and headers, or paste a grid to expand the table as needed.
 
-![Column selection, distinct header shading and floating table controls](assets/tour-table.png)
+![A whole table is selected with its floating toolbar above it](assets/tour-table.png)
+
+## Give AI your note context
+
+Select text and choose **Copy as AI quote** from the context menu, or use the customizable Ctrl+Shift+C shortcut (⌘⇧C on macOS). Paste the plain Markdown excerpt, local note path, and quote location into any AI client. **Settings → Blo Editor → AI collaboration** also provides a note Skill and directory rules for AI tools with file access.
+
+![AI collaboration settings show the note Skill, directory rules and AI quote instructions](assets/tour-ai-collaboration.png)
 
 ## Text, sketches and references together
 
@@ -48,7 +54,7 @@ Export **Markdown**, copy **rich text for cloud documents**, or save **HTML** an
 
 ![The four export choices](assets/tour-export.png)
 
-Also included: `/` commands, find/replace, automatic saving, reading mode and an optional floating memo integration. The bundled **blo-editor-notes** Skill helps file-capable AI tools write Blo's block structure, tables and editable drawings. Copy its installation/update prompt from **Settings → Blo Editor → AI collaboration** and give it to your AI tool.
+Also included are `/` commands, find/replace, automatic saving, reading mode and an optional floating memo integration.
 
 ## Try it
 

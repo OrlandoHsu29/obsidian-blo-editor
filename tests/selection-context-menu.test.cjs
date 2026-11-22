@@ -31,8 +31,8 @@ function fixture(trusted = true) {
   };
   const host = { isConnected: true, ownerDocument: { defaultView: window, getSelection: () => 'excerpt' } };
   return {
-    open: editable => addSelectionContextAction({ isTrusted: trusted, stopImmediatePropagation() { stopped = true; } },
-      host, editable, { label: 'Copy as AI quote', run() { quotes++; } }),
+    open: (editable, hotkeys) => addSelectionContextAction({ isTrusted: trusted, stopImmediatePropagation() { stopped = true; } },
+      host, editable, { label: 'Copy as AI quote', hotkeys, run() { quotes++; } }),
     reply: details => listeners.get('context-menu')?.(null, details),
     get items() { return items; }, get requested() { return requested; },
     get stopped() { return stopped; }, get quotes() { return quotes; },
@@ -48,6 +48,7 @@ test('native edit actions and the AI quote share one context menu', () => {
   assert.deepEqual(f.items.map(item => item.role ?? item.type ?? item.label),
     ['cut', 'copy', 'paste', 'pasteAndMatchStyle', 'separator', 'Copy as AI quote']);
   assert.equal(f.items[2].enabled, false);
+  assert.equal(f.items.at(-1).accelerator, undefined);
   assert.equal(f.listeners.size, 0);
   f.items.at(-1).click();
   assert.equal(f.quotes, 1);
@@ -62,4 +63,22 @@ test('read-only and synthetic contexts preserve the applicable native behavior',
   synthetic.open(true);
   assert.equal(synthetic.requested, false);
   assert.equal(synthetic.stopped, false);
+});
+
+test('the AI quote menu uses the native shortcut column without registering a second binding', () => {
+  for (const [hotkeys, expected] of [
+    [[{ key: 'C', modifiers: ['Mod', 'Shift'] }], 'CmdOrCtrl+Shift+C'],
+    [[{ key: 'C', modifiers: ['Alt'] }], 'Alt+C'],
+    [[{ key: 'ArrowRight', modifiers: ['Ctrl'] }], 'Ctrl+Right'],
+    [[{ key: '+', modifiers: ['Ctrl'] }], 'Ctrl+Plus'],
+    [[{ key: '中', modifiers: ['Alt'] }], undefined],
+    [[], undefined],
+  ]) {
+    const f = fixture();
+    f.open(true, hotkeys);
+    f.reply({ editFlags: { canCopy: true } });
+    assert.equal(f.items.at(-1).label, 'Copy as AI quote');
+    assert.equal(f.items.at(-1).accelerator, expected);
+    assert.equal(f.items.at(-1).registerAccelerator, false);
+  }
 });

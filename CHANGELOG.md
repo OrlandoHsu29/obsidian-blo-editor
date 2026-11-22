@@ -4,7 +4,7 @@
 
 ### 中文
 
-- 选中文字后按 Ctrl+Shift+C（macOS 上按 ⌘⇧C）即可复制为 AI 引用。可在 Obsidian 的「快捷键」设置中修改。
+- 选中文字后按 Ctrl+Shift+C（macOS 上按 ⌘⇧C）即可复制为 AI 引用。可在 Obsidian 的「快捷键」设置中修改，当前绑定会显示在右键菜单的快捷键栏。
 - 标题列表菜单为 H1～H4 分别提供无序和有序两排按钮。同级标题混用两种样式时，两边都会高亮，点击可统一该级样式。默认 H1～H3 使用无序列表，H4 不使用列表。段落样式中的 H5 改称「小标题」。
 - 缩窄链接和附件菜单。网页链接的显示文字留空时会尝试获取网页标题，失败时提示并保留原链接。本地库链接留空时使用链接地址。
 - 普通引用文字以 80% 不透明度显示，保留手动设置的字色；在引用内清除列表标记时，保留引用和其他块的缩进。
@@ -12,7 +12,7 @@
 
 ### English
 
-- Press Ctrl+Shift+C (⌘⇧C on macOS) with text selected to copy an AI quote. Change the binding in Obsidian’s Hotkeys settings.
+- Press Ctrl+Shift+C (⌘⇧C on macOS) with text selected to copy an AI quote. Change the binding in Obsidian’s Hotkeys settings. The active binding appears in the context menu’s shortcut column.
 - Heading lists offer separate unordered and ordered buttons for H1–H4. Both reflect mixed styles at a level. Click a button to apply one style across that level. H1–H3 default to unordered lists and H4 has no list prefix. H5 is labeled Subheading.
 - Narrow the link and attachment menus. A blank web link label triggers a title lookup. If it fails, the editor shows a notice and keeps the original link. A blank vault link label uses the link address.
 - Render ordinary quote text at 80% opacity and preserve custom text colors. Removing a list marker inside a quote preserves indentation for the quote and its other blocks.

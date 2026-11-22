@@ -44,7 +44,7 @@ import { isRowImage } from './wysimark/image-plugin/row-model';
 import { startImageDrag } from './blocks/RootBlock';
 import { clearTableCellTextDrag, tableTextDropAllowed } from './wysimark/table-plugin/cell-selection';
 import { clearTextDrag } from './blocks/text-drag';
-import { prepareAiQuote } from './ai-quote';
+import { COPY_AS_AI_QUOTE_COMMAND, prepareAiQuote } from './ai-quote';
 import { addSelectionContextAction } from './selection-context-menu';
 
 export const VIEW_TYPE_BLO = 'blo-view';
@@ -698,6 +698,7 @@ export class BloView extends FileView {
       if (!copy) return;
       addSelectionContextAction(event, host, !this.readOnly, {
         label: ui('复制为 AI 引用'),
+        hotkeys: this.plugin.editorHotkeys?.commandHotkeys(COPY_AS_AI_QUOTE_COMMAND),
         run: copy,
       });
     });

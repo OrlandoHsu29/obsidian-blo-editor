@@ -24,6 +24,7 @@ import { isMemoPanelLeaf, isMemoPanelDocument, memoPanelEnabled, memoPanelStatus
 import { MemoPanelSetupModal, setupMemoPanel } from './memo-panel-setup';
 import { writeAiSkill } from './ai-skill';
 import { writeDirectoryRules } from './ai-directory-rules';
+import { COPY_AS_AI_QUOTE_COMMAND } from './ai-quote';
 
 const INTEGRATION_SETTINGS = {
   imageViewer: { key: 'enableImageViewer', name: 'Image Toolkit' },
@@ -155,7 +156,7 @@ export default class BloEditorPlugin extends Plugin {
       return true;
     }});
     this.addCommand({
-      id: 'copy-as-ai-quote',
+      id: COPY_AS_AI_QUOTE_COMMAND,
       name: ui('复制为 AI 引用'),
       hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'C' }],
       checkCallback: checking => {

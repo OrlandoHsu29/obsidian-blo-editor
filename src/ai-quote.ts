@@ -4,6 +4,8 @@ import { ReactEditor } from 'slate-react'
 import { aiQuoteLocation, aiQuoteMarkdown, aiQuotePrompt } from './ai-quote-markdown'
 import { ui } from './wysimark/utils/translations'
 
+export const COPY_AS_AI_QUOTE_COMMAND = 'copy-as-ai-quote'
+
 export function prepareAiQuote(editor: Editor, host: HTMLElement, adapter: FileSystemAdapter, path: string) {
   const selection = host.ownerDocument.getSelection()
   if (!selection?.anchorNode || !selection.focusNode || !host.contains(selection.anchorNode) ||

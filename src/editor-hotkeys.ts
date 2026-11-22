@@ -143,6 +143,9 @@ export function installEditorHotkeys(plugin: Plugin, getEditor: () => Editor | u
   const retiredBindings = [...bindings.flatMap(({ command }) => command.hotkeys), ...legacy]
   const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text' }
   return {
+    commandHotkeys(id: string): Hotkey[] {
+      return effective(`${plugin.manifest.id}:${id}`)
+    },
     async migrateClearedNativeBindings(): Promise<boolean> {
       if (!manager.setHotkeys || !manager.save) return false
       const taken = assignedKeys()

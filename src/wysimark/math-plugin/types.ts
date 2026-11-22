@@ -5,5 +5,5 @@ export type MathElement = InlineMathElement | { type: "math-block"; latex: strin
 export type MathPluginCustomTypes = {
   Name: "math"
   Element: MathElement
-  Editor: { math: { insertInline: () => boolean } }
+  Editor: { math: { insertInline: (fromMenu?: boolean) => boolean; insertBlock: () => boolean } }
 }

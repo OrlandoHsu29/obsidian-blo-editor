@@ -141,7 +141,7 @@ export function installEditorHotkeys(plugin: Plugin, getEditor: () => Editor | u
   // Suppress old editor fallbacks after a hotkey has been removed or reassigned.
   const legacy = [key('j', 'Mod'), ...['0','1','2','3','4','5','7','8','9','k','.',','].map(k => key(k, 'Mod', Platform.isMacOS ? 'Alt' : 'Shift'))].flat()
   const retiredBindings = [...bindings.flatMap(({ command }) => command.hotkeys), ...legacy]
-  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text' }
+  const aliases: Record<string, string> = { [ui('清除文字样式')]: 'clear-formatting', [ui('字体颜色')]: 'text-color', [ui('查找／替换')]: 'find-text', [ui('行内公式')]: 'insert-inline-math' }
   return {
     commandHotkeys(id: string): Hotkey[] {
       return effective(`${plugin.manifest.id}:${id}`)

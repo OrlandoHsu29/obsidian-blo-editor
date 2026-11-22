@@ -1,7 +1,7 @@
 import { MenuItemData } from '../../shared-overlays'
 import { t, ui } from '../../utils/translations'
 import { Drawing, Formula } from '../icons'
-import { canInsertMath } from '../../math-plugin'
+import { canInsertBlockMath, canInsertMath } from '../../math-plugin'
 import { compactBlockItems } from './block-items'
 import { dialogItems } from './dialogItems'
 import { expandedMarkItems } from './mark-items'
@@ -10,8 +10,8 @@ import { headingPrefixItem } from './heading-items'
 import { expandedQuoteItems } from './quote-items'
 import { blockIndentItems, clearStyleItem, historyItems, utilityItems } from './utility-items'
 
-// Quick memo windows keep these tools on the main row; others go under More.
-const memoButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'highlight', 'outdent', 'indent', 'find-replace', 'table', 'link', 'attachment'])
+// Keep these tools visible longer when resizing, and show them by default in quick memo.
+const primaryToolbarButtons = new Set(['paragraph-style', 'heading-prefix', 'clear-formatting', 'undo', 'redo', 'text-color', 'highlight', 'outdent', 'indent', 'inline-math', 'table', 'link', 'attachment'])
 
 function pick(items:MenuItemData[],title:string):Exclude<MenuItemData,'divider'> {
   const item=items.find(item=>item!=='divider'&&item.title===title)
@@ -35,7 +35,10 @@ export const toolbarGroups: ToolbarEntry[][] = [
     entry('numbered-list',pick(listItems,t('numberedList'))),entry('bullet-list',pick(listItems,t('bulletList'))),
     entry('check-list',pick(listItems,t('checkList'))),
     entry('quote',pick(expandedQuoteItems,t('quote'))),entry('code-block',pick(expandedQuoteItems,t('codeBlock'))),
-    entry('inline-math', { title: ui('插入行内公式'), icon: Formula, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline() } }),
+    entry('inline-math', { title: ui('LaTeX 公式'), icon: Formula, more: true, disabled: editor => !canInsertMath(editor), children: [
+      { title: ui('行内公式'), icon: Formula, hotkey: 'mod+shift+m', focusEditor: false, disabled: editor => !canInsertMath(editor), action: editor => { editor.math.insertInline(true) } },
+      { title: ui('独立公式'), icon: Formula, focusEditor: false, disabled: editor => !canInsertBlockMath(editor), action: editor => { editor.math.insertBlock() } },
+    ] }),
     entry('horizontal-rule',pick(dialogItems,t('horizontalRule')))],
   [entry('outdent',blockIndentItems[0]),entry('indent',blockIndentItems[1])],
   [entry('table',pick(dialogItems,t('insertTable'))),
@@ -47,7 +50,7 @@ export const toolbarGroups: ToolbarEntry[][] = [
 export function visibleToolbarItems(show: (item: ToolbarEntry['item']) => boolean = () => true, fixedOnly = false): MenuItemData[] {
   const result: MenuItemData[] = [];
   for (const group of toolbarGroups) {
-    const visible = group.filter(entry => (!fixedOnly || memoButtons.has(entry.id)) && show(entry.item));
+    const visible = group.filter(entry => (!fixedOnly || primaryToolbarButtons.has(entry.id)) && show(entry.item));
     if (!visible.length) continue;
     if (result.length) result.push('divider');
     result.push(...visible.map(entry => entry.item));

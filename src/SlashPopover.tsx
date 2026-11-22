@@ -35,7 +35,7 @@ export function SlashPopover() {
       command.run?.(editor)
     })
     if (command.dialog && editor.selection) setDialog({kind: command.dialog, range: Editor.rangeRef(editor, editor.selection)})
-    else ReactEditor.focus(editor)
+    else if (command.focusEditor !== false) ReactEditor.focus(editor)
   }
   const closeDialog = () => { setDialog(null); ReactEditor.focus(editor) }
   useEffect(() => () => { dialog?.range.unref() }, [dialog])

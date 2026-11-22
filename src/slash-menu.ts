@@ -1,6 +1,6 @@
 import { ui } from "./wysimark/utils/translations"
 import { Editor, Element, Node, Point, Range } from 'slate'
-import { canInsertMath } from './wysimark/math-plugin'
+import { canInsertBlockMath } from './wysimark/math-plugin'
 
 export function getSlashContext(editor: Editor) {
   if (editor.wysimark.readOnly || !editor.selection || !Range.isCollapsed(editor.selection)) return null
@@ -27,6 +27,7 @@ type SlashCommand = {
   dialog?: 'link' | 'attachment'
   feature?: 'drawings'
   available?: (editor: Editor) => boolean
+  focusEditor?: boolean
 }
 
 const normalizeSearch = (text: string) => text.normalize('NFKC').toLowerCase().replace(/[\s_-]+/g, '')
@@ -57,7 +58,7 @@ export const slashCommands: SlashCommand[] = [
   command('任务列表', 'list-checks', editor => editor.list.convertTaskList(true), {}, ['复选框', '待办', 'task', 'todo', 'checklist', 'checkbox', 'fxk', 'rwlb', 'db']),
   command('引用', 'quote', editor => editor.blockQuotePlugin.isActive() ? editor.blockQuotePlugin.outdent() : editor.blockQuotePlugin.indent(), {}, ['yy']),
   command('表格', 'table', editor => { editor.tablePlugin.insertTable(3, 3) }, {}, ['bg', 'grid', 'spreadsheet']),
-  {...command('插入行内公式', 'sigma', editor => { editor.math.insertInline() }, {}, ['公式', '数学公式', 'LaTeX', 'math', 'equation', 'formula', 'hngs', 'crhngs', 'gs', 'sxgs']), available: canInsertMath},
+  {...command('LaTeX 公式', 'sigma', editor => { editor.math.insertBlock() }, {}, ['公式', '独立公式', '插入公式', '数学公式', 'math', 'equation', 'formula', 'gs', 'dlgs', 'crgs', 'sxgs']), available: canInsertBlockMath, focusEditor: false},
   command('链接', 'link', undefined, {}, ['link', 'lj', 'url', 'hyperlink'], 'link'),
   command('附件', 'paperclip', undefined, {}, ['attachment', 'file', 'fj', '上传', 'upload', '导入', 'import', 'dr'], 'attachment'),
   command('代码块', 'code', editor => editor.codeBlock.toggleCodeBlock(), {}, ['dmk']),

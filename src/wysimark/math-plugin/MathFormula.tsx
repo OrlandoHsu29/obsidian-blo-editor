@@ -1,5 +1,5 @@
-import { finishRenderMath, loadMathJax, renderMath } from "obsidian"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { finishRenderMath } from "obsidian"
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { Editor, Transforms } from "slate"
 import { HistoryEditor } from "slate-history"
 import { ReactEditor, useReadOnly, useSelected, useSlateStatic } from "slate-react"
@@ -7,15 +7,13 @@ import type { RenderElementProps } from "slate-react"
 import { ui } from "../utils/translations"
 import { editMath, useMathEditing } from "./editing"
 import type { MathElement } from "./types"
-
-let mathReady: Promise<void> | undefined
-function ready() {
-  return mathReady ??= loadMathJax().catch(error => { mathReady = undefined; throw error })
-}
+import { loadFormulaRenderer, renderFormula } from "./render-formula"
 
 export function MathFormula({ element, attributes, children }: Omit<RenderElementProps, "element"> & { element: MathElement }) {
   const editor = useSlateStatic(), readOnly = useReadOnly(), selected = useSelected()
-  const editing = useMathEditing(editor, element) && !readOnly
+  const editingHeight = useMathEditing(editor, element)
+  const editing = editingHeight !== undefined && !readOnly
+  const sourceLabel = useId()
   const input = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const preview = useRef<HTMLSpanElement>(null), changed = useRef(false)
   const [failed, setFailed] = useState(false)
@@ -25,7 +23,7 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
   useLayoutEffect(() => {
     if (!editing) return
     changed.current = false
-    input.current?.focus()
+    input.current?.focus({ preventScroll: true })
     input.current?.setSelectionRange(element.latex.length, element.latex.length)
   }, [editing])
   useEffect(() => {
@@ -35,11 +33,9 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
     target.replaceChildren()
     setFailed(false)
     if (!element.latex.trim()) { target.textContent = "LaTeX"; return }
-    void ready().then(async () => {
+    void loadFormulaRenderer().then(async () => {
       if (cancelled) return
-      const rendered = renderMath(element.latex, display)
-      if (rendered.matches('mjx-merror,[data-mjx-error]') || rendered.querySelector('mjx-merror,[data-mjx-error]')) throw new Error("Invalid formula")
-      target.replaceChildren(rendered)
+      target.replaceChildren(renderFormula(element.latex, display))
       await finishRenderMath()
     }).catch(() => {
       if (!cancelled) { target.textContent = element.latex; setFailed(true) }
@@ -59,7 +55,7 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
   }
   const sourceProps = {
     value: source,
-    'aria-label': ui('LaTeX 公式源码'),
+    'aria-labelledby': sourceLabel,
     spellCheck: false,
     onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const latex = event.target.value
@@ -87,18 +83,19 @@ export function MathFormula({ element, attributes, children }: Omit<RenderElemen
   }
   const Wrapper = display ? "div" : "span"
   return <Wrapper {...attributes} data-blo-math={display ? "block" : "inline"} className={`blo-math${selected && !readOnly ? ' is-selected' : ''}${editing ? ' is-editing' : ''}${failed ? ' is-invalid' : ''}`}>
-    <span contentEditable={false} onDoubleClick={event => {
-      if (readOnly) return
+    <span className="blo-math-surface" contentEditable={false} onDoubleClick={event => {
+      if (readOnly || editing) return
       event.preventDefault(); event.stopPropagation(); editMath(editor, element)
     }} onMouseDown={event => {
       if (readOnly || editing) return
       event.preventDefault(); event.stopPropagation()
       Transforms.select(editor, ReactEditor.findPath(editor, element)); ReactEditor.focus(editor)
     }}>
+      {editing && <span id={sourceLabel} hidden>{ui('LaTeX 公式源码')}</span>}
       {editing ? display
-        ? <textarea {...sourceProps} ref={node => { input.current = node }} rows={3} />
+        ? <textarea {...sourceProps} ref={node => { input.current = node }} rows={3} style={{ minHeight: editingHeight || undefined }} />
         : <input {...sourceProps} ref={node => { input.current = node }} type="text" style={{ width: `${Math.min(48, Math.max(8, element.latex.length + 2))}ch` }} />
-        : <span ref={preview} className="blo-math-preview" aria-label={display && !readOnly ? ui('双击编辑公式') : undefined} />}
+        : <span ref={preview} className="blo-math-preview" />}
     </span>
     {children}
   </Wrapper>

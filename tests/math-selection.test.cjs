@@ -69,3 +69,18 @@ test('existing formulas survive document load and ordinary edits to legacy headi
  assert.equal(e.children[0].children.find(n=>n.type==='math-inline').latex,'legacy');
  assert.equal(loaded.exports.canInsertMath(e),false);
 });
+
+test('formula menu switches an inline formula to its own block and can switch it back',()=>{
+ const e=fixture();
+ e.children=[{type:'paragraph',children:[{text:''},formula('a+b'),{text:''}]}];
+ Transforms.select(e,Editor.start(e,[0,1]));
+ const before=structuredClone(e.children);
+ assert(e.math.insertBlock());
+ assert.deepEqual(e.children.map(node=>[node.type,node.latex]),[['math-block','a+b']]);
+ assert(e.math.insertInline(true));
+ assert.deepEqual(e.children,before);
+ e.undo();
+ assert.deepEqual(e.children.map(node=>[node.type,node.latex]),[['math-block','a+b']]);
+ e.undo();
+ assert.deepEqual(e.children,before);
+});

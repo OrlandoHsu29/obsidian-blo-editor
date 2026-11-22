@@ -7,7 +7,7 @@ import { editMath } from "./editing"
 import type { MathElement, MathPluginCustomTypes } from "./types"
 import { materializeTextBoundary } from "../../blocks/boundary"
 import { mathSelectionSource } from './selection-source'
-import { restoreInlineMathText } from './inline-text'
+import { restoreInlineMathText, selectedInlineMath } from './inline-text'
 import { withHistoryBatch } from '../utils/with-history-batch'
 import { selectionHasHeading } from '../../blocks/heading-policy'
 import { withHeadingMathPolicy } from './heading-math'
@@ -22,16 +22,17 @@ function editSelectedMath(editor: Editor) {
   const inserted = Editor.above<MathElement>(editor, { match: isMath })
   if (inserted) editMath(editor, inserted[0])
 }
-/** The formula the caret or selection belongs to: clicked voids select their whole range. */
-function selectedMath(editor: Editor): { node: MathElement; path: number[] } | undefined {
+/** A display formula the caret is in, or that the selection covers completely. */
+function selectedMathBlock(editor: Editor): { node: MathElement; path: number[] } | undefined {
   const selection = editor.selection
   if (!selection) return
+  const isBlock = (node: unknown): node is MathElement => Element.isElement(node) && node.type === 'math-block'
   if (Range.isCollapsed(selection)) {
-    const entry = Editor.above<MathElement>(editor, { match: isMath })
+    const entry = Editor.above<MathElement>(editor, { match: isBlock })
     return entry && { node: entry[0], path: entry[1] }
   }
   const [start, end] = Range.edges(selection)
-  for (const [node, path] of Editor.nodes<MathElement>(editor, { at: selection, match: isMath, voids: true })) {
+  for (const [node, path] of Editor.nodes<MathElement>(editor, { at: selection, match: isBlock, voids: true })) {
     if (Point.compare(start, Editor.start(editor, path)) <= 0 && Point.compare(end, Editor.end(editor, path)) >= 0) return { node, path }
   }
 }
@@ -84,11 +85,11 @@ function inlineToBlock(editor: Editor, selected: { node: MathElement; path: numb
 
 /** Switch a display formula back into the text flow of a paragraph. */
 function blockToInline(editor: Editor, selected: { node: MathElement; path: number[] }): boolean {
-  const { type: _type, children: _children, ...meta } = selected.node
+  const { type: _type, latex, children: _children, ...meta } = selected.node
   withHistoryBatch(editor, () => Editor.withoutNormalizing(editor, () => {
     Transforms.removeNodes(editor, { at: selected.path })
     Transforms.insertNodes(editor, { ...meta, type: 'paragraph',
-      children: [{ text: '' }, { type: 'math-inline', latex: selected.node.latex, children: [{ text: '' }] }, { text: '' }] }, { at: selected.path })
+      children: [{ text: '' }, { type: 'math-inline', latex, children: [{ text: '' }] }, { text: '' }] }, { at: selected.path })
     Transforms.select(editor, Editor.start(editor, [...selected.path, 1]))
   }))
   editSelectedMath(editor)
@@ -97,13 +98,16 @@ function blockToInline(editor: Editor, selected: { node: MathElement; path: numb
 
 function insertInline(editor: Editor, fromMenu = false): boolean {
   if (!canInsertMath(editor)) return false
-  const selected = selectedMath(editor)
-  if (selected?.node.type === 'math-inline') {
-    if (fromMenu) editMath(editor, selected.node)
-    else withHistoryBatch(editor, () => restoreInlineMathText(editor, selected.path))
+  // Only a formula covered on its own toggles or edits; a wider selection is
+  // converted from its mixed text and formula source instead.
+  const inline = selectedInlineMath(editor)
+  if (inline) {
+    if (fromMenu) editMath(editor, Node.get(editor, inline) as MathElement)
+    else withHistoryBatch(editor, () => restoreInlineMathText(editor, inline))
     return true
   }
-  if (selected?.node.type === 'math-block') return blockToInline(editor, selected)
+  const block = selectedMathBlock(editor)
+  if (block) return blockToInline(editor, block)
   const latex = mathSelectionSource(editor)
   HistoryEditor.withNewBatch(editor, () => Editor.withoutNormalizing(editor, () => {
     materializeTextBoundary(editor)
@@ -121,9 +125,10 @@ export function canInsertBlockMath(editor: Editor): boolean {
 
 function insertBlock(editor: Editor): boolean {
   if (!canInsertBlockMath(editor)) return false
-  const selected = selectedMath(editor)
-  if (selected?.node.type === 'math-block') { editMath(editor, selected.node); return true }
-  if (selected?.node.type === 'math-inline') return inlineToBlock(editor, selected)
+  const block = selectedMathBlock(editor)
+  if (block) { editMath(editor, block.node); return true }
+  const inline = selectedInlineMath(editor)
+  if (inline) return inlineToBlock(editor, { node: Node.get(editor, inline) as MathElement, path: inline })
   const latex = mathSelectionSource(editor)
   const formula = { type: 'math-block' as const, latex, children: [{ text: '' }] }
   withHistoryBatch(editor, () => {

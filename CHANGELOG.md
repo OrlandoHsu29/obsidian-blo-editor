@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.15 — 2026-11-22
+
+### 中文
+
+- 在行内或行间公式上按住鼠标拖动时，现在会像正文一样实时拖选，并可跨过公式继续选到后面的文字；单击公式仍然只选中公式本身。
+- 编辑表格单元格时，拖选始终限制在该单元格内：拖到格子外不会选中相邻格子或正文，选区按指针相对本格文字的左右位置计算，全程无闪烁。
+- 编辑单元格内容后不再重复执行一次表格宽度重排，消除表格上半部分每次输入后的轻微抖动。
+
+### English
+
+- Pressing and dragging on an inline or display formula now extends the text selection live and can continue past the formula; a plain click still selects only the formula itself.
+- While editing a table cell, text drags stay inside that cell: pointer positions outside no longer select neighbouring cells or body text, and the selection follows the pointer's horizontal position within the cell without flashing.
+- Editing a cell no longer triggers a redundant table width pass, removing the slight jitter in the upper half of the table after each keystroke.
+
+
 ## 0.2.14 — 2026-11-22
 
 ### 中文

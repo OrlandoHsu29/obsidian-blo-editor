@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.14 — 2026-11-22
+
+### 中文
+
+- 修复把公式和文字一起选中后转成公式时被当成只选中公式的问题，现在按选区内容合并成一个公式。
+- 修复行间公式切回行内时，段落上残留 LaTeX 属性的问题。
+- 复制时纯文本目标只得到可见文字，保留列表序号与缩进、公式用 LaTeX 源码；不再带上 Markdown 标记和 Blo 的块元数据注释，富文本目标仍保留样式。
+
+### English
+
+- Fix a mixed selection of text and formulas being treated as only the formula when merging it into one formula; the selection now combines into a single formula.
+- Fix a stale LaTeX property left on the paragraph when a display formula switches back inline.
+- Plain-text targets now receive only the visible text with list numbers, indentation and LaTeX sources instead of Markdown tokens or Blo block metadata; rich-text targets keep their styling.
+
+
 ## 0.2.13 — 2026-11-22
 
 ### 中文

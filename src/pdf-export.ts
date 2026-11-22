@@ -1,7 +1,8 @@
-import { Component, Modal, Notice, Platform, Setting, TFile, loadPdfJs } from 'obsidian';
+import { Component, Modal, Notice, Platform, Setting, TFile, finishRenderMath, loadPdfJs } from 'obsidian';
 import type { BloView } from './BloView';
 import { ui } from './wysimark/utils/translations';
 import { flushViewportDrawings } from './viewport-work';
+import { loadFormulaRenderer, renderFormula } from './wysimark/math-plugin/render-formula';
 
 type PdfOptions = { paper: 'A4' | 'Letter' | 'A3'; landscape: boolean; margin: number; title: boolean; pages: boolean };
 function pdfErrorMessage(error: unknown): string {
@@ -64,6 +65,25 @@ async function waitForPreviews(source: HTMLElement): Promise<void> {
   });
 }
 
+async function renderOpenFormulaInputs(source: HTMLElement, clone: HTMLElement): Promise<void> {
+  const selector = '[data-blo-math].is-editing';
+  const originals = [...source.querySelectorAll<HTMLElement>(selector)];
+  if (!originals.length) return;
+  const fields = [...clone.querySelectorAll<HTMLElement>(selector)];
+  const values = originals.map(element => element.querySelector<HTMLInputElement | HTMLTextAreaElement>('input,textarea')?.value ?? '');
+  await loadFormulaRenderer().catch(() => {});
+  for (const [index, formula] of fields.entries()) {
+    const preview = clone.ownerDocument.createElement('span');
+    preview.className = 'blo-math-preview';
+    const latex = values[index];
+    try { if (latex.trim()) preview.append(renderFormula(latex, formula.dataset.bloMath === 'block')); }
+    catch { preview.textContent = latex; }
+    formula.querySelector('.blo-math-surface')?.replaceChildren(preview);
+    formula.classList.remove('is-editing');
+  }
+  await finishRenderMath();
+}
+
 async function dataUrl(src: string): Promise<string> {
   if (src.startsWith('data:')) return src;
   const controller = new AbortController();
@@ -90,6 +110,7 @@ export async function createPdfHtml(view: BloView, options: PdfOptions, format: 
   await waitForPreviews(source);
   const doc = source.ownerDocument;
   const clone = source.cloneNode(true) as HTMLElement;
+  await renderOpenFormulaInputs(source, clone);
   clone.querySelectorAll('[data-blo-render-paused]').forEach(el => el.removeAttribute('data-blo-render-paused'));
   // Render PDF covers independently: offscreen native readers may never paint,
   // and exporting must not scroll the note or disturb their zoom/render queue.

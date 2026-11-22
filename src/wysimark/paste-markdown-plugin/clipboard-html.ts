@@ -7,7 +7,8 @@ import { serialize } from "../convert"
 let clipboardRevision = 0
 
 /** Build semantic HTML from just the copied fragment, without editor controls/CSS. */
-export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>(), resolveImageUrl?: (url: string) => string): string {
+export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>(), resolveImageUrl?: (url: string) => string,
+  formulaImage?: (latex: string, display: boolean) => { src: string; width: number; height: number } | undefined): string {
   const document = window.document.implementation.createHTMLDocument('')
   const container = document.createElement('div')
   container.setAttribute('data-slate-fragment', encoded)
@@ -30,8 +31,18 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
       return result
     }
     if (node.type === 'math-inline' || node.type === 'math-block') {
-      const source = document.createElement(node.type === 'math-block' ? 'div' : 'span')
-      source.textContent = serializeMath(node.latex, node.type === 'math-block')
+      const display = node.type === 'math-block'
+      const rendered = formulaImage?.(node.latex, display)
+      const source = document.createElement(display ? 'div' : 'span')
+      if (!rendered) source.textContent = serializeMath(node.latex, display)
+      else {
+        const image = document.createElement('img')
+        image.src = rendered.src; image.alt = node.latex
+        image.width = rendered.width; image.height = rendered.height
+        image.style.cssText = 'max-width:100%;height:auto;vertical-align:middle'
+        if (display) source.style.textAlign = 'center'
+        source.append(image)
+      }
       return source
     }
     if (node.type === 'inline-code') {

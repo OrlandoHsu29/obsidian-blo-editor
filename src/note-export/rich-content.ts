@@ -8,6 +8,7 @@ import { isWikiEmbedUrl, isWikiLinkHref, wikiEmbedSpecFromUrl, wikiLinkSpecFromH
 import { exportMarkdown, resolveExportAssets } from './content'
 import { createPdfHtml } from '../pdf-export'
 import { mediaExtensions } from '../media-extensions'
+import { prepareRichMath } from './rich-math'
 const attachmentExtension = new RegExp(`\\.(?:${mediaExtensions}|excalidraw(?:\\.md)?)(?:[?#]|$)`, 'i')
 
 /** Use the same semantic renderer as rich copy/paste, without changing selection. */
@@ -42,8 +43,10 @@ export async function richContent(view: BloView, source: TFile, nodes: Descendan
     return copy
   }
   const fragment = exportHeadingLists(nodes).map(clone)
-  const doc = view.contentEl.ownerDocument.implementation.createHTMLDocument('')
-  doc.body.innerHTML = clipboardFragmentHtml(fragment, '')
+  const owner = view.contentEl.ownerDocument
+  const formulas = await prepareRichMath(owner, fragment)
+  const doc = owner.implementation.createHTMLDocument('')
+  doc.body.innerHTML = clipboardFragmentHtml(fragment, '', undefined, undefined, formulas)
   doc.body.firstElementChild?.removeAttribute('data-slate-fragment')
   return { html: doc.body.innerHTML, text: includeText ? exportMarkdown(view, nodes, resolve) : '' }
 }

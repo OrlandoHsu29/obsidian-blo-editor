@@ -1,5 +1,5 @@
 import { Element } from "../types"
-import { Node } from "slate"
+import { Node, Text } from "slate"
 import { orderedNumbers } from '../../../blocks/model'
 import { InternalLinkOptions } from "../obsidian-links"
 import { serializeElement } from "./serialize-element"
@@ -83,7 +83,8 @@ export function serializeElements(
   // Strip block separators, then restore intentional source boundary newlines.
   let trailingEmpty = 0
   for (let i = elements.length - 1; i >= 0; i--) {
-    if (elements[i].type !== "paragraph" || Node.string(elements[i]) !== "") break
+    const element = elements[i]
+    if (element.type !== "paragraph" || !element.children.every(child => Text.isText(child) && child.text === "")) break
     trailingEmpty++
   }
   return "\n".repeat(elements[0]?.__markdownLeadingNewlines || 0) +

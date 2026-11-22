@@ -154,6 +154,17 @@ export default class BloEditorPlugin extends Plugin {
       if (!checking) void view.editor.wysimark.insertDrawing?.();
       return true;
     }});
+    this.addCommand({
+      id: 'copy-as-ai-quote',
+      name: ui('复制为 AI 引用'),
+      hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'C' }],
+      checkCallback: checking => {
+        const copy = this.app.workspace.getActiveViewOfType(BloView)?.prepareAiQuoteCopy();
+        if (!copy) return false;
+        if (!checking) copy();
+        return true;
+      },
+    });
     this.addCommand({ id: 'toggle-memo-panel', name: ui('打开/关闭速记面板'), checkCallback: checking => {
       if (!this.settings.enableMemoPanel || !memoPanelEnabled(this.app)) return false;
       if (!checking) void this.toggleMemoPanelWindow();

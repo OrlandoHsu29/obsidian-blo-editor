@@ -155,9 +155,9 @@ export const uiMessages = {
   '无法复制块链接，请重试': { zh: '无法复制块链接，请重试', en: 'Could not copy the block link. Please try again.' },
   'AI 协作': { zh: 'AI 协作', en: 'AI collaboration' },
   'AI 引用': { zh: 'AI 引用', en: 'AI quotes' },
-  '在桌面端选中文字，右键选择「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置，可粘贴到 AI 对话中。': {
-    zh: '在桌面端选中文字，右键选择「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置，可粘贴到 AI 对话中。',
-    en: 'On desktop, select text and choose Copy as AI quote from the context menu. Paste the Markdown excerpt, local note path, and quote location into your AI conversation.',
+  '选中文字后，通过右键菜单或快捷键「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置。可在 Obsidian 的「快捷键」设置中更改此快捷键。': {
+    zh: '选中文字后，通过右键菜单或快捷键「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置。可在 Obsidian 的「快捷键」设置中更改此快捷键。',
+    en: 'Select text and use Copy as AI quote from the context menu or with its hotkey. This copies the Markdown excerpt, local note path, and quote location. Change the binding in Obsidian’s Hotkeys settings.',
   },
   'AI 默认写作格式': { zh: 'AI 默认写作格式', en: 'Default AI note format' },
   '生成 AGENTS.md': { zh: '生成 AGENTS.md', en: 'Generate AGENTS.md' },

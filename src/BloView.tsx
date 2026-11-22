@@ -639,6 +639,12 @@ export class BloView extends FileView {
     return 'pencil';
   }
 
+  prepareAiQuoteCopy(host = this.contentEl.querySelector<HTMLElement>('[data-slate-editor="true"]')) {
+    const adapter = this.app.vault.adapter;
+    if (!host || !this.editor || !this.currentFile || !(adapter instanceof FileSystemAdapter)) return;
+    return prepareAiQuote(this.editor, host, adapter, this.currentFile.path);
+  }
+
   async onOpen(): Promise<void> {
     await super.onOpen();
     // Get the content container
@@ -684,12 +690,11 @@ export class BloView extends FileView {
       clearTextDrag(this.editor);
     }, true);
     this.registerDomEvent(contentEl, 'contextmenu', event => {
-      const adapter = this.app.vault.adapter;
-      if (event.defaultPrevented || !this.editor || !this.currentFile || !(adapter instanceof FileSystemAdapter)) return;
+      if (event.defaultPrevented) return;
       const target = event.target;
       const host = isDomElement(target) && target.closest<HTMLElement>('[data-slate-editor="true"]');
       if (!host || target.closest('button,input,textarea,[contenteditable="false"]')) return;
-      const copy = prepareAiQuote(this.editor, host, adapter, this.currentFile.path);
+      const copy = this.prepareAiQuoteCopy(host);
       if (!copy) return;
       addSelectionContextAction(event, host, !this.readOnly, {
         label: ui('复制为 AI 引用'),

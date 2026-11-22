@@ -107,7 +107,7 @@ export class BloSettingsTab extends PluginSettingTab {
       }))
     new Setting(aiGroup)
       .setName(ui('AI 引用'))
-      .setDesc(ui('在桌面端选中文字，右键选择「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置，可粘贴到 AI 对话中。'))
+      .setDesc(ui('选中文字后，通过右键菜单或快捷键「复制为 AI 引用」。复制内容包含 Markdown 文段、笔记的本机路径和引用位置。可在 Obsidian 的「快捷键」设置中更改此快捷键。'))
     new Setting(editorGroup)
       .setName(ui('默认使用富文本编辑器'))
       .setDesc(ui('Markdown 笔记默认使用富文本编辑；阅读视图不受影响。'))

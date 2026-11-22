@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Editor, Element, Path, Range, Transforms } from 'slate'
+import { Editor, Element, Path, Point, Range, Transforms } from 'slate'
 import { HistoryEditor } from 'slate-history'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { ui } from '../../utils/translations'
@@ -9,7 +9,7 @@ import type { TableColumnAlign, TableElement } from '../types'
 import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
 import { structuredBlockBounds } from '../../../blocks/structured-block'
-import { pointerRangeFromPoint, setPointerSelection, tableCellFromPointer } from '../../../blocks/pointer-selection'
+import { pointerRangeFromPoint, preservePointerSelectionClick, setPointerSelection, tableCellFromPointer } from '../../../blocks/pointer-selection'
 import { TableContext } from './table-context'
 
 type Position = { left: number; top: number }
@@ -43,9 +43,64 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     const host = ReactEditor.toDOMNode(editor, editor)
     let origin: Path | undefined, snapped: Range | undefined
     let enteringEdit = false, selectingMultipleCells = false
+    // Text drags inside the cell being edited are driven by the pointer and
+    // always stay in that cell, so nothing outside ever flashes as selected.
+    let editingCell: Path | undefined, editingAnchor: Point | undefined
+    let editingElement: HTMLElement | undefined, editingDrag = false, editingMoved = false
     let hoverTimer: number | undefined, leaveTimer: number | undefined
     let pending: Insertion[] | undefined
     let repairing = false, showingInsertions = false, watchingScroll = false
+    const endEditingDrag = () => {
+      editingCell = undefined; editingAnchor = undefined; editingElement = undefined; editingDrag = false; editingMoved = false
+    }
+    const clampToEditingCell = (point: Point): Point => {
+      const start = Editor.start(editor, editingCell!), end = Editor.end(editor, editingCell!)
+      if (Point.isBefore(point, start)) return start
+      if (Point.isAfter(point, end)) return end
+      return point
+    }
+    /** Visual lines of the edited cell: leaf boxes of one line are merged. */
+    const editingLines = () => {
+      const lines: { left: number; right: number; top: number; bottom: number }[] = []
+      if (!editingElement) return lines
+      for (const string of editingElement.querySelectorAll('[data-slate-string]')) {
+        const node = string.firstChild
+        if (!node || node.nodeType !== 3) continue
+        const range = doc.createRange()
+        range.selectNodeContents(node)
+        for (const rect of Array.from(range.getClientRects())) {
+          const line = lines.find(item => Math.abs(item.top - rect.top) < 2 && Math.abs(item.bottom - rect.bottom) < 2)
+          if (line) {
+            line.left = Math.min(line.left, rect.left)
+            line.right = Math.max(line.right, rect.right)
+          } else {
+            lines.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom })
+          }
+        }
+      }
+      return lines
+    }
+    const editingPointAt = (x: number, y: number): Point | undefined => {
+      if (!editingElement) return
+      const lines = editingLines()
+      // Nearest line to the pointer; an empty cell falls back to its own box.
+      const bounds = editingElement.getBoundingClientRect()
+      let box = { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom }
+      if (lines.length) {
+        box = lines.reduce((best, line) =>
+          Math.abs((line.top + line.bottom) / 2 - y) < Math.abs((best.top + best.bottom) / 2 - y) ? line : best)
+      }
+      // Only the horizontal position decides where inside the line it lands.
+      const left = box.left + 1, right = Math.max(left, box.right - 1)
+      const top = box.top + 1, bottom = Math.max(top, box.bottom - 1)
+      const cx = Math.min(Math.max(x, left), right), cy = Math.min(Math.max(y, top), bottom)
+      const hit = doc.caretRangeFromPoint(cx, cy)
+      const point = hit && ReactEditor.toSlatePoint(editor, [hit.startContainer, hit.startOffset], { exactMatch: false, suppressThrow: true })
+      if (point) return clampToEditingCell(point)
+      return x < left ? Editor.start(editor, editingCell!) : Editor.end(editor, editingCell!)
+    }
+    const insideEditingCell = (point: Point): boolean =>
+      !!editingCell && !Point.isBefore(point, Editor.start(editor, editingCell)) && !Point.isAfter(point, Editor.end(editor, editingCell))
     const cancelHover = () => { win.clearTimeout(hoverTimer); hoverTimer = undefined; pending = undefined }
     const stopWatchingScroll = () => {
       if (!watchingScroll) return
@@ -71,17 +126,34 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         setPointerSelection(editor, snapped, doc)
       } finally { repairing = false }
     }
+    /** Native selection can spill into neighbouring cells; keep it in the edited one. */
     const down = (event: MouseEvent) => {
       if (event.button !== 0 || menuRef.current?.contains(event.target as globalThis.Node) || insertRef.current?.contains(event.target as globalThis.Node)) return
       hideInsertions()
       origin = undefined; snapped = undefined; enteringEdit = false; selectingMultipleCells = false
+      endEditingDrag()
       const target = event.target as HTMLElement
       if (target.closest('[contenteditable="false"],button')) return
       if (table.contains(target)) {
         clearTableAxisSelection(editor)
         origin = cellAt(event)
         if (!origin) return
-        if (isTableCellEditing(editor,origin)) return
+        if (isTableCellEditing(editor, origin) && event.detail < 2) {
+          // Take over the drag: the browser's own selection would run past the
+          // cell first and only be corrected later, which flickers.
+          event.preventDefault()
+          editingCell = origin
+          editingElement = target.closest<HTMLElement>('td,th') ?? undefined
+          const focus = editingPointAt(event.clientX, event.clientY) ?? Editor.start(editor, origin)
+          const selection = editor.selection
+          editingAnchor = event.shiftKey && selection && insideEditingCell(selection.anchor) ? selection.anchor : focus
+          editingDrag = true
+          editingMoved = false
+          origin = undefined
+          ReactEditor.focus(editor)
+          setPointerSelection(editor, { anchor: editingAnchor, focus }, doc)
+          return
+        }
         if (event.detail >= 2) {
           event.preventDefault()
           enteringEdit = beginTableCellEdit(editor,origin); ReactEditor.focus(editor)
@@ -150,6 +222,15 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       hoverTimer = win.setTimeout(() => { hoverTimer = undefined; showingInsertions = true; setInsertions(next) }, 220)
     }
     const move = (event: MouseEvent) => {
+      if (editingCell) {
+        if (!(event.buttons & 1)) { endEditingDrag(); return }
+        const focus = editingPointAt(event.clientX, event.clientY)
+        if (!focus) return
+        event.preventDefault()
+        editingMoved = true
+        setPointerSelection(editor, { anchor: editingAnchor ?? focus, focus }, doc)
+        return
+      }
       if (!origin || !(event.buttons & 1)) {
         if (insertRef.current?.contains(event.target as globalThis.Node)) {
           win.clearTimeout(leaveTimer); leaveTimer = undefined
@@ -184,6 +265,9 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       }
     }
     const up = () => {
+      // A drag would otherwise collapse the selection through the following click.
+      if (editingDrag && editingMoved) preservePointerSelectionClick(editor)
+      endEditingDrag()
       if (!origin) return
       if (!selectingMultipleCells || !snapped || !selectWholeTableDrag(editor, origin.slice(0, -2), snapped)) synchronize()
       origin = undefined; snapped = undefined

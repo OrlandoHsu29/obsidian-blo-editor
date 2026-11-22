@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.13 — 2026-11-22
+
+### 中文
+
+- 行内公式可以像正文一样设置字体颜色、高亮、下划线、删除线和斜体/加粗。样式随 Markdown 以 HTML 标签保存，下划线、删除线与高亮按正文基线连续绘制，在编辑、富文本复制和 Obsidian 原生阅读视图中都能正确显示。
+- 公式工具拆成「行内公式」和「行间公式」两个图标。行间公式新增快捷键 Ctrl+Alt+M（macOS ⌘⌥M），并支持两者互相切换：选中行内公式按 Ctrl+Alt+M 变为居中的行间公式，选中行间公式按 Ctrl+Shift+M 回到正文。原「独立公式」更名为「行间公式」。
+- 导出与复制保留公式样式：Markdown、HTML 和 PDF 中公式的样式保持完整；复制到云文档时公式图片内烘焙了字体颜色、下划线和删除线；从网页或 LaTeX 粘贴的 `\(...\)`、`\[...\]` 与 MathML 公式会保留为可编辑公式。
+- 修复在无序列表圆点与文字之间的空白处按下鼠标或拖选时选区跳到行尾的问题，现在会从该行开头开始选择。
+- 修复导出的笔记丢失公式渲染结果的问题，导出时公式以图片形式保留。
+
+### English
+
+- Inline formulas now take text color, highlight, underline, strikethrough and italic/bold like body text. Styles round-trip as HTML tags, and underline, strikethrough and highlight follow the surrounding text baseline, so they render correctly in the editor, rich copies and Obsidian's own reading view.
+- The formula tool is split into **Inline formula** and **Display formula** with distinct icons. Display formulas get Ctrl+Alt+M (⌘⌥M on macOS) and switch both ways: Ctrl+Alt+M turns a selected inline formula into a centered display formula, Ctrl+Shift+M brings a display formula back into the text flow. **Standalone formula** is renamed to **Display formula**.
+- Exports and copies keep formula styling: Markdown, HTML and PDF retain it; formulas copied to cloud documents bake the color, underline and strikethrough into the image; LaTeX pasted from the web as `\(...\)`, `\[...\]` or MathML stays an editable formula.
+- Clicking or dragging in the gap between an unordered list marker and its text now starts the selection at the beginning of that line instead of jumping to its end.
+- Fix exported notes losing rendered formulas; exports now keep them as images.
+
 ## 0.2.12 — 2026-11-22
 
 ### 中文

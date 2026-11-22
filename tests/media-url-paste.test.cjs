@@ -5,9 +5,14 @@ const Module=require('node:module');
 const {createEditor,Editor,Node,Transforms}=require('slate');
 const {withHistory,HistoryEditor}=require('slate-history');
 const loaded=new Module('media-url-paste.cjs');
-loaded.require=id=>id==='obsidian'?{getLanguage:()=> 'en'}:require(id);
-loaded._compile(buildSync({stdin:{contents:`export {createMediaLinkImport} from './src/media-url-paste';export {wikiEmbedUrl} from './src/wysimark/convert/obsidian-links';export {convertToEmbed} from './src/wysimark/anchor-plugin/methods/convertToEmbed';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['slate','slate-react','obsidian'],write:false}).outputFiles[0].text,'media-url-paste.cjs');
-const {createMediaLinkImport,wikiEmbedUrl,convertToEmbed}=loaded.exports;
+const notices=[];
+loaded.require=id=>id==='obsidian'?{
+ getLanguage:()=> 'en',
+ Notice:class {constructor(message){notices.push(message)}},
+ requestUrl:async ({url})=>({status:url.endsWith('/found')?200:404,headers:{'content-type':'text/html'},text:'Fetched title'}),
+}:require(id);
+loaded._compile(buildSync({stdin:{contents:`export {createMediaLinkImport} from './src/media-url-paste';export {createWebUrlPaste} from './src/web-link-paste';export {wikiEmbedUrl} from './src/wysimark/convert/obsidian-links';export {convertToEmbed} from './src/wysimark/anchor-plugin/methods/convertToEmbed';export {createAnchorMethods} from './src/wysimark/anchor-plugin/methods';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['slate','slate-react','obsidian'],write:false}).outputFiles[0].text,'media-url-paste.cjs');
+const {createMediaLinkImport,createWebUrlPaste,wikiEmbedUrl,convertToEmbed,createAnchorMethods}=loaded.exports;
 function fixture(before,after,ext='pdf',props={}){
  const e=withHistory(createEditor());
  e.isInline=n=>['anchor','image-inline'].includes(n.type);
@@ -18,6 +23,28 @@ function fixture(before,after,ext='pdf',props={}){
  Transforms.select(e,Editor.end(e,[1]));
  return {e,url,importer:createMediaLinkImport(e,[0,1],url)};
 }
+
+function pasteWebLink(path,label) {
+ const editor=withHistory(createEditor()),url='https://example.test/'+path;
+ editor.wysimark={readOnly:false};editor.isInline=node=>node.type==='anchor';editor.anchor=createAnchorMethods(editor);
+ editor.children=[{type:'paragraph',children:[{text:''}]}];Transforms.select(editor,Editor.start(editor,[0]));
+ const doc={defaultView:{setTimeout,clearTimeout,DOMParser:class {parseFromString(text){return {querySelector:()=>({textContent:text})}}}}};
+ return {editor,url,session:createWebUrlPaste(editor,url,doc,label)};
+}
+
+test('pasting a webpage with no retrievable title keeps its label and reports one failure',async()=>{
+ const {editor,session}=pasteWebLink('missing','Clipboard label');const start=notices.length;
+ await session.choose('title');await session.choose('title');
+ assert.equal(Node.string(editor),'Clipboard label');assert.equal(session.choice,'url');
+ assert.deepEqual(notices.slice(start),['Could not fetch the link title']);session.dispose();
+});
+
+test('the pasted URL remains usable while a successful title request completes',async()=>{
+ const {editor,url,session}=pasteWebLink('found');const start=notices.length;
+ assert.equal(Node.string(editor),url);await session.choose('title');
+ assert.equal(Node.string(editor),'Fetched title');assert.equal(session.choice,'title');assert.equal(notices.length,start);
+ editor.undo();assert.equal(Node.string(editor),url);session.dispose();
+});
 for(const ext of ['pdf','png'])for(const [before,after] of [['Before','After'],['','After'],['Before',''],['','']]){
  test(`${ext} import separates ${JSON.stringify(before)} and ${JSON.stringify(after)} and undoes in one step`,async()=>{
   const {e,importer}=fixture(before,after,ext),original=structuredClone(e.children);

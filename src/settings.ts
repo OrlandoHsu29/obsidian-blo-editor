@@ -22,7 +22,6 @@ export type EditorSettings = {
   /** Integrations the user turned off on purpose; detection leaves them off. */
   integrationOptOut: string[]
   tableDefaults: { headerRow: boolean; headerColumn: boolean }
-  autoLinkTitle: boolean
   showListGuides: boolean
   blockSelectShortcut: boolean
   nativeShortcutMigrationVersion?: number
@@ -41,7 +40,6 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   enableMemoPanel: false,
   integrationOptOut: [],
   tableDefaults: { headerRow: true, headerColumn: false },
-  autoLinkTitle: true,
   showListGuides: true,
   blockSelectShortcut: true,
 }

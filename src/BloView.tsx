@@ -300,12 +300,6 @@ function KnowledgeSpaceEditorComponent({
   });
   editor.wysimark.readOnly = readOnly;
   editor.wysimark.linkPreview = preview;
-  editor.wysimark.linkTitlePreferences = plugin.linkTitlePreferences;
-  editor.wysimark.setAutoLinkTitle = enabled => {
-    plugin.settings.autoLinkTitle = enabled;
-    plugin.linkTitlePreferences.setEnabled(enabled);
-    void plugin.saveData(plugin.settings);
-  };
   editor.wysimark.memoPanel = memoPanel;
   editor.wysimark.integrationPreferences = plugin.integrationPreferences;
   editor.wysimark.normalizeInternalLink = value => normalizeVaultLinkInput(plugin.app, value);

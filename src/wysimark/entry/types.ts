@@ -1,6 +1,5 @@
 import { Descendant, Element } from "slate"
 import type { ReactNode } from "react"
-import type { LinkTitlePreferences } from '../../link-title-preferences'
 import type { IntegrationPreferences } from '../../integration-preferences'
 
 /**
@@ -32,8 +31,6 @@ export type WysimarkEditor = {
     normalizeInternalLink?: (value: string) => { target: string; display?: string }
     resolveInternalMedia?: (target: string) => string | undefined
     getReferencedMedia?: (url: string) => { target: string; name: string; path: string } | undefined
-    linkTitlePreferences?: LinkTitlePreferences
-    setAutoLinkTitle?: (enabled: boolean) => void
     memoPanel?: boolean
     integrationPreferences?: IntegrationPreferences
     resolveImageUrl?: (url: string) => string

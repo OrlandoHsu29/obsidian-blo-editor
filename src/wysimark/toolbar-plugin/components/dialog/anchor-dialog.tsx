@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Notice } from 'obsidian'
 import { Editor, Range, Transforms } from 'slate'
 import type { RangeRef } from 'slate'
 import { HistoryEditor } from 'slate-history'
@@ -17,7 +18,6 @@ import type { Rect } from '../../../use-reposition/types'
 
 type DialogProps = { dest: HTMLElement; close: () => void; getAnchorRect?: () => Rect }
 type Source = 'url' | 'vault' | 'computer'
-const subscribeNoop = () => () => {}
 
 export function AnchorDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment={false} /> }
 export function AttachmentInsertDialog(props: DialogProps) { return <ReferenceDialog {...props} attachment /> }
@@ -36,9 +36,6 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
   const [url, setUrl] = useState('')
   const [target, setTarget] = useState('')
   const [text, setText] = useState(initialText)
-  const [fallbackAutoTitle, setFallbackAutoTitle] = useState(true)
-  const titlePreferences = editor.wysimark.linkTitlePreferences
-  const autoTitle = useSyncExternalStore(titlePreferences?.subscribe ?? subscribeNoop, titlePreferences?.getSnapshot ?? (() => fallbackAutoTitle))
   const [description, setDescription] = useState(initialText)
   const [title, setTitle] = useState('')
   const [selectedFile, setSelectedFile] = useState<File>()
@@ -80,6 +77,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
     let href = source === 'vault' ? target.trim() : url.trim()
     let preview: string | undefined
     let label = attachment ? text.trim() : normalizeLinkLabel(text)
+    let titleUnavailable = false
     try {
       if (attachment && source !== 'vault') {
         setSaving(true)
@@ -100,11 +98,12 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
           href = wikiLinkHref(spec)
         }
       } else {
-        if (!label && autoTitle) {
+        if (!label) {
           setSaving(true)
-          label = await fetchLinkTitle(href, dest.ownerDocument) || ''
+          const fetched = await fetchLinkTitle(href, dest.ownerDocument)
+          titleUnavailable = !fetched
+          label = fetched || href
         }
-        label ||= href
       }
       if (!active.current || editor.wysimark.readOnly) return
       const selection = location.current?.current
@@ -121,6 +120,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
       else apply()
       ReactEditor.focus(editor)
       dismiss()
+      if (titleUnavailable) new Notice(ui('链接标题获取失败'))
     } catch (cause) {
       console.error('Blo Editor: reference insertion failed', cause)
       if (active.current) setError(ui('无法插入链接或附件，请检查地址或文件后重试。'))
@@ -133,7 +133,7 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
   const sources: Source[] = attachment ? ['vault', 'url', 'computer'] : ['url', 'vault']
   const footerHint = attachment
     ? ui(source === 'vault' ? '直接引用库内文件' : '保存到附件目录并预览')
-    : ''
+    : ui(source === 'url' ? '显示文字留空时自动获取标题' : '显示文字留空时使用链接地址')
   return <>
     <CloseMask close={dismiss} isInside={target => dest.contains(target)} />
     <$AnchorDialog ref={ref} style={style} className="wysimark-reference-dialog" data-reference-kind={attachment ? 'attachment' : 'link'} role="dialog" aria-labelledby={labelId}>
@@ -165,8 +165,8 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
             </label>
           </> : <>
             <label className="wysimark-reference-field">
-              <span>{ui('显示文字（可选）')}<small className="wysimark-link-label-hint">{ui(source === 'url' && autoTitle ? '留空使用链接地址或自动标题' : '留空使用链接地址')}</small></span>
-              <input type="text" value={text} onChange={event => setText(event.target.value)} />
+              <span>{ui('显示文字（可选）')}</span>
+              <input type="text" value={text} aria-describedby={labelId + '-label-hint'} onChange={event => setText(event.target.value)} />
             </label>
             <label className="wysimark-reference-field">
               <span>{ui('悬停提示（可选）')}</span>
@@ -176,11 +176,9 @@ function ReferenceDialog({ dest, close, attachment, getAnchorRect }: DialogProps
         </fieldset>
         {error && <div role="alert" className="wysimark-reference-error">{error}</div>}
         <div className="wysimark-reference-actions">
-          {footerHint && <$DialogHint className="wysimark-reference-footer-hint" title={footerHint}>{footerHint}</$DialogHint>}
-          {!attachment && source === 'url' && <label className="wysimark-reference-auto-title"><input type="checkbox" checked={autoTitle} disabled={saving} onChange={event => {
-            if (editor.wysimark.setAutoLinkTitle) editor.wysimark.setAutoLinkTitle(event.target.checked)
-            else setFallbackAutoTitle(event.target.checked)
-          }} /><span>{ui('插入链接时自动获取链接标题')}</span></label>}
+          <$DialogHint className="wysimark-reference-footer-hint" id={attachment ? undefined : labelId + '-label-hint'} title={attachment ? footerHint : undefined}>
+            {footerHint}
+          </$DialogHint>
           <button type="submit" disabled={!valid || saving}>{saving ? t('saving') : t('insert')}</button>
         </div>
       </form>

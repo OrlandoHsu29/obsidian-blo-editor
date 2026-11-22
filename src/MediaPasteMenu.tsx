@@ -106,7 +106,7 @@ function MediaPasteMenu({ session, host, close }: { session: PasteSession; host:
       }}>
       {isWebSession(session) ? <div className="wysimark-media-import-actions">
         <button type="button" role="menuitemradio" aria-checked={session.choice === 'url'} onClick={() => { void session.choose('url'); dismiss(); ReactEditor.focus(editor) }}><Link /><span>{ui('保留文本链接')}</span></button>
-        <button type="button" role="menuitemradio" aria-checked={session.choice === 'title'} onClick={() => { const request = session.choose('title'); dismiss(); ReactEditor.focus(editor); void request.catch(cause => { console.error('Blo Editor: pasted link title failed', cause); new Notice(ui('无法获取网页标题，已保留原链接。')) }) }}><PageTitleIcon /><span>{ui('显示链接标题')}</span></button>
+        <button type="button" role="menuitemradio" aria-checked={session.choice === 'title'} onClick={() => { const request = session.choose('title'); dismiss(); ReactEditor.focus(editor); void request.catch(cause => { console.error('Blo Editor: pasted link title failed', cause); new Notice(ui('链接标题获取失败')) }) }}><PageTitleIcon /><span>{ui('显示链接标题')}</span></button>
       </div> : <MediaImportActions session={session} close={dismiss} />}
     </$Panel>
 }
@@ -139,7 +139,7 @@ export function MediaPasteController({ host }: { host: RefObject<HTMLElement> })
       const openMenu = () => {
         if (pending.current === session && session.current()) dialogRef.current.open(() => <MediaPasteMenu session={session} host={shell} close={dialogRef.current.close} />)
       }
-      if (!isWebSession(session) || editor.wysimark.linkTitlePreferences?.getSnapshot() === false) { openMenu(); return }
+      if (!isWebSession(session)) { openMenu(); return }
       const doc = shell.ownerDocument, win = doc.defaultView!
       let active = true, frame = 0
       const removeListeners = () => {
@@ -177,6 +177,7 @@ export function MediaPasteController({ host }: { host: RefObject<HTMLElement> })
       }
       void session.choose('title').then(showAfterTitle, cause => {
         console.error('Blo Editor: pasted link title failed', cause)
+        if (session.current()) new Notice(ui('链接标题获取失败'))
         showAfterTitle()
       })
     }

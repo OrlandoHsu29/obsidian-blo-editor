@@ -32,6 +32,7 @@ export function preservePointerSelectionClick(editor: Editor) {
 /** Keep the browser and Slate pointed at the same real document range. */
 export function setPointerSelection(editor: Editor, range: Range, doc: Document) {
   Transforms.select(editor, range)
+  range = editor.selection ?? range
   const [a, offset] = ReactEditor.toDOMPoint(editor, range.anchor)
   const [f, end] = ReactEditor.toDOMPoint(editor, range.focus)
   const native=doc.getSelection()

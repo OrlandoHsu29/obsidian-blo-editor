@@ -1,6 +1,4 @@
-import { Editor, Path, Point, Range, Transforms } from "slate"
-import { withHistoryBatch } from "../../utils/with-history-batch"
-import { rangeCoversRootTable } from "../../../blocks/selection"
+import { Editor, Path, Transforms } from "slate"
 
 import { findElementUpPath } from "../../sink"
 
@@ -43,39 +41,6 @@ export function deleteFragmentWithProtectedTypes(
    */
   if (!startProtectedPath && !endProtectedPath) {
     return false
-  }
-
-  // Remove fully covered tables before applying cell protection to the
-  // remaining range, which may still begin or end in a partially selected table.
-  const tables: number[] = []
-  for (let index = start.path[0]; index <= end.path[0]; index++) {
-    if (rangeCoversRootTable(editor, index, editor.selection)) tables.push(index)
-  }
-  if (tables.length) {
-    const first = tables[0], last = tables[tables.length - 1]
-    let from: Point | undefined = start, to: Point | undefined = end
-    if (first === start.path[0]) {
-      let index = first + 1
-      while (tables.includes(index)) index++
-      from = index < editor.children.length ? Editor.start(editor, [index]) : undefined
-    }
-    if (last === end.path[0]) {
-      let index = last - 1
-      while (tables.includes(index)) index--
-      to = index >= 0 ? Editor.end(editor, [index]) : undefined
-    }
-    withHistoryBatch(editor, () => {
-      Editor.withoutNormalizing(editor, () => {
-        const remaining = from && to && Point.compare(from, to) < 0
-        const caret = from ?? to
-        if (remaining) Transforms.select(editor, { anchor: from!, focus: to! })
-        else if (caret) Transforms.select(editor, caret)
-        for (const index of tables.reverse()) Transforms.removeNodes(editor, { at: [index] })
-        if (remaining && editor.selection && Range.isExpanded(editor.selection) &&
-          !deleteFragmentWithProtectedTypes(editor, protectedTypes)) Transforms.delete(editor, { hanging: true })
-      })
-    })
-    return true
   }
 
   /**

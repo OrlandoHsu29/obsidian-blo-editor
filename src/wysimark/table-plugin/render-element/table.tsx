@@ -23,8 +23,7 @@ export function Table({
   const isSelected = useSelected()
   const readOnly=useReadOnly()
   const blockSelected=useBlockSelection(element)
-  // Cross-block text ranges use the same cell backgrounds as table selections.
-  // Keep the original range intact for clipboard and deletion operations.
+  // Mixed ranges use the table's block highlight and keep its controls closed.
   const crossBlockSelection=useSlateSelector(useCallback(editor=>{
     const selection=editor.selection
     if(!selection||Range.isCollapsed(selection))return false
@@ -62,7 +61,7 @@ export function Table({
       <div ref={frame} className="blo-table-frame" data-scrollbar-active={isSelected||blockSelected||!!cells||undefined}>
         <div className="blo-table-placeholder" aria-hidden="true" />
         <div className="blo-table-scroll">
-          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&!blockSelected&&(cells||isSelected&&crossBlockSelection)?true:undefined}
+          <$Table {...attributes} columns={element.columns} data-block-selected={blockSelected&&!readOnly||undefined} data-cell-selection={!readOnly&&!blockSelected&&!!cells||undefined}
             data-text-selection={readOnly||isSelected&&!cells&&!blockSelected&&!crossBlockSelection||undefined}>
             <tbody>{children}</tbody>
           </$Table>

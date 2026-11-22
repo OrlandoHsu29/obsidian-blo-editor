@@ -9,6 +9,7 @@ import { indentCodeSelection } from '../wysimark/code-block-plugin/methods/inden
 import { indentQuoteContents } from './quote-indent'
 import { boundaryBlockIndex, deleteRangeEndingAtBoundary, insertBreakAtBoundary, materializeTextBoundary, normalizeStructuredBoundary, outdentEmptyParagraph, selectStructuredBoundary } from './boundary'
 import { handleTableCellKey } from '../wysimark/table-plugin/cell-selection'
+import { deleteMixedTableSelection, expandMixedTableRange } from '../wysimark/table-plugin/mixed-selection'
 import { exitEmptyQuote } from './subtitle'
 import { relocateFoldedSelection, revealFoldedSelection } from './folding'
 import { uniquePastedBlockIds, validBlockId } from './block-reference'
@@ -26,25 +27,30 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  let pendingDefaults:HeadingDefaults|undefined
  editor.apply=operation=>{
   const restoring=HistoryEditor.isHistoryEditor(editor)&&HistoryEditor.isSaving(editor)===false
+  if(operation.type==='set_selection'&&operation.newProperties) {
+   const selection={...editor.selection,...operation.newProperties}
+   if(Range.isRange(selection)&&!restoring&&!isBlockSelectionRange(editor,selection)) {
+    const expanded = expandMixedTableRange(editor, selection)
+    if (expanded !== selection) operation = { ...operation, properties: editor.selection, newProperties: expanded }
+    revealFoldedSelection(editor, expanded)
+   }
+  }
   const rootChange=!restoring&&['insert_node','remove_node','move_node','merge_node','split_node'].includes(operation.type)&&'path' in operation&&operation.path.length===1
   const defaults=rootChange?headingDefaults(editor.children[0])??pendingDefaults:undefined
   if(!restoring&&operation.type==='split_node'&&operation.path.length===1&&'__blockId' in operation.properties&&validBlockId(operation.properties.__blockId)) {
    clearBlockSelection(editor)
-   const node=Node.get(editor,operation.path)
-   const emptyPrefix=operation.position===0||Element.isElement(node)&&
+   const { path, position } = operation
+   const node=Node.get(editor,path)
+   const emptyPrefix=position===0||Element.isElement(node)&&
     (node.type==='paragraph'||node.type==='heading'||isListBlock(node))&&
-    (node.children as Descendant[]).slice(0,operation.position).every(child=>Text.isText(child)&&child.text==='')
+    (node.children as Descendant[]).slice(0,position).every(child=>Text.isText(child)&&child.text==='')
    if(emptyPrefix) {
-    Editor.withoutNormalizing(editor,()=>{apply(operation);Transforms.unsetNodes(editor,'__blockId',{at:operation.path})})
+    Editor.withoutNormalizing(editor,()=>{apply(operation);Transforms.unsetNodes(editor,'__blockId',{at:path})})
    } else {
     const {__blockId,...properties}=operation.properties
     apply({...operation,properties})
    }
    return
-  }
-  if(operation.type==='set_selection'&&operation.newProperties) {
-   const selection={...editor.selection,...operation.newProperties}
-   if(Range.isRange(selection)&&!restoring&&!isBlockSelectionRange(editor,selection))revealFoldedSelection(editor,selection)
   }
   // Browser selectionchange may echo the exact range we just selected.
   // A mouse selection is cleared separately on pointer down.
@@ -64,6 +70,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   if(operation.type==='set_node'&&'__collapsed' in operation.newProperties&&operation.newProperties.__collapsed===true)relocateFoldedSelection(editor)
  }
  editor.insertText=text=>{
+  if(text&&deleteMixedTableSelection(editor,()=>editor.insertText(text)))return
   const row=activeImageRow(editor)?.index
   if(!text||boundaryBlockIndex(editor)===undefined&&row===undefined)return insertText(text)
   Editor.withoutNormalizing(editor,()=>{
@@ -73,6 +80,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
  }
  editor.insertFragment=(fragment,options)=>{
   const insert=()=>insertFragment(pasteTextContent(editor,uniquePastedBlockIds(editor,cleanPastedFragment(fragment as Descendant[]))),options)
+  if(fragment.length&&!options?.at&&deleteMixedTableSelection(editor,()=>editor.insertFragment(fragment,options)))return
   const row=activeImageRow(editor)
   const boundary=boundaryBlockIndex(editor)??row?.index
   if(!fragment.length||boundary===undefined || options?.at)return insert()
@@ -95,7 +103,7 @@ export const BlockStructurePlugin=createPlugin<Types>(editor=>{
   },
   deleteBackward:()=>deleteAtBlockBoundary(editor),
   deleteForward:()=>deleteWholeBlockSelection(editor)||deleteImageRowAtCaret(editor,1),
-  deleteFragment:()=>deleteWholeBlockSelection(editor)||deleteRangeEndingAtBoundary(editor),
+  deleteFragment:()=>deleteWholeBlockSelection(editor)||deleteMixedTableSelection(editor)||deleteRangeEndingAtBoundary(editor),
  },
  editableProps:{onCut:event=>{
   if((selectedImageFragment(editor)?.length??0)<=1)return false

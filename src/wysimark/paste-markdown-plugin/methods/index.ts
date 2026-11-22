@@ -4,6 +4,7 @@ import { curryOne } from "../../sink"
 
 import { parse } from "../../convert"
 import { pasteTableFragment } from '../../table-plugin/paste-table'
+import { deleteMixedTableSelection } from '../../table-plugin/mixed-selection'
 
 function pasteMarkdown(editor: Editor, markdown: string, fromHtml = false) {
   const fragment = parse(markdown, { enableInternalLinks: true, collapseListGaps: fromHtml })
@@ -19,7 +20,8 @@ function pasteMarkdown(editor: Editor, markdown: string, fromHtml = false) {
   if (emptyParagraph || fragment.every(element => element.type === "paragraph")) {
     editor.insertFragment(fragment)
   } else {
-    Transforms.insertNodes(editor, fragment)
+    const insert = () => Transforms.insertNodes(editor, fragment)
+    if (!deleteMixedTableSelection(editor, insert)) insert()
   }
 }
 

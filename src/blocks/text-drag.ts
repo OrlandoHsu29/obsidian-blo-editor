@@ -3,6 +3,7 @@ import { Editor, Point, Range, Transforms } from 'slate'
 import { ReactEditor } from 'slate-react'
 import { isDomElement } from '../dom-guards'
 import { withHistoryBatch } from '../wysimark/utils/with-history-batch'
+import { deleteMixedTableSelection, expandMixedTableRange } from '../wysimark/table-plugin/mixed-selection'
 
 const dragType = 'application/x-blo-text-move'
 type TextDrag = { id: string; range: ReturnType<typeof Editor.rangeRef> }
@@ -30,7 +31,7 @@ export function startTextDrag(editor: Editor, event: DragEvent<HTMLElement>): bo
   const id = String(++nextDragId)
   dataTransfer.setData(dragType, id)
   dataTransfer.effectAllowed = 'copyMove'
-  textDrags.set(editor, { id, range: Editor.rangeRef(editor, range, { affinity: 'inward' }) })
+  textDrags.set(editor, { id, range: Editor.rangeRef(editor, editor.selection ?? range, { affinity: 'inward' }) })
   return true
 }
 
@@ -41,18 +42,22 @@ export function textDragOver(editor: Editor, event: DragEvent<HTMLElement>) {
 }
 
 export function moveTextSelection(editor: Editor, range: Range, point: Point, copy = false) {
+  range = expandMixedTableRange(editor, range)
   if (Range.isCollapsed(range) || Range.includes(range, point) || Editor.void(editor, { at: point })) return false
   Transforms.select(editor, range)
   const fragment = editor.getFragment()
   if (!fragment.length) return false
   const destination = Editor.pointRef(editor, point)
   try {
+    const insert = () => {
+      if (!destination.current) return
+      Transforms.select(editor, destination.current)
+      editor.insertFragment(fragment)
+    }
+    if (!copy && deleteMixedTableSelection(editor, insert)) return true
     withHistoryBatch(editor, () => {
       if (!copy) Transforms.delete(editor, { at: range })
-      if (destination.current) {
-        Transforms.select(editor, destination.current)
-        editor.insertFragment(fragment)
-      }
+      insert()
     })
   } finally {
     destination.unref()

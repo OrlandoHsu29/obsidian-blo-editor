@@ -27,8 +27,10 @@ loaded._compile(buildSync({stdin:{contents:`
  export {parse,serialize} from './src/wysimark/convert';
  export {createPasteMarkdownMethods} from './src/wysimark/paste-markdown-plugin/methods';
  export {selectWholeTableDrag,tableCellSelection} from './src/wysimark/table-plugin/cell-selection';
+ export {mixedRangeCoversTable} from './src/wysimark/table-plugin/mixed-selection';
+ export {moveTextSelection} from './src/blocks/text-drag';
  `,resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',external:['obsidian','slate','slate-history','slate-react','react','react-dom'],write:false}).outputFiles[0].text,'empty-indent.cjs');
-const {withBlocks,blockDepth,sharedQuoteIndent,isWholeBlockSelected,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection}=loaded.exports;
+const {withBlocks,blockDepth,sharedQuoteIndent,isWholeBlockSelected,parse,serialize,createPasteMarkdownMethods,selectWholeTableDrag,tableCellSelection,mixedRangeCoversTable,moveTextSelection}=loaded.exports;
 const p=(text='',depth=0)=>({type:'paragraph',__blockDepth:depth,children:[{text}]});
 function fixture(nodes){const e=withHistory(createEditor());e.wysimark={readOnly:false};withBlocks(e,{});e.children=nodes;Editor.normalize(e,{force:true});e.history.undos=[];Transforms.select(e,Editor.end(e,[0]));return e}
 function tab(e){let prevented=false;const handled=e.sink.plugins[0].editableProps.onKeyDown({key:'Tab',nativeEvent:{},preventDefault(){prevented=true},stopPropagation(){}});assert(handled&&prevented)}
@@ -127,6 +129,53 @@ test('mixed text selection removes a fully covered table and only the selected s
   assert.equal(e.children.map(Node.string).join(''),anchorInTable?'Beforeter':'Befter');
   e.undo();assert(e.children.some(node=>node.type==='table'));
  }
+});
+
+test('mixed selections snap either table endpoint to the whole table in both drag directions',()=>{
+ for(const startsInTable of [false,true])for(const backward of [false,true]){
+  const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`));
+  const index=e.children.findIndex(n=>n.type==='table'),after=e.children.findIndex(n=>Node.string(n)==='After');
+  const inside=Editor.end(e,[index,0,1]),beforePoint={path:[0,0],offset:3},afterPoint={path:[after,0],offset:2};
+  const [start,end]=startsInTable?[inside,afterPoint]:[beforePoint,inside];
+  Transforms.select(e,backward?{anchor:end,focus:start}:{anchor:start,focus:end});
+  const range=structuredClone(e.selection), expected=startsInTable?Editor.start(e,[index]):Editor.end(e,[index]);
+  assert.deepEqual(range[startsInTable!==backward?'anchor':'focus'],expected);
+  assert(mixedRangeCoversTable(e,[index],range));assert.equal(tableCellSelection(e),undefined);
+  assert.equal(Node.string(e.getFragment().find(n=>n.type==='table')),'ABCD');
+  e.deleteFragment({direction:'backward'});
+  assert(!e.children.some(n=>n.type==='table'));assert.equal(Node.string(e),startsInTable?'Beforeter':'BefAfter');
+  e.undo();assert.deepEqual(e.selection,range);assert(mixedRangeCoversTable(e,[index],e.selection));
+  assert.equal(Node.string(e.children[index]),'ABCD');e.redo();assert(!e.children.some(n=>n.type==='table'));
+ }
+});
+
+test('a range ending inside a second table includes and removes both endpoint tables',()=>{
+ const e=fixture(parse(`Before\n\n${markdownTable}\n\nBetween\n\n${markdownTable}\n\nAfter`));
+ const paths=e.children.flatMap((n,i)=>n.type==='table'?[[i]]:[]);
+ Transforms.select(e,{anchor:Editor.end(e,[...paths[0],0,0]),focus:Editor.start(e,[...paths[1],0,1])});
+ assert(paths.every(path=>mixedRangeCoversTable(e,path,e.selection)));
+ assert.deepEqual(e.getFragment().filter(n=>n.type==='table').map(Node.string),['ABCD','ABCD']);
+ e.deleteFragment();assert(!e.children.some(n=>n.type==='table'));assert.equal(Node.string(e),'BeforeAfter');
+});
+
+test('typing and pasting replace a mixed selection without leaving table cells behind',()=>{
+ const replace=[e=>e.insertText('New'),e=>e.insertFragment([p('New')]),e=>createPasteMarkdownMethods(e).pasteMarkdown('## New')];
+ for(const insert of replace){
+  const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`)),index=e.children.findIndex(n=>n.type==='table');
+  Transforms.select(e,{anchor:{path:[0,0],offset:3},focus:Editor.end(e,[index,0,1])});
+  insert(e);assert.equal(Node.string(e),'BefNewAfter');assert(!e.children.some(n=>n.type==='table'));
+  assert.equal(e.history.undos.length,1);e.undo();assert.equal(Node.string(e.children[index]),'ABCD');
+ }
+});
+
+test('moving a mixed selection moves the complete table in one undo step',()=>{
+ const e=fixture(parse(`Before\n\n${markdownTable}\n\nAfter`)),index=e.children.findIndex(n=>n.type==='table');
+ const destination=Editor.end(e,[e.children.findIndex(n=>Node.string(n)==='After')]);
+ const range={anchor:{path:[0,0],offset:3},focus:Editor.end(e,[index,0,1])};
+ assert(moveTextSelection(e,range,destination));
+ assert.deepEqual(e.children.filter(n=>n.type==='table').map(Node.string),['ABCD']);
+ assert.equal(Node.string(e),'BefAfteroreABCD');assert.equal(e.history.undos.length,1);
+ e.undo();assert.equal(Node.string(e),'BeforeABCDAfter');
 });
 
 test('Tab then Enter returns an empty paragraph to its original indentation without adding a row',()=>{

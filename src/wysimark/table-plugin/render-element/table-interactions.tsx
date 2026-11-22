@@ -10,6 +10,7 @@ import type { TableColumnAlign, TableElement } from '../types'
 import { useBlockToolbarPosition } from '../../use-reposition/hooks/use-block-toolbar-position'
 import { editorOverlayViewport } from '../../use-reposition/observe-anchored-overlay'
 import { structuredBlockBounds } from '../../../blocks/structured-block'
+import { pointerRangeFromPoint, setPointerSelection } from '../../../blocks/pointer-selection'
 import { TableContext } from './table-context'
 
 type Position = { left: number; top: number }
@@ -40,6 +41,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
     if (readOnly) return
     const table = ReactEditor.toDOMNode(editor, element) as HTMLTableElement
     const doc = table.ownerDocument, win = doc.defaultView!
+    const host = ReactEditor.toDOMNode(editor, editor)
     let origin: Path | undefined, snapped: Range | undefined
     let enteringEdit = false, selectingMultipleCells = false
     let hoverTimer: number | undefined, leaveTimer: number | undefined
@@ -68,12 +70,7 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
       if (!snapped || repairing) return
       repairing = true
       try {
-        if (!editor.selection || !Range.equals(editor.selection, snapped)) Transforms.select(editor, snapped)
-        const domRange = ReactEditor.toDOMRange(editor, snapped), selection = win.getSelection()
-        if (selection && (selection.anchorNode !== domRange.startContainer || selection.anchorOffset !== domRange.startOffset ||
-          selection.focusNode !== domRange.endContainer || selection.focusOffset !== domRange.endOffset)) {
-          selection.setBaseAndExtent(domRange.startContainer, domRange.startOffset, domRange.endContainer, domRange.endOffset)
-        }
+        setPointerSelection(editor, snapped, doc)
       } finally { repairing = false }
     }
     const down = (event: MouseEvent) => {
@@ -165,7 +162,16 @@ export function TableInteractions({ element, readOnly, active }: { element: Tabl
         return
       }
       const cell = cellAt(event.target)
-      if (!cell) return
+      if (!cell) {
+        if (table.contains(event.target as globalThis.Node)) return
+        const range = pointerRangeFromPoint(editor, host, event.clientX, event.clientY, Editor.start(editor, origin))
+        if (!range || Path.isAncestor(origin.slice(0, -2), range.focus.path)) return
+        selectingMultipleCells = false
+        snapped = range
+        event.preventDefault()
+        synchronize()
+        return
+      }
       selectingMultipleCells = !Path.equals(cell, origin)
       if (selectingMultipleCells || snapped) {
         const path = Path.parent(Path.parent(origin))

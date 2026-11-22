@@ -1,8 +1,9 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { Element } from 'slate'
-import { useSlateSelector, useSlateStatic } from 'slate-react'
+import { ReactEditor, useSlateSelector, useSlateStatic } from 'slate-react'
 import { rootCache } from './model'
-import { hasMultipleImagesSelected, isWholeBlockSelected, rangeCoversRootTable, subscribeBlockSelection } from './selection'
+import { hasMultipleImagesSelected, isWholeBlockSelected, subscribeBlockSelection } from './selection'
+import { mixedRangeCoversTable } from '../wysimark/table-plugin/mixed-selection'
 
 /** Follow both native ranges and disjoint image selections, including when
  * another image is removed while the focused image stays selected. */
@@ -28,7 +29,8 @@ export function useBlockSelection(element: Element): boolean {
   )
   return useSlateSelector(useCallback(editor => {
     const index = rootCache(editor).indices.get(element)
-    return index !== undefined && (snapshot && isWholeBlockSelected(editor, index) ||
-      element.type === 'table' && !!editor.selection && rangeCoversRootTable(editor, index, editor.selection))
+    if (index !== undefined && snapshot && isWholeBlockSelected(editor, index)) return true
+    return element.type === 'table' && !!editor.selection &&
+      mixedRangeCoversTable(editor, index === undefined ? ReactEditor.findPath(editor, element) : [index], editor.selection)
   }, [element, snapshot]))
 }

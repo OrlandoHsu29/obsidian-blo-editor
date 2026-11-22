@@ -21,6 +21,7 @@ export function removeMarks(
     ...Editor.nodes(editor, {
       match: (n) => Text.isText(n),
       at,
+      voids: true,
     }),
   ]
   const setter: Record<string, null> = {}
@@ -33,6 +34,7 @@ export function removeMarks(
   Transforms.setNodes(editor, setter, {
     match: (n) => Text.isText(n),
     split: true,
+    voids: true,
     at,
   })
 }

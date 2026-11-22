@@ -1,4 +1,4 @@
-import { cleanInlineStyle } from "../../blocks/typography"
+import { inlineStyleProps } from "../../blocks/typography"
 import { clsx } from "clsx"
 import { Editor, Path, Range, Text, Transforms } from "slate"
 
@@ -130,17 +130,13 @@ export const MarksPlugin = createPlugin<MarksPluginCustomTypes>((editor) => {
     name: "marks",
     editableProps: {
       renderLeaf: ({ leaf, children }) => {
-        const inlineStyle=cleanInlineStyle(leaf.inlineStyle)
         if (leaf.footnote) children = <sup>{children}</sup>
         if (leaf.kbd) children = <kbd>{children}</kbd>
         if (leaf.sup) children = <sup>{children}</sup>
         if (leaf.sub) children = <sub>{children}</sub>
         return (
           <$MarksSpan
-            style={inlineStyle ? Object.fromEntries(inlineStyle.split(';').filter(Boolean).map(part => {
-              const at = part.indexOf(':');
-              return [part.slice(0, at).replace(/-([a-z])/g, (_, ch: string) => ch.toUpperCase()), part.slice(at + 1)];
-            })) : undefined}
+            style={inlineStyleProps(leaf.inlineStyle)}
             className={clsx({
               "--bold": leaf.bold,
               "--italic": leaf.italic,

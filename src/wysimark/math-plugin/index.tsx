@@ -93,6 +93,10 @@ function insertBlock(editor: Editor): boolean {
 
 export const MathPlugin = createPlugin<MathPluginCustomTypes>((editor, _options, { createPolicy }) => {
   editor.math = { insertInline: fromMenu => insertInline(editor, fromMenu), insertBlock: () => insertBlock(editor) }
+  // The formula is a void, but its leaf carries the text marks so color,
+  // highlight, underline and the other styles apply to the formula itself.
+  const markableVoid = editor.markableVoid.bind(editor)
+  editor.markableVoid = element => element.type === "math-inline" || markableVoid(element)
   withHeadingMathPolicy(editor)
   return createPolicy({
     name: "math",

@@ -3,12 +3,29 @@ import type { Descendant } from 'slate'
 import { blockDepth, isEditorSpacer, isListBlock, resolveOrderedNumbers, rootCache } from '../../blocks/model'
 import { cleanInlineStyle } from '../../blocks/typography'
 import { serializeMath } from "../math-plugin/serialize"
+import { formulaMarks } from "../math-plugin/formula-marks"
+import type { FormulaMarks } from "../math-plugin/formula-marks"
 import { serialize } from "../convert"
 let clipboardRevision = 0
 
+/** Mark → tag pairs shared by text runs and inline formulas. */
+const MARK_TAGS = { code: 'code', bold: 'strong', italic: 'em', underline: 'u', strike: 's', highlight: 'mark', kbd: 'kbd', sup: 'sup', sub: 'sub' } as const
+
+function wrapMarks(document: Document, leaf: Text, result: globalThis.Node): globalThis.Node {
+  const style = cleanInlineStyle(leaf.inlineStyle)
+  // A custom highlight color travels in the span; `<mark>` would paint over it.
+  const customBackground = !!style && /(?:^|;)background-color:/i.test(style)
+  for (const [mark, tag] of Object.entries(MARK_TAGS)) {
+    if (mark === 'highlight' && customBackground) continue
+    if (leaf[mark as keyof typeof MARK_TAGS]) { const element = document.createElement(tag); element.append(result); result = element }
+  }
+  if (style) { const span = document.createElement('span'); span.setAttribute('style', style); span.append(result); result = span }
+  return result
+}
+
 /** Build semantic HTML from just the copied fragment, without editor controls/CSS. */
 export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, labels = new Map<Node, string>(), resolveImageUrl?: (url: string) => string,
-  formulaImage?: (latex: string, display: boolean) => { src: string; width: number; height: number } | undefined): string {
+  formulaImage?: (latex: string, display: boolean, marks?: FormulaMarks) => { src: string; width: number; height: number } | undefined): string {
   const document = window.document.implementation.createHTMLDocument('')
   const container = document.createElement('div')
   container.setAttribute('data-slate-fragment', encoded)
@@ -23,16 +40,13 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
         node.text.split('\n').forEach((line, index) => { if (index) lines.append(document.createElement('br')); lines.append(document.createTextNode(line)) })
         result = lines
       }
-      const marks = { code: 'code', bold: 'strong', italic: 'em', underline: 'u', strike: 's', highlight: 'mark', kbd: 'kbd', sup: 'sup', sub: 'sub' } as const
-      for (const [mark, tag] of Object.entries(marks)) if (node[mark as keyof typeof marks]) result = wrap(tag, result)
       if (node.footnote) result = wrap('sup', result)
-      const style = cleanInlineStyle(node.inlineStyle)
-      if (style) { const span = wrap('span', result); span.setAttribute('style', style); result = span }
-      return result
+      return wrapMarks(document, node, result)
     }
     if (node.type === 'math-inline' || node.type === 'math-block') {
       const display = node.type === 'math-block'
-      const rendered = formulaImage?.(node.latex, display)
+      const leaf = display ? undefined : node.children.find(Text.isText)
+      const rendered = formulaImage?.(node.latex, display, leaf ? formulaMarks(leaf) : undefined)
       const source = document.createElement(display ? 'div' : 'span')
       if (!rendered) source.textContent = serializeMath(node.latex, display)
       else {
@@ -43,7 +57,8 @@ export function clipboardFragmentHtml(fragment: Descendant[], encoded: string, l
         if (display) source.style.textAlign = 'center'
         source.append(image)
       }
-      return source
+      if (display) return source
+      return leaf ? wrapMarks(document, leaf, source) : source
     }
     if (node.type === 'inline-code') {
       const code = document.createElement('code')

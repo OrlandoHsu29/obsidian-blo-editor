@@ -1,5 +1,6 @@
 import { Editor, Location, Node, Point, Range, Text, Transforms } from "slate"
 import { formatSelectedTableCells, selectedCellTextEntries } from '../../table-plugin/cell-selection'
+import { inlineMathLeaves } from '../../math-plugin/inline-marks'
 
 /**
  * Toggles a mark.
@@ -39,8 +40,16 @@ export function toggleMark(
 
   const validMarkKey = markKey
   const marks = Editor.marks(editor) || {}
+  // Inline formulas keep their marks on an empty leaf, so include them when
+  // deciding whether every selected piece already carries the mark.
+  const mathLeaves = Range.isRange(at) && Range.isExpanded(at)
+    ? inlineMathLeaves(editor, at).map(({ leaf }) => leaf)
+    : []
   const selectedLeaves = Range.isRange(at) && Range.isExpanded(at)
-    ? Editor.fragment(editor, at).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length > 0)
+    ? [
+        ...Editor.fragment(editor, at).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length > 0),
+        ...mathLeaves,
+      ]
     : []
   const isActive = selectedLeaves.length
     ? selectedLeaves.every(leaf => leaf[validMarkKey] === true)

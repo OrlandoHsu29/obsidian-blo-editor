@@ -1,6 +1,6 @@
 import { Text as SlateText } from "slate"
 
-import { Segment } from "../../../types"
+import { MarkKey, Segment, Text } from "../../../types"
 import { assertUnreachable } from "../../../utils"
 import { serializeImageShared } from "../../serialize-image-shared"
 import { EscapeTextOptions } from "../utils"
@@ -11,6 +11,18 @@ import { cleanInlineStyle } from '../../../../../blocks/typography'
 import { serializeMath } from "../../../../math-plugin/serialize"
 import { serializeLine } from '../serialize-line'
 import { serializeCodeFrame } from './serialize-code-frame'
+
+/** Marks on an inline formula use tags, not delimiters; see the case below. */
+const MATH_MARK_TAGS: [MarkKey, string][] = [
+  ["bold", "strong"],
+  ["italic", "em"],
+  ["underline", "u"],
+  ["strike", "s"],
+  ["highlight", "mark"],
+  ["kbd", "kbd"],
+  ["sup", "sup"],
+  ["sub", "sub"],
+]
 
 export function serializeSegment(
   segment: Segment,
@@ -43,8 +55,17 @@ export function serializeSegment(
         return serializeCodeFrame(segment)
       }
       return serializeLine(segment.children.map(text => ({ ...text, code: true })), [], [], options)
-    case "math-inline":
-      return serializeMath(segment.latex, false, options?.inTable)
+    case "math-inline": {
+      const formula = serializeMath(segment.latex, false, options?.inTable)
+      const leaf = segment.children.find(child => SlateText.isText(child)) as Text | undefined
+      if (!leaf) return formula
+      // Marks around a formula use paired HTML tags: Markdown delimiters do not
+      // reliably parse beside `$…$`, and Obsidian renders these tags too.
+      let result = formula
+      for (const [mark, tag] of MATH_MARK_TAGS) if (leaf[mark]) result = `<${tag}>${result}</${tag}>`
+      const style = cleanInlineStyle(leaf.inlineStyle)
+      return style ? `<span style="${style}">${result}</span>` : result
+    }
     case "anchor": {
       return serializeAnchor(segment, options)
     }

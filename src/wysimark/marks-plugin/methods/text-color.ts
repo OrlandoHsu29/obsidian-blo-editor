@@ -2,6 +2,7 @@ import { Editor, Node, Range, Text, Transforms } from "slate"
 import { cleanInlineStyle, isDefaultTextColor } from '../../../blocks/typography'
 import { TEXT_COLORS } from '../../../blocks/colors'
 import { formatSelectedTableCells, selectedCellTextEntries, tableCellSelection } from '../../table-plugin/cell-selection'
+import { inlineMathLeaves } from '../../math-plugin/inline-marks'
 import { withHistoryBatch } from '../../utils/with-history-batch'
 
 export const DEFAULT_TEXT_COLOR = TEXT_COLORS.red
@@ -16,7 +17,10 @@ export function toggleTextColor(editor: Editor, color: string) {
   if (!editor.selection || editor.wysimark.readOnly) return
   const cells = tableCellSelection(editor)
   const leaves = cells ? selectedCellTextEntries(editor, cells).map(([leaf]) => leaf).filter(leaf => leaf.text.length) : Range.isExpanded(editor.selection)
-    ? Editor.fragment(editor, editor.selection).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length)
+    ? [
+        ...Editor.fragment(editor, editor.selection).flatMap(node => Array.from(Node.texts(node)).map(([leaf]) => leaf)).filter(leaf => leaf.text.length),
+        ...inlineMathLeaves(editor, editor.selection).map(({ leaf }) => leaf),
+      ]
     : [Editor.marks(editor) || {}]
   const active = leaves.length > 0 && leaves.every(leaf =>
     leaf.inlineStyle?.split(';').some(part => part.trim().toUpperCase() === `COLOR:${color.toUpperCase()}`))
@@ -56,6 +60,13 @@ export function applyTextColor(editor: Editor, color: string | null) {
   const selection = editor.selection
   const leaves = Array.from(Editor.nodes<Text>(editor, { at: selection, match: Text.isText }))
   Editor.withoutNormalizing(editor, () => {
+    // Formula leaves are empty, so the leaf loop skips them. Mark them first:
+    // splitting text leaves below would invalidate their paths.
+    for (const { leaf, path } of inlineMathLeaves(editor, selection)) {
+      const style = withTextColor(leaf.inlineStyle, color)
+      if (style) Transforms.setNodes(editor, { inlineStyle: style }, { at: path, voids: true })
+      else Transforms.unsetNodes(editor, 'inlineStyle', { at: path, voids: true })
+    }
     // Reverse order keeps earlier paths stable when partial leaves are split.
     for (const [leaf, path] of leaves.reverse()) {
       if (Editor.above(editor, { at: path, match: node => !Text.isText(node) && 'type' in node && node.type === 'code-block' })) continue

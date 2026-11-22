@@ -237,10 +237,14 @@ function parsePhrasingContent(
 ): Segment[] {
   const marks = contextMarks(baseMarks, context)
   switch (phrasingContent.type) {
-    case "inlineMath":
+    case "inlineMath": {
+      // Formatting that wraps the formula belongs to the formula's own leaf, so
+      // bold, color, highlight and other marks survive a save and reload.
+      const { code: _code, ...mathMarks } = marks
       return [{ type: "math-inline", latex: options.inTable
         ? phrasingContent.value.replace(/(\\+)\|/g, (_, slashes: string) => '\\'.repeat(Math.floor(slashes.length / 2)) + '|')
-        : phrasingContent.value, children: [{ text: "" }] }]
+        : phrasingContent.value, children: [{ text: "", ...mathMarks }] }]
+    }
     case "delete":
       return parsePhrasingContents(
         phrasingContent.children,

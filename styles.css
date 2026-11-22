@@ -558,13 +558,24 @@
 
 /* Blockquotes */
 .blo-math { display:inline-block; max-width:100%; vertical-align:baseline; border-radius:var(--radius-s); }
-.blo-math[data-blo-math="inline"] { margin-inline:4px; max-width:calc(100% - 8px); }
+.blo-math[data-blo-math="inline"] { --blo-math-gap:4px; margin-inline:4px; max-width:calc(100% - 8px); }
 .blo-math[data-blo-math="block"],
 .blo-math[data-blo-math="block"] > .blo-math-surface { display:block; }
 .blo-math[data-blo-math="block"] { border-radius:calc(var(--radius-s) + 4px); }
 .blo-math[data-blo-math="block"] > .blo-math-surface { border-radius:inherit; }
 .wysimark-block:is([data-block-dragging="true"],[data-block-selected="true"]) > .blo-math[data-blo-math="block"] { background:var(--blo-block-highlight-color); }
 .blo-math-preview { display:inline-block; min-width:1em; cursor:text; }
+/* Inline formula marks. Underline, strikethrough and highlight continue the
+   surrounding text, so they are drawn from the measured text baseline and text
+   band (custom properties set by MathFormula) instead of per MathJax glyph. */
+.blo-math[data-blo-math="inline"]:is(.--underline,.--strike,.--highlight) { position:relative; z-index:0; }
+.blo-math.--highlight::before { content:""; position:absolute; z-index:-1; left:calc(-1 * var(--blo-math-gap)); right:calc(-1 * var(--blo-math-gap)); top:var(--blo-math-text-top, 2px); bottom:var(--blo-math-text-bottom, 3px); background:var(--blo-math-highlight, var(--text-highlight-bg, rgba(255, 208, 0, .4))); }
+.blo-math:is(.--underline,.--strike)::after { content:""; position:absolute; left:calc(-1 * var(--blo-math-gap)); right:calc(-1 * var(--blo-math-gap)); top:0; bottom:0; pointer-events:none; background-repeat:no-repeat; background-size:100% max(1px, .0625em); background-image:linear-gradient(currentColor,currentColor); }
+.blo-math.--underline::after { background-position:0 calc(var(--blo-math-baseline, 50%) + .06em); }
+.blo-math.--strike::after { background-position:0 calc(var(--blo-math-baseline, 50%) - .39em); }
+.blo-math.--underline.--strike::after { background-image:linear-gradient(currentColor,currentColor),linear-gradient(currentColor,currentColor); background-size:100% max(1px, .0625em),100% max(1px, .0625em); background-position:0 calc(var(--blo-math-baseline, 50%) + .06em), 0 calc(var(--blo-math-baseline, 50%) - .39em); }
+.blo-math.--italic .blo-math-preview mjx-container * { font-style:italic; }
+.blo-math.--bold .blo-math-preview mjx-container * { font-weight:700; }
 .blo-math[data-blo-math="block"] .blo-math-preview { display:block; padding:8px; text-align:center; }
 .blo-math-preview mjx-container { margin:0 !important; }
 .blo-math.is-selected,

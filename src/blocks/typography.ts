@@ -41,6 +41,18 @@ export function cleanInlineStyle(style:string|undefined):string|undefined {
   }
   return colors.size?Array.from(colors,([key,value])=>`${key}:${value}`).join(';'):undefined
 }
+/** Sanitized inline style as React style props; used by text and inline formulas. */
+export function inlineStyleProps(style:string|undefined):Record<string,string>|undefined {
+  const clean=cleanInlineStyle(style)
+  if(!clean)return undefined
+  const props:Record<string,string>={}
+  for(const part of clean.split(';').filter(Boolean)) {
+    const colon=part.indexOf(':')
+    if(colon<0)continue
+    props[part.slice(0,colon).replace(/-([a-z])/g,(_,ch:string)=>ch.toUpperCase())]=part.slice(colon+1)
+  }
+  return props
+}
 export function cleanPastedFragment(fragment:Descendant[]):Descendant[] {
   return fragment.map(node=>{
     if(Text.isText(node)) {
